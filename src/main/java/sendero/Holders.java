@@ -312,7 +312,7 @@ final class Holders {
             execute(
                     () -> {
                         final Pair.Immutables.Int<T> holderSnap  = getSnapshot();
-                        if (holderSnap != null && snapshot == holderSnap.getInt()) {
+                        if (holderSnap != null && snapshot == holderSnap.getInt() && outPutTest(holderSnap.getValue())) {
                             subscriber.accept(map.apply(holderSnap));
                         }
                     }
