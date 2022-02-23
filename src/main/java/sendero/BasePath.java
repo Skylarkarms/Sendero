@@ -85,22 +85,28 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
 
         @Override
         protected void dispatch(Pair.Immutables.Int<T> t) {
-            final Consumer<Pair.Immutables.Int<T>>[] subs = remote.copy();
-            if (subs.length == 0) return;
-            parallelDispatch(0, subs, t, UnaryOperator.identity());
             //Last local observers on same thread
+            dispatchRemotes(false, t);
 
         }
 
         @Override
         protected void coldDispatch(Pair.Immutables.Int<T> t) {
             //From local observers on forked thread (if extended)
+            dispatchRemotes(false, t);
+        }
+
+        protected void dispatchRemotes(boolean fullyParallel, Pair.Immutables.Int<T> t) {
             final Consumer<Pair.Immutables.Int<T>>[] subs = remote.copy();
             final int length = subs.length;
             if (length == 0) return;
-            if (length > 1) parallelDispatch(1, subs, t, UnaryOperator.identity());
+            if (!fullyParallel) {
+                if (length > 1) parallelDispatch(1, subs, t, UnaryOperator.identity());
 
-            subs[0].accept(t); //Keep in thread
+                subs[0].accept(t); //Keep in thread
+            } else {
+                parallelDispatch(0, subs, t, UnaryOperator.identity());
+            }
         }
 
         @Override

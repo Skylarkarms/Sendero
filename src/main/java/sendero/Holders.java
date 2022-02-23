@@ -20,7 +20,7 @@ final class Holders {
         StatefulHolder<T> expectOut(Predicate<T> expect);
     }
 
-    static class DispatcherHolder<T> extends Dispatcher<T> implements StatefulHolder<T> {
+    static class DispatcherHolder<T> extends DispatcherImpl<T> implements StatefulHolder<T> {
         @SuppressWarnings("unchecked")
         protected final T INVALID = (T) new Object();
         private final Pair.Immutables.Int<T> FIRST = new Pair.Immutables.Int<>(0, INVALID);
@@ -59,7 +59,7 @@ final class Holders {
         private void lazyCASAccept(UnaryOperator<T> t) {
             Pair.Immutables.Int<T> prev = reference.get();
             T newValue = t.apply(prev.getValue());
-            Pair.Immutables.Int<T> next = new Pair.Immutables.Int<>(prev.getInt() + 1, newValue);;
+            Pair.Immutables.Int<T> next = new Pair.Immutables.Int<>(prev.getInt() + 1, newValue);
             boolean wasValid = newValue != INVALID;
             for (boolean changed = false;;) {
                 if (changed) {
@@ -205,6 +205,25 @@ final class Holders {
             }
         };
 
+        protected <S> void onRegistered(
+                Consumer<? super S> subscriber,
+                Function<Consumer<? super S>,
+                        Pair.Immutables.Bool<Integer>> snapshotFun,
+                Function<Pair.Immutables.Int<T>, S> map,
+                Consumer<Runnable> executionMethod
+        ) {
+            Pair.Immutables.Bool<Integer> res = snapshotFun.apply(subscriber);
+            if (res.aBoolean) tryActivate();
+            int snapshot = res.value;
+            Runnable runnable = () -> {
+                final Pair.Immutables.Int<T> holderSnap  = holder.getSnapshot();
+                if (holderSnap != null && snapshot == holderSnap.getInt() && holder.outPutTest(holderSnap.getValue())) {
+                    subscriber.accept(map.apply(holderSnap));
+                }
+            };
+            executionMethod.accept(runnable);
+        }
+
         protected void tryActivate() {
             manager.tryActivate();
         }
@@ -259,6 +278,16 @@ final class Holders {
         protected int getVersion() {
             return holder.getVersion();
         }
+
+        @Override
+        protected void setExpectOutput(Predicate<T> expectOutput) {
+            holder.setExpectOutput(expectOutput);
+        }
+
+//        @Override
+//        protected boolean outPutTest(T value) {
+//            return holder.outPutTest(value);
+//        }
     }
 
 
@@ -276,9 +305,15 @@ final class Holders {
             super(selfMap);
         }
 
-        private void onActive() {
+//        private void onActive() {
+//            eService.increment();
+//            tryActivate();
+//        }
+
+        @Override
+        protected void tryActivate() {
             eService.increment();
-            tryActivate();
+            super.tryActivate();
         }
 
         private void onInactive() {
@@ -306,16 +341,23 @@ final class Holders {
         }
 
         protected <S> void onAdd(Consumer<? super S> subscriber, Function<Consumer<? super S>, Pair.Immutables.Bool<Integer>> snapshotFun, Function<Pair.Immutables.Int<T>, S> map) {
-            Pair.Immutables.Bool<Integer> res = snapshotFun.apply(subscriber);
-            if (res.aBoolean) onActive();
-            int snapshot = res.value;
-            execute(
-                    () -> {
-                        final Pair.Immutables.Int<T> holderSnap  = getSnapshot();
-                        if (holderSnap != null && snapshot == holderSnap.getInt() && outPutTest(holderSnap.getValue())) {
-                            subscriber.accept(map.apply(holderSnap));
-                        }
-                    }
+//            Pair.Immutables.Bool<Integer> res = snapshotFun.apply(subscriber);
+//            if (res.aBoolean) onActive();
+//            int snapshot = res.value;
+//            execute(
+//                    () -> {
+//                        final Pair.Immutables.Int<T> holderSnap  = getSnapshot();
+//                        if (holderSnap != null && snapshot == holderSnap.getInt() && outPutTest(holderSnap.getValue())) {
+//                            subscriber.accept(map.apply(holderSnap));
+//                        }
+//                    }
+//            );
+
+            onRegistered(
+                    subscriber,
+                    snapshotFun,
+                    map,
+                    this::execute
             );
         }
 

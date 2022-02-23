@@ -14,20 +14,16 @@ public class Main {
             }
             return true;
         });
-        helloWorld.from(hello, updater -> helloString -> {
-            updater.update(strings -> {
-                String[] newRes = strings.clone();
-                newRes[0] = helloString;
-                return newRes;
-            });
-        });
-        helloWorld.from(world, updater -> worldString -> {
-            updater.update(strings -> {
-                String[] newRes = strings.clone();
-                newRes[1] = worldString;
-                return newRes;
-            });
-        });
+        helloWorld.from(hello, updater -> helloString -> updater.update(strings -> {
+            String[] newRes = strings.clone();
+            newRes[0] = helloString;
+            return newRes;
+        }));
+        helloWorld.from(world, updater -> worldString -> updater.update(strings -> {
+            String[] newRes = strings.clone();
+            newRes[1] = worldString;
+            return newRes;
+        }));
 
         Gates.Out.Single<String> result = helloWorld.forkMap(
                 strings -> strings[0] + " " + strings[1]
@@ -42,6 +38,9 @@ public class Main {
 
         System.out.println("setting hello...");
         hello.accept("Hello");
+
+        ComplexHelloWorld test2 = new ComplexHelloWorld();
+        test2.commence();
 
     }
 }

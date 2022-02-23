@@ -22,7 +22,7 @@ final class Links {
         );
     }
 
-    public interface Link<T> extends BaseLink, LinkActions<T> {
+    interface Link<T> extends BaseLink, LinkActions<T> {
     }
 
     static abstract class AbsLink<T> implements LinkActions<T> {
@@ -35,7 +35,7 @@ final class Links {
 
             public static final OwnerExitConsumer FIRST = INITIALIZE();
 
-            protected static OwnerExitConsumer INITIALIZE() {
+            private static OwnerExitConsumer INITIALIZE() {
                 return new OwnerExitConsumer(0, 0, null);
             }
 
@@ -159,7 +159,7 @@ final class Links {
 
         private static final class AcceptorConsumer<S> implements BooleanConsumer, Consumer<Pair.Immutables.Int<S>> {
             private final BasePath<S> newOwner;
-            protected final Consumer<Pair.Immutables.Int<S>> exit;
+            private final Consumer<Pair.Immutables.Int<S>> exit;
             private AcceptorConsumer(Consumer<Pair.Immutables.Int<S>> exit, BasePath<S> newOwner) {
                 this.exit = exit;
                 this.newOwner = newOwner;
