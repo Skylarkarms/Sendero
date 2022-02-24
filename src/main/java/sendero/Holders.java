@@ -48,10 +48,12 @@ final class Holders {
             return this;
         }
 
-        /*Todo: throw exception if mapped == currentValue*/
         private UnaryOperator<T> lazyProcess(UnaryOperator<T> update) {
             return currentValue -> {
-                T mapped = map.apply(update.apply(currentValue));
+                //Not valid if same instance
+                T updated = update.apply(currentValue);
+                if (updated == currentValue) return INVALID;
+                T mapped = map.apply(updated);
                 return expectInput.test(mapped) ? mapped : INVALID;
             };
         }
