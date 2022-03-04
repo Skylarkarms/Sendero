@@ -8,6 +8,7 @@ import sendero.threshold_listener.ThresholdListeners;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.function.BooleanSupplier;
 
 abstract class ActivationManager {
 
@@ -56,6 +57,52 @@ abstract class ActivationManager {
         return () -> {
             throw new IllegalStateException("Must use the according constructor: ObservableTest(boolean withActivationListener == true)");
         };
+    }
+
+    static Builder getBuilder() {
+        return new Builder();
+    }
+
+    protected static class Builder {
+        private BooleanConsumer activationListener;
+        private boolean mutableActivationListener;
+
+        public Builder withFixed(BooleanConsumer activationListener) {
+            if (mutableActivationListener) throwException();
+            this.activationListener = activationListener;
+            this.mutableActivationListener = false;
+            return this;
+        }
+
+        void throwException() {
+            throw new IllegalStateException("Only one at a time.");
+        }
+
+        public Builder withMutable(boolean activationListener) {
+            if (this.activationListener != null) throwException();
+            this.mutableActivationListener = activationListener;
+            return this;
+        }
+
+        public ActivationManager build(BooleanSupplier deactivation) {
+            return new ActivationManager(activationListener, mutableActivationListener) {
+                @Override
+                protected boolean deactivationRequirements() {
+                    return deactivation.getAsBoolean();
+                }
+            };
+        }
+    }
+
+    private ActivationManager(BooleanConsumer fixedActivationListener, boolean mutableActivationListener) {
+        this.switchRegister = fixedActivationListener != null ?
+                BinaryEventRegisters.getAtomicWith(fixedActivationListener)
+                :
+                mutableActivationListener ?
+                        BinaryEventRegisters.getAtomicRegister()
+                        :
+                        Switchers.getAtomic();
+        this.thrower = mutableActivationListener ? Functions.emptyRunnable() : createThrower();
     }
 
     protected ActivationManager(boolean withActivationListener) {

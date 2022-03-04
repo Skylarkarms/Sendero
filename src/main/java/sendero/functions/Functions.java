@@ -1,5 +1,7 @@
 package sendero.functions;
 
+import sendero.interfaces.BinaryPredicate;
+
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -31,6 +33,10 @@ public final class Functions {
             return super.toString() + CLEARED_STRING;
         }
     };
+
+    public static<T> BinaryPredicate<T> binaryAlways(boolean aBoolean) {
+        return (o, t2) -> aBoolean;
+    }
     public static Runnable emptyRunnable() {
         return emptyRunnable;
     }

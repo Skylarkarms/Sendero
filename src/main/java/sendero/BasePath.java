@@ -2,11 +2,13 @@ package sendero;
 
 import sendero.event_registers.ConsumerRegister;
 import sendero.interfaces.BooleanConsumer;
+import sendero.interfaces.Updater;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
@@ -22,9 +24,25 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         super(selfMap);
     }
 
+    protected BasePath(T initialValue, Function<Updater<T>, BooleanConsumer> selfMap, Predicate<T> expectOut) {
+        super(initialValue, selfMap, expectOut);
+    }
+
+    protected BasePath(Holders.DispatcherHolder<T> holder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
+        super(holder, actMgmtBuilder);
+    }
+
+    protected BasePath(Holders.DispatcherHolder<T> holder, ActivationManager.Builder actMgmtBuilder) {
+        super(holder, actMgmtBuilder);
+    }
+
     protected abstract void appoint(Consumer<Pair.Immutables.Int<T>> subscriber);
 
     static class Injective<T> extends BasePath<T> {
+
+        public Injective(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+            super(selfMap);
+        }
 
         private final ConsumerRegister.IConsumerRegister.SnapshottingConsumerRegister<Integer, Pair.Immutables.Int<T>>
                 remote = ConsumerRegister.IConsumerRegister.getInstance(this::getVersion);
@@ -82,6 +100,17 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
             super(selfMap);
         }
 
+        protected ToMany(T initialValue, Function<Updater<T>, BooleanConsumer> selfMap, Predicate<T> expectOut) {
+            super(initialValue, selfMap, expectOut);
+        }
+
+        protected ToMany(Holders.DispatcherHolder<T> holder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
+            super(holder, actMgmtBuilder);
+        }
+
+        protected ToMany(Holders.DispatcherHolder<T> holder, ActivationManager.Builder actMgmtBuilder) {
+            super(holder, actMgmtBuilder);
+        }
 
         @Override
         protected void dispatch(Pair.Immutables.Int<T> t) {

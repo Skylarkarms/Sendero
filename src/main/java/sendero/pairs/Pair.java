@@ -59,6 +59,10 @@ public final class Pair {
             public int compareTo(int other) {
                 return anInt - other;
             }
+
+            public Int<T> deepCopy() {
+                return new Int<>(anInt, value);
+            }
         }
         public static class Bool<T> {
             public final boolean aBoolean;

@@ -45,5 +45,8 @@ public class Main {
         ComplexHelloWorld test2 = new ComplexHelloWorld();
         test2.commence();
 
+        ForkedMultiplication multiplication = new ForkedMultiplication();
+        multiplication.commence();
+
     }
 }

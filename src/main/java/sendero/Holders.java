@@ -24,7 +24,56 @@ final class Holders {
         @SuppressWarnings("unchecked")
         protected final T INVALID = (T) new Object();
         private final Pair.Immutables.Int<T> FIRST = new Pair.Immutables.Int<>(0, INVALID);
-        private final AtomicReference<Pair.Immutables.Int<T>> reference = new AtomicReference<>(FIRST);
+        private final AtomicReference<Pair.Immutables.Int<T>> reference;
+
+        static<S> DispatcherHolder<S> get(UnaryOperator<Builder<S>> op) {
+            return op.apply(new Builder<>()).build();
+        }
+
+        protected static class Builder<T> {
+            private AtomicReference<Pair.Immutables.Int<T>> reference;
+            private Predicate<T> expectOutput;
+            private UnaryOperator<T> map;
+
+            protected Builder<T> withInitial(T value) {
+                reference = new AtomicReference<>(new Pair.Immutables.Int<>(1, value));
+                return this;
+            }
+
+            protected Builder<T> expectOut(Predicate<T> expectOutput) {
+                this.expectOutput = expectOutput;
+                return this;
+            }
+
+            protected Builder<T> with(UnaryOperator<T> map) {
+                this.map = map;
+                return this;
+            }
+
+            protected DispatcherHolder<T> build() {
+                return new DispatcherHolder<T>(reference, map, expectOutput);
+            }
+
+        }
+
+        public DispatcherHolder() {
+            reference = new AtomicReference<>(FIRST);
+        }
+
+        private DispatcherHolder(AtomicReference<Pair.Immutables.Int<T>> reference, UnaryOperator<T> map, Predicate<T> expectInput) {
+            this.reference = reference == null ?  new AtomicReference<>(FIRST) : reference;
+            this.map = map == null ? CLEARED_MAP : map;
+            this.expectInput = expectInput == null ? CLEARED_PREDICATE : expectInput;
+        }
+
+        DispatcherHolder(T initialValue) {
+            reference = new AtomicReference<>(new Pair.Immutables.Int<>(1, initialValue));
+        }
+
+        DispatcherHolder(T initialValue, Predicate<T> expectOutput) {
+            setExpectOutput(expectOutput);
+            reference = new AtomicReference<>(new Pair.Immutables.Int<>(1, initialValue));
+        }
 
         private final UnaryOperator<T> CLEARED_MAP = UnaryOperator.identity();
         private volatile UnaryOperator<T> map = CLEARED_MAP;
@@ -118,16 +167,16 @@ final class Holders {
         private void versionValueCAS(int newVersion, T processed) {
             if (processed == INVALID) return;
             Pair.Immutables.Int<T> prev = reference.get(), next = prev;
-            for (boolean lesserThan = prev.compareTo(newVersion) < 0;;) {
-                if (lesserThan) {
+            for (boolean lesser;;) {
+                lesser = prev.compareTo(newVersion) < 0;
+                if (lesser) {
                     next = new Pair.Immutables.Int<>(newVersion, processed);
                 }
-                //Only IF prev version is lesser than new version
-                if (lesserThan && reference.compareAndSet(prev, next)) {
+                if (lesser && reference.compareAndSet(prev, next)) {
                     inferDispatch(next, true);
                     break;
                 }
-                if (prev == (prev = reference.get()) && lesserThan == (lesserThan = prev.compareTo(newVersion) < 0)) break;
+                if (prev.compareTo(prev = reference.get()) >= 0) break;
             }
         }
 
@@ -169,6 +218,17 @@ final class Holders {
         }
 
         protected ActivationHolder() {
+            holder = new DispatcherHolder<T>() {
+                @Override
+                protected void dispatch(Pair.Immutables.Int<T> t) {
+                    ActivationHolder.this.dispatch(t);
+                }
+
+                @Override
+                protected void coldDispatch(Pair.Immutables.Int<T> t) {
+                    ActivationHolder.this.coldDispatch(t);
+                }
+            };
             manager = new ActivationManager(){
                 @Override
                 protected boolean deactivationRequirements() {
@@ -178,6 +238,17 @@ final class Holders {
         }
 
         protected ActivationHolder(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+            holder = new DispatcherHolder<T>() {
+                @Override
+                protected void dispatch(Pair.Immutables.Int<T> t) {
+                    ActivationHolder.this.dispatch(t);
+                }
+
+                @Override
+                protected void coldDispatch(Pair.Immutables.Int<T> t) {
+                    ActivationHolder.this.coldDispatch(t);
+                }
+            };
             manager = new ActivationManager(selfMap.apply(holder::acceptVersionValue)){
                 @Override
                 protected boolean deactivationRequirements() {
@@ -186,7 +257,48 @@ final class Holders {
             };
         }
 
+        protected ActivationHolder(T initialValue, Function<Updater<T>, BooleanConsumer> selfMap, Predicate<T> expectOutput) {
+            holder = new DispatcherHolder<T>(initialValue, expectOutput) {
+                @Override
+                protected void dispatch(Pair.Immutables.Int<T> t) {
+                    ActivationHolder.this.dispatch(t);
+                }
+
+                @Override
+                protected void coldDispatch(Pair.Immutables.Int<T> t) {
+                    ActivationHolder.this.coldDispatch(t);
+                }
+            };
+            manager = new ActivationManager(selfMap.apply(holder)){
+                @Override
+                protected boolean deactivationRequirements() {
+                    return ActivationHolder.this.deactivationRequirements();
+                }
+            };
+        }
+
+        protected ActivationHolder(DispatcherHolder<T> holder, Function<DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
+            this.holder = holder;
+            this.manager = actMgmtBuilder.apply(holder).build(this::deactivationRequirements);
+        }
+
+        protected ActivationHolder(DispatcherHolder<T> holder, ActivationManager.Builder actMgmtBuilder) {
+            this.holder = holder;
+            this.manager = actMgmtBuilder.build(this::deactivationRequirements);
+        }
+
         protected ActivationHolder(boolean activationListener) {
+            holder = new DispatcherHolder<T>() {
+                @Override
+                protected void dispatch(Pair.Immutables.Int<T> t) {
+                    ActivationHolder.this.dispatch(t);
+                }
+
+                @Override
+                protected void coldDispatch(Pair.Immutables.Int<T> t) {
+                    ActivationHolder.this.coldDispatch(t);
+                }
+            };
             manager = new ActivationManager(activationListener){
                 @Override
                 protected boolean deactivationRequirements() {
@@ -195,7 +307,7 @@ final class Holders {
             };
         }
 
-        private final DispatcherHolder<T> holder = new DispatcherHolder<T>() {
+        private final DispatcherHolder<T> holder/* = new DispatcherHolder<T>() {
             @Override
             protected void dispatch(Pair.Immutables.Int<T> t) {
                 ActivationHolder.this.dispatch(t);
@@ -205,7 +317,7 @@ final class Holders {
             protected void coldDispatch(Pair.Immutables.Int<T> t) {
                 ActivationHolder.this.coldDispatch(t);
             }
-        };
+        }*/;
 
         protected <S> void onRegistered(
                 Consumer<? super S> subscriber,
@@ -307,7 +419,27 @@ final class Holders {
             super(selfMap);
         }
 
-//        private void onActive() {
+        public ExecutorHolder(
+                T initialValue,
+                Function<Updater<T>, BooleanConsumer> selfMap,
+                Predicate<T> expectOut
+        ) {
+            super(initialValue, selfMap, expectOut);
+        }
+
+        protected ExecutorHolder(
+                DispatcherHolder<T> holder,
+                Function<DispatcherHolder<T>,
+                        ActivationManager.Builder> actMgmtBuilder
+        ) {
+            super(holder, actMgmtBuilder);
+        }
+
+        protected ExecutorHolder(DispatcherHolder<T> holder, ActivationManager.Builder actMgmtBuilder) {
+            super(holder, actMgmtBuilder);
+        }
+
+        //        private void onActive() {
 //            eService.increment();
 //            tryActivate();
 //        }

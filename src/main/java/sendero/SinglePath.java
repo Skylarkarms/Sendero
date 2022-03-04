@@ -2,37 +2,20 @@ package sendero;
 
 import sendero.functions.Consumers;
 import sendero.interfaces.BooleanConsumer;
-import sendero.interfaces.Updater;
 import sendero.pairs.Pair;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
-public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
+public class SinglePath<T> extends BasePath.Injective<T> implements Forkable<T> {
 
-    public Path() {
-    }
+//    public SinglePath() {
+//        super();
+//    }
 
-    public Path(boolean activationListener) {
-        super(activationListener);
-    }
-
-    protected Path(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+    protected SinglePath(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
         super(selfMap);
-    }
-
-    protected Path(T initialValue, Function<Updater<T>, BooleanConsumer> selfMap, Predicate<T> expectOut) {
-        super(initialValue, selfMap, expectOut);
-    }
-
-    protected Path(Holders.DispatcherHolder<T> holder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
-        super(holder, actMgmtBuilder);
-    }
-
-    protected Path(Holders.DispatcherHolder<T> holder, ActivationManager.Builder actMgmtBuilder) {
-        super(holder, actMgmtBuilder);
     }
 
     private <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> mainForkingFunctionBuilder(Function<Consumer<Pair.Immutables.Int<S>>, Consumer<Pair.Immutables.Int<T>>> converter) {
@@ -40,7 +23,7 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
             final Consumer<Pair.Immutables.Int<T>> converted = converter.apply(intConsumer);
             return isActive -> {
                 if (isActive) appoint(converted);
-                else demote(converted);
+                else demote();
             };
         };
     }
@@ -51,14 +34,15 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
 
     protected <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> mapFunctionBuilder(Function<T, S> map) {
         return mainForkingFunctionBuilder(
-                intConsumer ->
-                        tInt -> intConsumer.accept(new Pair.Immutables.Int<>(tInt.getInt(), map.apply(tInt.getValue())))
+                (Function<Consumer<Pair.Immutables.Int<S>>, Consumer<Pair.Immutables.Int<T>>>)
+                        intConsumer ->
+                                tInt -> intConsumer.accept(new Pair.Immutables.Int<>(tInt.getInt(), map.apply(tInt.getValue())))
         );
     }
 
     protected <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> mutateFunctionBuilder(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
         return mainForkingFunctionBuilder(
-                intConsumer ->
+                (Function<Consumer<Pair.Immutables.Int<S>>, Consumer<Pair.Immutables.Int<T>>>) intConsumer ->
                         tInt -> {
                             T t = tInt.getValue();
                             int intT = tInt.getInt();
@@ -69,7 +53,7 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
     }
 
     protected <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> switchFunctionBuilder(Function<T, BasePath<S>> switchMap) {
-        final BasePath.ToMany<T> thisDomain = Path.this;
+        final Injective<T> thisDomain = SinglePath.this;
         return intConsumer -> {
             final Links.LinkHolder<S> jointHolder = new Links.LinkHolder<S>() {
                 @Override
@@ -102,14 +86,14 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
                 }
                 else {
                     jointHolder.tryDeactivate(true);
-                    thisDomain.demote(toAppoint);
+                    thisDomain.demote();
                 }
             };
         };
     }
 
     protected <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> switchMutateFunctionBuilder(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
-        final BasePath.ToMany<T> thisDomain = Path.this;
+        final Injective<T> thisDomain = SinglePath.this;
         return intConsumer -> {
             //Controls domain subscription
             final Links.LinkHolder<S> domainSubscriber = new Links.LinkHolder<S>() {
@@ -149,7 +133,7 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
                 }
                 else {
                     domainSubscriber.tryDeactivate(true);
-                    thisDomain.demote(toAppoint);
+                    thisDomain.demote();
                 }
             };
         };
@@ -168,29 +152,29 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
     }
 
     @Override
-    public <S> Path<S> forkMap(Function<T, S> map) {
-        return new Path<S>(
+    public <S> SinglePath<S> forkMap(Function<T, S> map) {
+        return new SinglePath<S>(
                 mapFunctionBuilder(map)
         ) {};
     }
 
     @Override
-    public <S> Path<S> forkFun(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
-        return new Path<S>(
+    public <S> SinglePath<S> forkFun(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
+        return new SinglePath<S>(
                 mutateFunctionBuilder(exit)
         ) {};
     }
 
     @Override
-    public <S> Path<S> forkSwitch(Function<T, BasePath<S>> switchMap) {
-        return new Path<S>(
+    public <S> SinglePath<S> forkSwitch(Function<T, BasePath<S>> switchMap) {
+        return new SinglePath<S>(
                 switchFunctionBuilder(switchMap)
         ) {};
     }
 
     @Override
-    public <S> Path<S> forkSwitchFun(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
-        return new Path<S>(
+    public <S> SinglePath<S> forkSwitchFun(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
+        return new SinglePath<S>(
                 switchMutateFunctionBuilder(mutate)
         ) {};
     }
