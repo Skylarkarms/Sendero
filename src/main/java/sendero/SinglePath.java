@@ -6,17 +6,18 @@ import sendero.pairs.Pair;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
 public class SinglePath<T> extends BasePath.Injective<T> implements Forkable<T> {
 
-//    public SinglePath() {
-//        super();
-//    }
-
     protected SinglePath(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
         super(selfMap);
     }
+
+//    public<S> SinglePath(Supplier<BasePath<S>> basePathSupplier, Function<Consumer<Pair.Immutables.Int<T>>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+//        super(basePathSupplier, toAppointFun);
+//    }
 
     private <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> mainForkingFunctionBuilder(Function<Consumer<Pair.Immutables.Int<S>>, Consumer<Pair.Immutables.Int<T>>> converter) {
         return intConsumer -> {
@@ -34,15 +35,14 @@ public class SinglePath<T> extends BasePath.Injective<T> implements Forkable<T> 
 
     protected <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> mapFunctionBuilder(Function<T, S> map) {
         return mainForkingFunctionBuilder(
-                (Function<Consumer<Pair.Immutables.Int<S>>, Consumer<Pair.Immutables.Int<T>>>)
-                        intConsumer ->
-                                tInt -> intConsumer.accept(new Pair.Immutables.Int<>(tInt.getInt(), map.apply(tInt.getValue())))
+                intConsumer ->
+                        tInt -> intConsumer.accept(new Pair.Immutables.Int<>(tInt.getInt(), map.apply(tInt.getValue())))
         );
     }
 
     protected <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> mutateFunctionBuilder(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
         return mainForkingFunctionBuilder(
-                (Function<Consumer<Pair.Immutables.Int<S>>, Consumer<Pair.Immutables.Int<T>>>) intConsumer ->
+                intConsumer ->
                         tInt -> {
                             T t = tInt.getValue();
                             int intT = tInt.getInt();
@@ -55,7 +55,7 @@ public class SinglePath<T> extends BasePath.Injective<T> implements Forkable<T> 
     protected <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> switchFunctionBuilder(Function<T, BasePath<S>> switchMap) {
         final Injective<T> thisDomain = SinglePath.this;
         return intConsumer -> {
-            final Links.LinkHolder<S> jointHolder = new Links.LinkHolder<S>() {
+            final BaseLinks.LinkHolder<S> jointHolder = new BaseLinks.LinkHolder<S>() {
                 @Override
                 protected void coldDispatch(Pair.Immutables.Int<S> t) {
                     intConsumer.accept(t);
@@ -96,7 +96,7 @@ public class SinglePath<T> extends BasePath.Injective<T> implements Forkable<T> 
         final Injective<T> thisDomain = SinglePath.this;
         return intConsumer -> {
             //Controls domain subscription
-            final Links.LinkHolder<S> domainSubscriber = new Links.LinkHolder<S>() {
+            final BaseLinks.LinkHolder<S> domainSubscriber = new BaseLinks.LinkHolder<S>() {
                 @Override
                 protected void dispatch(Pair.Immutables.Int<S> t) {
                     intConsumer.accept(t);

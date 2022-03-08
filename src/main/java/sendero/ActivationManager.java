@@ -84,7 +84,7 @@ abstract class ActivationManager {
             return this;
         }
 
-        public ActivationManager build(BooleanSupplier deactivation) {
+        protected ActivationManager build(BooleanSupplier deactivation) {
             return new ActivationManager(activationListener, mutableActivationListener) {
                 @Override
                 protected boolean deactivationRequirements() {
@@ -117,13 +117,6 @@ abstract class ActivationManager {
 
     protected abstract boolean deactivationRequirements();
 
-//    protected void manageDeactivation(
-//            boolean attemptRemove
-//    ) {
-//        if (attemptRemove && deactivationRequirements()) {
-//            tryDeactivate();
-//        }
-//    }
     protected boolean tryActivate() {
         return switchRegister.on();
     }
@@ -144,6 +137,10 @@ abstract class ActivationManager {
 
     protected boolean clearActivationListener() {
         return ((BinaryEventRegisters.BinaryEventRegister)switchRegister).unregister() != null;
+    }
+
+    protected BooleanConsumer getAndClearActivationListener() {
+        return ((BinaryEventRegisters.BinaryEventRegister)switchRegister).unregister();
     }
 
     protected boolean isIdle() {

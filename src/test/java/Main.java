@@ -48,5 +48,10 @@ public class Main {
         ForkedMultiplication multiplication = new ForkedMultiplication();
         multiplication.commence();
 
+        System.out.println("Test Hard");
+
+        TestHard testHard = new TestHard();
+        testHard.commence();
+
     }
 }

@@ -1,6 +1,5 @@
 package sendero;
 
-import sendero.functions.Functions;
 import sendero.pairs.Pair;
 
 import java.util.function.Predicate;

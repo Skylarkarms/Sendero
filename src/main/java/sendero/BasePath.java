@@ -2,13 +2,12 @@ package sendero;
 
 import sendero.event_registers.ConsumerRegister;
 import sendero.interfaces.BooleanConsumer;
-import sendero.interfaces.Updater;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
 public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
@@ -24,24 +23,45 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         super(selfMap);
     }
 
-    protected BasePath(T initialValue, Function<Updater<T>, BooleanConsumer> selfMap, Predicate<T> expectOut) {
-        super(initialValue, selfMap, expectOut);
+    protected BasePath(Holders.DispatcherHolder.Builder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
+        super(holderBuilder, actMgmtBuilder);
     }
 
-    protected BasePath(Holders.DispatcherHolder<T> holder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
-        super(holder, actMgmtBuilder);
+    protected BasePath(Holders.DispatcherHolder.Builder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
+        super(holderBuilder, actMgmtBuilder);
     }
 
-    protected BasePath(Holders.DispatcherHolder<T> holder, ActivationManager.Builder actMgmtBuilder) {
-        super(holder, actMgmtBuilder);
+    static<S> BooleanConsumer activationListenerCreator(
+            Supplier<BasePath<S>> basePathSupplier,
+            Consumer<Pair.Immutables.Int<S>> toAppoint
+    ) {
+        return new BooleanConsumer() {
+            //The supplier is for the Client to be allowed to  create a path at super()
+            final BasePath<S> basePath = basePathSupplier.get();
+            @Override
+            public void accept(boolean isActive) {
+                if (isActive) basePath.appoint(toAppoint);
+                else if (basePath instanceof ToMany) {
+                    ((ToMany<S>) basePath).demote(toAppoint);
+                } else if (basePath instanceof Injective) {
+                    ((Injective<S>) basePath).demote();
+                }
+            }
+        };
     }
 
     protected abstract void appoint(Consumer<Pair.Immutables.Int<T>> subscriber);
 
     static class Injective<T> extends BasePath<T> {
 
-        public Injective(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+        protected Injective(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
             super(selfMap);
+        }
+
+        protected<S> Injective(Supplier<BasePath<S>> basePathSupplier, Function<Consumer<Pair.Immutables.Int<T>>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+            super(
+                    dispatcher -> activationListenerCreator(basePathSupplier, toAppointFun.apply(dispatcher))
+            );
         }
 
         private final ConsumerRegister.IConsumerRegister.SnapshottingConsumerRegister<Integer, Pair.Immutables.Int<T>>
@@ -100,16 +120,12 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
             super(selfMap);
         }
 
-        protected ToMany(T initialValue, Function<Updater<T>, BooleanConsumer> selfMap, Predicate<T> expectOut) {
-            super(initialValue, selfMap, expectOut);
+        protected ToMany(Holders.DispatcherHolder.Builder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
+            super(holderBuilder, actMgmtBuilder);
         }
 
-        protected ToMany(Holders.DispatcherHolder<T> holder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
-            super(holder, actMgmtBuilder);
-        }
-
-        protected ToMany(Holders.DispatcherHolder<T> holder, ActivationManager.Builder actMgmtBuilder) {
-            super(holder, actMgmtBuilder);
+        protected ToMany(Holders.DispatcherHolder.Builder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
+            super(holderBuilder, actMgmtBuilder);
         }
 
         @Override

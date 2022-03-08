@@ -2,12 +2,11 @@ package sendero;
 
 import sendero.functions.Consumers;
 import sendero.interfaces.BooleanConsumer;
-import sendero.interfaces.Updater;
 import sendero.pairs.Pair;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
 public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
@@ -23,16 +22,24 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
         super(selfMap);
     }
 
-    protected Path(T initialValue, Function<Updater<T>, BooleanConsumer> selfMap, Predicate<T> expectOut) {
-        super(initialValue, selfMap, expectOut);
+    protected<S> Path(Supplier<BasePath<S>> basePathSupplier, Function<Consumer<Pair.Immutables.Int<T>>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+        super(
+                dispatcher -> activationListenerCreator(basePathSupplier, toAppointFun.apply(dispatcher))
+        ) ;
     }
 
-    protected Path(Holders.DispatcherHolder<T> holder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
-        super(holder, actMgmtBuilder);
+    protected<S> Path(Holders.DispatcherHolder.Builder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+        super(holderBuilder,
+                dispatcher -> ActivationManager.getBuilder().withFixed(activationListenerCreator(basePathSupplier, toAppointFun.apply(dispatcher)))
+                );
     }
 
-    protected Path(Holders.DispatcherHolder<T> holder, ActivationManager.Builder actMgmtBuilder) {
-        super(holder, actMgmtBuilder);
+//    protected Path(Holders.DispatcherHolder.Builder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
+//        super(holderBuilder, actMgmtBuilder);
+//    }
+
+    protected Path(Holders.DispatcherHolder.Builder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
+        super(holderBuilder, actMgmtBuilder);
     }
 
     private <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> mainForkingFunctionBuilder(Function<Consumer<Pair.Immutables.Int<S>>, Consumer<Pair.Immutables.Int<T>>> converter) {
@@ -71,7 +78,7 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
     protected <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> switchFunctionBuilder(Function<T, BasePath<S>> switchMap) {
         final BasePath.ToMany<T> thisDomain = Path.this;
         return intConsumer -> {
-            final Links.LinkHolder<S> jointHolder = new Links.LinkHolder<S>() {
+            final BaseLinks.LinkHolder<S> jointHolder = new BaseLinks.LinkHolder<S>() {
                 @Override
                 protected void coldDispatch(Pair.Immutables.Int<S> t) {
                     intConsumer.accept(t);
@@ -112,7 +119,7 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
         final BasePath.ToMany<T> thisDomain = Path.this;
         return intConsumer -> {
             //Controls domain subscription
-            final Links.LinkHolder<S> domainSubscriber = new Links.LinkHolder<S>() {
+            final BaseLinks.LinkHolder<S> domainSubscriber = new BaseLinks.LinkHolder<S>() {
                 @Override
                 protected void dispatch(Pair.Immutables.Int<S> t) {
                     intConsumer.accept(t);

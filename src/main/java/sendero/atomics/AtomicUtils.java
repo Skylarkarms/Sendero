@@ -9,21 +9,17 @@ import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
 public final class AtomicUtils {
-    public static<T, V> TaggedAtomicReference<T, V> get(UnaryOperator<TaggedAtomicReference.Builder<T, V>> op) {
-        return TaggedAtomicReference.getBuilder(op).build();
-    }
-    @SuppressWarnings("unchecked")
-    public static<T, V> TaggedAtomicReference<T, V> get() {
-        return (TaggedAtomicReference<T, V>) TaggedAtomicReference.getBuilder().build();
-    }
     public static class TaggedAtomicReference<Tag, Value> {
 
+        @SuppressWarnings("unchecked")
+        private final Tag NO_TAG = (Tag) new Object();
+        private final Pair.Immutables<Tag, Value> FIRST_PAIR = new Pair.Immutables<>(NO_TAG, null);
         private final BinaryPredicate<Tag> equality;
         private final BiFunction<Tag, Supplier<Value>, Value> valueSupplier;
         private BiFunction<Tag, Supplier<Value>, Value> builderNoEquality() {
             return (tag, valueSupplier) -> reference.updateAndGet(
                     tagValueImmutables -> {
-                        if (tagValueImmutables == null) return new Pair.Immutables<>(tag, valueSupplier.get());
+                        if (tagValueImmutables.firstValue == NO_TAG) return new Pair.Immutables<>(tag, valueSupplier.get());
                         Tag prev = tagValueImmutables.firstValue;
                         if (prev != tag) return new Pair.Immutables<>(tag, valueSupplier.get());
                         return tagValueImmutables;
@@ -35,7 +31,7 @@ public final class AtomicUtils {
             assert equality != null;
             return (tag, valueSupplier) -> reference.updateAndGet(
                     tagValueImmutables -> {
-                        if (tagValueImmutables == null) return new Pair.Immutables<>(tag, valueSupplier.get());
+                        if (tagValueImmutables.firstValue == NO_TAG) return new Pair.Immutables<>(tag, valueSupplier.get());
                         Tag prev = tagValueImmutables.firstValue;
                         if (equality.test(prev, tag)) return new Pair.Immutables<>(tag, valueSupplier.get());
                         return tagValueImmutables;
@@ -43,20 +39,17 @@ public final class AtomicUtils {
             ).secondValue;
         }
 
-        static<T, V> Builder<T, V> getBuilder(UnaryOperator<Builder<T, V>> op) {
-            return op.apply(new Builder<>());
-        }
-
-        static<T, V> Builder<T, V> getBuilder() {
-            return new Builder<>();
+        public static<T, V> TaggedAtomicReference<T, V> build(UnaryOperator<Builder<T, V>> op) {
+            return op.apply(new Builder<>()).build();
         }
 
         public static class Builder<Tag, Value> {
             private BinaryPredicate<Tag> tagEquality;
             private Pair.Immutables<Tag, Value> first;
 
-            public void check(BinaryPredicate<Tag> tagEquality) {
+            public Builder<Tag, Value> check(BinaryPredicate<Tag> tagEquality) {
                 this.tagEquality = tagEquality;
+                return this;
             }
 
             public void first(Tag tag, Value value) {
@@ -72,11 +65,11 @@ public final class AtomicUtils {
                 Pair.Immutables<Tag, Value> reference
         ) {
             this.equality = tagEquality;
-            this.reference = new AtomicReference<>(reference);
+            this.reference = new AtomicReference<>(reference == null ? FIRST_PAIR : reference);
             this.valueSupplier = tagEquality != null ? builderEquality() : builderNoEquality();
         }
 
-        public TaggedAtomicReference(Tag tag, Value value) {
+        private TaggedAtomicReference(Tag tag, Value value) {
             this.reference = new AtomicReference<>(new Pair.Immutables<>(tag, value));
             equality = null;
             valueSupplier = builderNoEquality();
@@ -94,28 +87,23 @@ public final class AtomicUtils {
             return valueSupplier.apply(tag, value);
         }
 
-        public static class Int<Value> {
-            private final Pair.Immutables.Int<Value> NOT_SET = new Pair.Immutables.Int<>(-1, null);
-            private final AtomicReference<Pair.Immutables.Int<Value>> reference;
-
-            public Int() {
-                this.reference = new AtomicReference<>(NOT_SET);
+        public boolean expectAndClear(Value expect) {
+            boolean shouldClear;
+            for (Pair.Immutables<Tag, Value> prev = reference.get();;) {
+                shouldClear = prev.firstValue != NO_TAG && prev.secondValue == expect;
+                if (shouldClear && reference.compareAndSet(prev, FIRST_PAIR)) break;
+                if (prev == (prev = reference.get())) break;
             }
-            public Int(int first, Value initial) {
-                this.reference = new AtomicReference<>(new Pair.Immutables.Int<>(first, initial));
-            }
-
-            public Value getOrSet(int nextI, Supplier<Value> next) {
-                assert next != null;
-                return reference.updateAndGet(
-                        valueInt -> {
-                            int prevInt = valueInt.getInt();
-                            if (valueInt == NOT_SET || prevInt != nextI) return new Pair.Immutables.Int<>(nextI, next.get());
-                            return valueInt;
-                        }
-                ).getValue();
-            }
-
+            return shouldClear;
         }
+
+        public Value getAndSet(Tag tag, Value value) {
+            return reference.getAndSet(new Pair.Immutables<>(tag, value)).secondValue;
+        }
+
+        public void set(Value value) {
+            reference.set(new Pair.Immutables<>(NO_TAG, value));
+        }
+
     }
 }

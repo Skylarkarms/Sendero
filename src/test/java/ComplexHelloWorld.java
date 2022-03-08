@@ -30,7 +30,7 @@ class ComplexHelloWorld {
             holder2.accept(3);
         }
 
-        private final Link<Integer> integerSubscriber = new Link<>();
+        private final Links.UnBound<Integer> integerSubscriber = new Links.UnBound<>();
 
         private final BasePath<String> process = integerSubscriber.forkSwitch(
                 domainCache::get
