@@ -54,8 +54,8 @@ public class Links<T> extends Path<T> implements BaseLink {
             return absConnector.unBind();
         }
 
-        private UnBound(Builders.HolderBuilder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
-            super(holderBuilder, actMgmtBuilder);
+        public UnBound(Builders.HolderBuilder<T> holderBuilder) {
+            super(holderBuilder, ActivationManager.getBuilder().withMutable(true));
         }
 
         @Override
@@ -191,7 +191,7 @@ public class Links<T> extends Path<T> implements BaseLink {
             }
 
             @Override
-            protected void update(UnaryOperator<T> update) {
+            public void update(UnaryOperator<T> update) {
                 super.update(update);
             }
         }

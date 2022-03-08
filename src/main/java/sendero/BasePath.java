@@ -12,8 +12,16 @@ import java.util.function.UnaryOperator;
 
 public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
 
+    private Runnable thrower = () -> {throw new IllegalStateException("Must call for Path(boolean activationListener) constructor.");};
     public BasePath(boolean activationListener) {
         super(activationListener);
+        thrower = () -> {};
+    }
+    /**Disconnect by unregistering activationListener
+     * this method is unable to infer repeating connections to same basePath*/
+    protected<S> void connect(BasePath<S> other, Function<S, T> map) {
+        thrower.run();
+        setActivationListener(activationListenerCreator(() -> other, sInt -> acceptVersionValue(new Pair.Immutables.Int<>(sInt.getInt(), map.apply(sInt.getValue())))));
     }
 
     public BasePath() {
