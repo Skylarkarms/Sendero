@@ -76,7 +76,7 @@ public final class AtomicUtils {
         }
 
         public TaggedAtomicReference() {
-            reference = new AtomicReference<>();
+            reference = new AtomicReference<>(FIRST_PAIR);
             equality = null;
             valueSupplier = builderNoEquality();
         }

@@ -1,10 +1,8 @@
-import sendero.BasePath;
-import sendero.Gates;
-import sendero.Links;
-import sendero.Path;
+import sendero.*;
 
 import java.util.HashMap;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public class TestHard {
 
@@ -31,7 +29,6 @@ public class TestHard {
     );
 
     Gates.Out.Single<String> BLinkOut = BLink.out(Gates.Out.Single.class);
-
 
     void commence() {
         BLinkOut.register(

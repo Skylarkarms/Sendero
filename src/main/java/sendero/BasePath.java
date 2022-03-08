@@ -23,11 +23,11 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         super(selfMap);
     }
 
-    protected BasePath(Holders.DispatcherHolder.Builder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
+    protected BasePath(Builders.HolderBuilder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
         super(holderBuilder, actMgmtBuilder);
     }
 
-    protected BasePath(Holders.DispatcherHolder.Builder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
+    protected BasePath(Builders.HolderBuilder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
         super(holderBuilder, actMgmtBuilder);
     }
 
@@ -120,11 +120,11 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
             super(selfMap);
         }
 
-        protected ToMany(Holders.DispatcherHolder.Builder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
+        protected ToMany(Builders.HolderBuilder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
             super(holderBuilder, actMgmtBuilder);
         }
 
-        protected ToMany(Holders.DispatcherHolder.Builder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
+        protected ToMany(Builders.HolderBuilder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
             super(holderBuilder, actMgmtBuilder);
         }
 

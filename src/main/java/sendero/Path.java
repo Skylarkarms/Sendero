@@ -28,7 +28,7 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
         ) ;
     }
 
-    protected<S> Path(Holders.DispatcherHolder.Builder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+    protected<S> Path(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
         super(holderBuilder,
                 dispatcher -> ActivationManager.getBuilder().withFixed(activationListenerCreator(basePathSupplier, toAppointFun.apply(dispatcher)))
                 );
@@ -38,7 +38,7 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
 //        super(holderBuilder, actMgmtBuilder);
 //    }
 
-    protected Path(Holders.DispatcherHolder.Builder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
+    protected Path(Builders.HolderBuilder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
         super(holderBuilder, actMgmtBuilder);
     }
 

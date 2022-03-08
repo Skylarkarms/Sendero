@@ -26,51 +26,51 @@ final class Holders {
         private final Pair.Immutables.Int<T> FIRST = new Pair.Immutables.Int<>(0, INVALID);
         private final AtomicReference<Pair.Immutables.Int<T>> reference;
 
-        static<S> Builder<S> get(UnaryOperator<Builder<S>> op) {
-            return op.apply(new Builder<>());
+        static<S> Builders.HolderBuilder<S> get(UnaryOperator<Builders.HolderBuilder<S>> op) {
+            return op.apply(new Builders.HolderBuilder<>());
         }
 
-        protected static class Builder<T> {
-            private AtomicReference<Pair.Immutables.Int<T>> reference;
-            private Predicate<T> expectOutput;
-            private UnaryOperator<T> map;
-
-            protected Builder<T> withInitial(T value) {
-                reference = new AtomicReference<>(new Pair.Immutables.Int<>(1, value));
-                return this;
-            }
-
-            protected Builder<T> expectOut(Predicate<T> expectOutput) {
-                this.expectOutput = expectOutput;
-                return this;
-            }
-
-            protected Builder<T> with(UnaryOperator<T> map) {
-                this.map = map;
-                return this;
-            }
-
-            protected DispatcherHolder<T> build(Dispatcher<T> dispatcher) {
-                return new DispatcherHolder<T>(reference, map, expectOutput){
-                    @Override
-                    protected void coldDispatch(Pair.Immutables.Int<T> t) {
-                        dispatcher.coldDispatch(t);
-                    }
-
-                    @Override
-                    protected void dispatch(Pair.Immutables.Int<T> t) {
-                        dispatcher.dispatch(t);
-                    }
-                };
-            }
-
-        }
+//        public static class Builder<T> {
+//            private AtomicReference<Pair.Immutables.Int<T>> reference;
+//            private Predicate<T> expectOutput;
+//            private UnaryOperator<T> map;
+//
+//            protected Builder<T> withInitial(T value) {
+//                reference = new AtomicReference<>(new Pair.Immutables.Int<>(1, value));
+//                return this;
+//            }
+//
+//            protected Builder<T> expectOut(Predicate<T> expectOutput) {
+//                this.expectOutput = expectOutput;
+//                return this;
+//            }
+//
+//            protected Builder<T> with(UnaryOperator<T> map) {
+//                this.map = map;
+//                return this;
+//            }
+//
+//            private DispatcherHolder<T> build(Dispatcher<T> dispatcher) {
+//                return new DispatcherHolder<T>(reference, map, expectOutput){
+//                    @Override
+//                    protected void coldDispatch(Pair.Immutables.Int<T> t) {
+//                        dispatcher.coldDispatch(t);
+//                    }
+//
+//                    @Override
+//                    protected void dispatch(Pair.Immutables.Int<T> t) {
+//                        dispatcher.dispatch(t);
+//                    }
+//                };
+//            }
+//
+//        }
 
         public DispatcherHolder() {
             reference = new AtomicReference<>(FIRST);
         }
 
-        private DispatcherHolder(AtomicReference<Pair.Immutables.Int<T>> reference, UnaryOperator<T> map, Predicate<T> expectInput) {
+        DispatcherHolder(AtomicReference<Pair.Immutables.Int<T>> reference, UnaryOperator<T> map, Predicate<T> expectInput) {
             this.reference = reference == null ?  new AtomicReference<>(FIRST) : reference;
             this.map = map == null ? CLEARED_MAP : map;
             this.expectInput = expectInput == null ? CLEARED_PREDICATE : expectInput;
@@ -271,12 +271,12 @@ final class Holders {
             };
         }
 
-        protected ActivationHolder(DispatcherHolder.Builder<T> holderBuilder, Function<DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
+        protected ActivationHolder(Builders.HolderBuilder<T> holderBuilder, Function<DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
             this.holder = holderBuilder.build(this);
             this.manager = actMgmtBuilder.apply(holder).build(this::deactivationRequirements);
         }
 
-        protected ActivationHolder(DispatcherHolder.Builder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
+        protected ActivationHolder(Builders.HolderBuilder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
             this.holder = holderBuilder.build(this);
             this.manager = actMgmtBuilder.build(this::deactivationRequirements);
         }
@@ -399,14 +399,14 @@ final class Holders {
         }
 
         protected ExecutorHolder(
-                DispatcherHolder.Builder<T> holderBuilder,
+                Builders.HolderBuilder<T> holderBuilder,
                 Function<DispatcherHolder<T>,
                         ActivationManager.Builder> actMgmtBuilder
         ) {
             super(holderBuilder, actMgmtBuilder);
         }
 
-        protected ExecutorHolder(DispatcherHolder.Builder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
+        protected ExecutorHolder(Builders.HolderBuilder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
             super(holderBuilder, actMgmtBuilder);
         }
 

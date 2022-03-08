@@ -15,11 +15,11 @@ public class Links<T> extends Path<T> implements BaseLink {
         super(activationListener);
     }
 
-    private Links(Holders.DispatcherHolder.Builder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
+    private Links(Builders.HolderBuilder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
         super(holderBuilder, actMgmtBuilder);
     }
 
-    private<S> Links(Holders.DispatcherHolder.Builder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+    private<S> Links(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
         super(holderBuilder, basePathSupplier, toAppointFun);
     }
 
@@ -54,7 +54,7 @@ public class Links<T> extends Path<T> implements BaseLink {
             return absConnector.unBind();
         }
 
-        private UnBound(Holders.DispatcherHolder.Builder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
+        private UnBound(Builders.HolderBuilder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
             super(holderBuilder, actMgmtBuilder);
         }
 
@@ -164,7 +164,7 @@ public class Links<T> extends Path<T> implements BaseLink {
         }
 
         public<S> Bound(
-                UnaryOperator<Holders.DispatcherHolder.Builder<T>> dispatcherBuilder,
+                UnaryOperator<Builders.HolderBuilder<T>> dispatcherBuilder,
                 BasePath<S> fixedPath,
                 Function<S, T> map
         ) {
