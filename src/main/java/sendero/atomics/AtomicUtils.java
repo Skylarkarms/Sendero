@@ -52,10 +52,11 @@ public final class AtomicUtils {
                 return this;
             }
 
-            public void first(Tag tag, Value value) {
+            public Builder<Tag, Value> first(Tag tag, Value value) {
                 this.first = new Pair.Immutables<>(tag, value);
+                return this;
             }
-            public TaggedAtomicReference<Tag, Value> build() {
+            private TaggedAtomicReference<Tag, Value> build() {
                 return new TaggedAtomicReference<>(tagEquality, first);
             }
         }
