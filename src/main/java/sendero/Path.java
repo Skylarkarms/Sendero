@@ -110,7 +110,7 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
                     thisDomain.appoint(toAppoint); // I give to appoint
                 }
                 else {
-                    jointHolder.tryDeactivate(true);
+                    jointHolder.tryDeactivate();
                     thisDomain.demote(toAppoint);
                 }
             };
@@ -157,7 +157,7 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
                     thisDomain.appoint(toAppoint);
                 }
                 else {
-                    domainSubscriber.tryDeactivate(true);
+                    domainSubscriber.tryDeactivate();
                     thisDomain.demote(toAppoint);
                 }
             };

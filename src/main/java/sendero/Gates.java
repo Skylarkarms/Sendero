@@ -167,7 +167,9 @@ public final class Gates {
 
                 @Override
                 public void unregister(Consumer<T> consumer) {
-                    tryDeactivate(locale.remove(consumer));
+                    if (locale.remove(consumer)) {
+                        tryDeactivate();
+                    }
                 }
 
                 @Override
@@ -238,7 +240,7 @@ public final class Gates {
 
                 @Override
                 public void unregister() {
-                    tryDeactivate(locale.unregister() != null);
+                    if (locale.unregister() != null) tryDeactivate();
 
                 }
 
@@ -300,7 +302,7 @@ public final class Gates {
 
             @Override
             public void unregister(Consumer<T> consumer) {
-                tryDeactivate(locale.remove(consumer));
+                if (locale.remove(consumer)) tryDeactivate();
             }
 
             @Override
@@ -367,7 +369,7 @@ public final class Gates {
 
             @Override
             public void unregister() {
-                tryDeactivate(locale.unregister() != null);
+                if (locale.unregister() != null) tryDeactivate();
 
             }
 

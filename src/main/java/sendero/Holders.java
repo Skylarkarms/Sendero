@@ -30,42 +30,6 @@ final class Holders {
             return op.apply(new Builders.HolderBuilder<>());
         }
 
-//        public static class Builder<T> {
-//            private AtomicReference<Pair.Immutables.Int<T>> reference;
-//            private Predicate<T> expectOutput;
-//            private UnaryOperator<T> map;
-//
-//            protected Builder<T> withInitial(T value) {
-//                reference = new AtomicReference<>(new Pair.Immutables.Int<>(1, value));
-//                return this;
-//            }
-//
-//            protected Builder<T> expectOut(Predicate<T> expectOutput) {
-//                this.expectOutput = expectOutput;
-//                return this;
-//            }
-//
-//            protected Builder<T> with(UnaryOperator<T> map) {
-//                this.map = map;
-//                return this;
-//            }
-//
-//            private DispatcherHolder<T> build(Dispatcher<T> dispatcher) {
-//                return new DispatcherHolder<T>(reference, map, expectOutput){
-//                    @Override
-//                    protected void coldDispatch(Pair.Immutables.Int<T> t) {
-//                        dispatcher.coldDispatch(t);
-//                    }
-//
-//                    @Override
-//                    protected void dispatch(Pair.Immutables.Int<T> t) {
-//                        dispatcher.dispatch(t);
-//                    }
-//                };
-//            }
-//
-//        }
-
         public DispatcherHolder() {
             reference = new AtomicReference<>(FIRST);
         }
@@ -323,17 +287,18 @@ final class Holders {
         }
 
         protected void tryActivate() {
-            manager.tryActivate();
+            if (manager.tryActivate()) onStateChange(true);
         }
+
+        /**WARNING: Calls bound to race conditions*/
+        protected void onStateChange(boolean isActive) {}
 
         protected boolean isIdle() {
             return manager.isIdle();
         }
 
-        protected void tryDeactivate(boolean deactivate) {
-            if (deactivate) {
-                manager.tryDeactivate();
-            }
+        protected void tryDeactivate() {
+            if (manager.tryDeactivate()) onStateChange(false);
         }
 
         protected void setActivationListener(BooleanConsumer activationListener) {
@@ -417,7 +382,7 @@ final class Holders {
         }
 
         private void onInactive() {
-            tryDeactivate(true);
+            tryDeactivate();
             eService.decrement();
         }
 

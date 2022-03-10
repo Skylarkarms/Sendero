@@ -92,7 +92,7 @@ final class BaseLinks {
             );
             final BooleanConsumer finalConsumer = isActive -> {
                 if (isActive) domainSubscriber.tryActivate();
-                else domainSubscriber.tryDeactivate(true);
+                else domainSubscriber.tryDeactivate();
 
                 booleanConsumer.accept(isActive);
             };
@@ -138,7 +138,7 @@ final class BaseLinks {
             );
             final BooleanConsumer finalActivationListener = isActive -> {
                 if (isActive) domainSubscriber.tryActivate();
-                else domainSubscriber.tryDeactivate(true);
+                else domainSubscriber.tryDeactivate();
 
                 booleanConsumer.accept(isActive);
             };
