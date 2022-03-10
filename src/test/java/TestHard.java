@@ -1,8 +1,8 @@
-import sendero.*;
+import sendero.Gates;
+import sendero.Links;
+import sendero.Path;
 
 import java.util.HashMap;
-import java.util.function.Function;
-import java.util.function.UnaryOperator;
 
 public class TestHard {
 

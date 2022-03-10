@@ -60,7 +60,7 @@ public class SimpleLists {
                 final int version;
                 final int size;
 
-                protected static<T> Snapshot<T> initialize(T[] EMPTY_ARRAY) {
+                private static<T> Snapshot<T> initialize(T[] EMPTY_ARRAY) {
                     return new Snapshot<T>(Arrays.copyOf(EMPTY_ARRAY, 0), 0, 0);
                 }
 
@@ -91,15 +91,58 @@ public class SimpleLists {
                     }
                     return -1;
                 }
-                protected static <E> boolean remove(AtomicReference<Snapshot<E>> atomicReference, E element) {
-                    boolean wasLast;
-                    Snapshot<E> prev, next;
-                    do {
-                        prev = atomicReference.get();
-                        next = remove(element, prev);
-                        wasLast = prev.size == 1 && next != prev;
-                    } while (!atomicReference.compareAndSet(prev, next));
-                    return wasLast;
+                private static final int retries = 3;
+                private static <E> boolean remove(AtomicReference<Snapshot<E>> atomicReference, E element) {
+                    //When a rapid succession of actions are executed, where an "add" followed by a "remove" is performed && the Collection has 0 items
+                    //The remove may arrive before the add,
+                    // And the final state will result in an item being added and size being 1, when it should have been 0.
+                    // to prevent a wrong final state we must retry until the add arrives.
+
+                    int i = 0;
+
+                    Snapshot<E> prev = atomicReference.get(),
+                            next = remove(element, prev);
+                    boolean wasLast = prev.size == 1 && next != prev,
+                            zeroSize = prev.size <= 0, shouldRetry;
+
+//                    boolean wasLast, shouldRetry;
+//                    Snapshot<E> prev, next;
+//
+                    for (boolean same = true;;i++) {
+                        if (!same) {
+                            zeroSize = prev.size <= 0;
+                        }
+                        shouldRetry = zeroSize && i <= retries;
+                        if (!zeroSize && !same) {
+                            next = remove(element, prev);
+                            wasLast = prev.size == 1 && next != prev;
+                        }
+                        //If the item is not found after all retries, then next remains the same as prev and wasLast == false.
+                        if (!shouldRetry && atomicReference.compareAndSet(prev, next)) return wasLast;
+                        if (same == (same = (prev == (prev = atomicReference.get()))) && !shouldRetry) return false;
+                    }
+
+
+//                    do {
+//                        prev = atomicReference.get();
+//                        shouldRetry = prev.size <= 0;
+//                        if (i == retries && shouldRetry) return false;
+//                        i++;
+//                        if (!shouldRetry) {
+//                            next = remove(element, prev);
+//                            wasLast = prev.size == 1 && next != prev;
+//
+//                        }
+//                    } while (shouldRetry || !atomicReference.compareAndSet(prev, next));
+//                    return wasLast;
+//                    boolean wasLast;
+//                    Snapshot<E> prev, next;
+//                    do {
+//                        prev = atomicReference.get();
+//                        next = remove(element, prev);
+//                        wasLast = prev.size == 1 && next != prev;
+//                    } while (!atomicReference.compareAndSet(prev, next));
+//                    return wasLast;
                 }
                 protected static <E> boolean removeIf(AtomicReference<Snapshot<E>> atomicReference, Predicate<E> removeIf) {
                     boolean wasLast;

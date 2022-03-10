@@ -1,8 +1,5 @@
 import sendero.Gates;
 import sendero.Merge;
-import sendero.Path;
-
-import java.util.function.UnaryOperator;
 
 public class Main {
     public static void main(String[] args) {

@@ -9,7 +9,7 @@ import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
 public final class AtomicUtils {
-    public static class TaggedAtomicReference<Tag, Value> {
+    public static class TaggedAtomicReference<Tag, Value> implements Supplier<Value> {
 
         @SuppressWarnings("unchecked")
         private final Tag NO_TAG = (Tag) new Object();
@@ -41,6 +41,16 @@ public final class AtomicUtils {
 
         public static<T, V> TaggedAtomicReference<T, V> build(UnaryOperator<Builder<T, V>> op) {
             return op.apply(new Builder<>()).build();
+        }
+
+        @Override
+        public Value get() {
+            return reference.get().secondValue;
+        }
+
+        public Tag getTag() {
+            Tag t = reference.get().firstValue;
+            return t == NO_TAG ? null : t;
         }
 
         public static class Builder<Tag, Value> {

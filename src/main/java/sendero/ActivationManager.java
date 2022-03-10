@@ -120,10 +120,12 @@ abstract class ActivationManager {
     protected boolean tryActivate() {
         return switchRegister.on();
     }
-    protected void tryDeactivate() {
+
+    protected boolean tryDeactivate() {
         if (deactivationRequirements()) {
-            switchRegister.off();
+            return switchRegister.off();
         }
+        return false;
     }
 
     protected void setActivationListener(BooleanConsumer listener) {

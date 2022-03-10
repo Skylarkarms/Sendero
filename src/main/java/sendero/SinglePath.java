@@ -6,7 +6,6 @@ import sendero.pairs.Pair;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
 public class SinglePath<T> extends BasePath.Injective<T> implements Forkable<T> {
@@ -85,7 +84,7 @@ public class SinglePath<T> extends BasePath.Injective<T> implements Forkable<T> 
                     thisDomain.appoint(toAppoint); // I give to appoint
                 }
                 else {
-                    jointHolder.tryDeactivate(true);
+                    jointHolder.tryDeactivate();
                     thisDomain.demote();
                 }
             };
@@ -132,7 +131,7 @@ public class SinglePath<T> extends BasePath.Injective<T> implements Forkable<T> 
                     thisDomain.appoint(toAppoint);
                 }
                 else {
-                    domainSubscriber.tryDeactivate(true);
+                    domainSubscriber.tryDeactivate();
                     thisDomain.demote();
                 }
             };

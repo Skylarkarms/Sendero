@@ -27,11 +27,6 @@ public class ConsumerRegister<T> implements Consumer<T>, Register<T> {
         }
     }
 
-//    @Override
-//    public boolean isRegistered() {
-//        return core != NOT_SET;
-//    }
-
     private final Function<T, Runnable> acceptor = t -> () -> core.accept(t);
 
     private static final Runnable NOT_ACCEPTED = Functions.emptyRunnable();
@@ -64,7 +59,6 @@ public class ConsumerRegister<T> implements Consumer<T>, Register<T> {
         clearScope();
     }
 
-    /*Todo: TEST on BooleanRegisters.Atomic*/
     public interface IConsumerRegister<T> extends Consumer<T>{
         boolean isRegistered();
         /**locks on to Consumer to maintain versions consistency
@@ -161,14 +155,25 @@ public class ConsumerRegister<T> implements Consumer<T>, Register<T> {
 
         @Override
         public RegisterSnapshot<S> register(Supplier<S> currentValue, Consumer<T> toRegister) {
-            Consumer<T> prev;
-            S curVal;
-            do {
-                prev = ref.get();
-                curVal = currentValue.get();
-                if (prev == toRegister) return new RegisterSnapshot<>(curVal, /*toRegister, */false);
-            } while (!ref.compareAndSet(prev, toRegister));
-            return new RegisterSnapshot<>(curVal, /*prev == CLEARED ? null : prev,*/ true);
+
+            Consumer<T> prev = ref.get();
+            boolean shouldReplace = prev != toRegister;
+            S current = currentValue.get();
+            RegisterSnapshot<S> snapshot = !shouldReplace ?
+                    new RegisterSnapshot<>(current, false) :
+                    new RegisterSnapshot<>(current, true);
+            for (boolean same = true;;) {
+                if (!same) {
+                    current = currentValue.get();
+                    shouldReplace = prev != toRegister;
+                    snapshot = !shouldReplace ?
+                            new RegisterSnapshot<>(current, false) :
+                            new RegisterSnapshot<>(current, true);
+                }
+                if (shouldReplace && ref.compareAndSet(prev, toRegister)) return snapshot;
+                if (same == (same = (prev == (prev = ref.get())))) return snapshot;
+            }
+
         }
 
         @Override
@@ -178,14 +183,24 @@ public class ConsumerRegister<T> implements Consumer<T>, Register<T> {
                 BiFunction<Source, Consumer<T>, Snapshot> onSet,
                 Consumer<T> toRegister
         ) {
-            Consumer<T> prev;
-            Source current;
-            do {
-                prev = ref.get();
-                current = sourceSupplier.get();
-                if (prev == toRegister) return onCancel.apply(current);
-            } while (!ref.compareAndSet(prev, toRegister));
-            return onSet.apply(current, prev);
+
+            Consumer<T> prev = ref.get();
+            boolean shouldReplace = prev != toRegister;
+            Source current = sourceSupplier.get();
+            Snapshot snapshot = !shouldReplace ?
+                    onCancel.apply(current) :
+                    onSet.apply(current, prev);
+            for (boolean same = true;;) {
+                if (!same) {
+                    current = sourceSupplier.get();
+                    shouldReplace = prev != toRegister;
+                    snapshot = !shouldReplace ?
+                            onCancel.apply(current) :
+                            onSet.apply(current, prev);
+                }
+                if (shouldReplace && ref.compareAndSet(prev, toRegister)) return snapshot;
+                if (same == (same = (prev == (prev = ref.get())))) return snapshot;
+            }
         }
 
         @Override
@@ -196,7 +211,7 @@ public class ConsumerRegister<T> implements Consumer<T>, Register<T> {
                 prev = ref.get();
                 curVal = currentValue.get();
             } while (!ref.compareAndSet(prev, CLEARED));
-            return new RegisterSnapshot<>(curVal, /*prev == CLEARED ? null : prev,*/ false);
+            return new RegisterSnapshot<>(curVal, false);
         }
 
         @Override
@@ -324,6 +339,12 @@ public class ConsumerRegister<T> implements Consumer<T>, Register<T> {
                 return binaryConsumerRegister.register(volatileBinaryState, newConsumer);
             }
 
+            /**Attaching a lambda BooleanConsumer, whose captured content may have changed will:
+             * reconnect an observer that is already present in the Collection
+             * disconnect one of the two repeating observers.
+             *
+             * Everything happens in the same thread.
+             * */
             @Override
             public void registerDispatch(BooleanConsumer newConsumer) {
                 boolean wasActive = volatileBinaryState.getAsBoolean();
@@ -411,14 +432,25 @@ public class ConsumerRegister<T> implements Consumer<T>, Register<T> {
 
             @Override
             public BooleanSnapshot register(BooleanSupplier booleanValue, BooleanConsumer toRegister) {
-                boolean current;
-                BooleanConsumer prev;
-                do {
-                    prev = ref.get();
-                    current = booleanValue.getAsBoolean();
-                    if (prev == toRegister) return new BooleanSnapshot(current, toRegister, false);
-                } while (!ref.compareAndSet(prev, toRegister));
-                return new BooleanSnapshot(current, prev == CLEARED ? null : prev, true);
+                boolean current = booleanValue.getAsBoolean();
+                BooleanConsumer prev = ref.get();
+                boolean shouldReplace = prev != toRegister;
+                BooleanSnapshot snapshot = !shouldReplace ?
+                        new BooleanSnapshot(current, toRegister, false) :
+                        new BooleanSnapshot(current, prev == CLEARED ? null : prev, true);
+
+                for (boolean same = true;;) {
+                    if (!same) {
+                        current = booleanValue.getAsBoolean();
+                        shouldReplace = prev != toRegister;
+                        snapshot = !shouldReplace ?
+                                new BooleanSnapshot(current, toRegister, false) :
+                                new BooleanSnapshot(current, prev == CLEARED ? null : prev, true);
+                    }
+                    if (shouldReplace && ref.compareAndSet(prev, toRegister)) return snapshot;
+                    if (same == (same = (prev == (prev = ref.get())))) return snapshot;
+                }
+
             }
 
             @Override
