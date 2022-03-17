@@ -18,6 +18,9 @@ public final class BinaryEventRegisters {
         BooleanConsumer unregister();
         BooleanConsumer unregisterAndOff();
         boolean isRegistered();
+        interface Atomic extends BinaryEventRegister {
+            boolean unregister(BooleanConsumer expect);
+        }
     }
     private static class Sequential implements BinaryEventRegister {
         private final Switchers.Switch aSwitch = Switchers.getSequential();
@@ -53,6 +56,15 @@ public final class BinaryEventRegisters {
             return last;
         }
 
+//        @Override
+//        public boolean unregister(BooleanConsumer expect) {
+//            if (binaryConsumerRegister.isRegistered())
+//            BooleanConsumer last = binaryConsumerRegister.unregister(expect, isActive());
+//            boolean listenerFound = last != null;
+//            if (listenerFound && isActive()) last.accept(false);
+//            return listenerFound;
+//        }
+
         @Override
         public BooleanConsumer unregisterAndOff() {
             aSwitch.off();
@@ -74,7 +86,7 @@ public final class BinaryEventRegisters {
      *
      * If both were heavily related, contention between boolean changes and consumer changes both with heavy traffic would be required to access a single atomic pipeline.
      * By using a loose relation between both, the only requirement is a volatile read of the current boolean state at the moment of new registration, with minor drawbacks explained*/
-    private static class AtomicBinaryEventRegisterImpl implements BinaryEventRegister {
+    private static class AtomicBinaryEventRegisterImpl implements BinaryEventRegister.Atomic {
         private final Switchers.Switch state = Switchers.getAtomic();
         private final ConsumerRegister.BinaryRegisters.StateAwareBinaryConsumerRegister register = ConsumerRegister.BinaryRegisters.getStateAware(state::isActive);
         @Override
@@ -113,6 +125,11 @@ public final class BinaryEventRegisters {
         @Override
         public boolean isRegistered() {
             return register.isRegistered();
+        }
+
+        @Override
+        public boolean unregister(BooleanConsumer expect) {
+            return false;
         }
     }
 

@@ -4,16 +4,21 @@ import sendero.functions.Functions;
 import sendero.interfaces.BooleanConsumer;
 import sendero.interfaces.Updater;
 import sendero.pairs.Pair;
+import sendero.threshold_listener.ThresholdListeners;
 
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
 final class Holders {
 
-    interface ConsumerUpdater<T> extends Updater<T>, Consumer<T> {
+    interface HolderIO<T> extends Updater<T>, Consumer<T>, Supplier<T> {
     }
 
-    interface StatefulHolder<T> extends ConsumerUpdater<T>, Supplier<T> {
+//    interface StatefulHolder<T> extends BaseHolder<T> {
+    interface StatefulHolder<T> extends HolderIO<T> {
         /**The map function happens BEFORE the expect predicate test*/
         StatefulHolder<T> setMap(UnaryOperator<T> map);
         StatefulHolder<T> expectIn(Predicate<T> expect);
@@ -26,9 +31,9 @@ final class Holders {
         private final Pair.Immutables.Int<T> FIRST = new Pair.Immutables.Int<>(0, INVALID);
         private final AtomicReference<Pair.Immutables.Int<T>> reference;
 
-        static<S> Builders.HolderBuilder<S> get(UnaryOperator<Builders.HolderBuilder<S>> op) {
-            return op.apply(new Builders.HolderBuilder<>());
-        }
+//        static<S> Builders.HolderBuilder<S> get(UnaryOperator<Builders.HolderBuilder<S>> op) {
+//            return op.apply(Builders.get());
+//        }
 
         public DispatcherHolder() {
             reference = new AtomicReference<>(FIRST);
@@ -40,14 +45,14 @@ final class Holders {
             this.expectInput = expectInput == null ? CLEARED_PREDICATE : expectInput;
         }
 
-        DispatcherHolder(T initialValue) {
-            reference = new AtomicReference<>(new Pair.Immutables.Int<>(1, initialValue));
-        }
-
-        DispatcherHolder(T initialValue, Predicate<T> expectOutput) {
-            setExpectOutput(expectOutput);
-            reference = new AtomicReference<>(new Pair.Immutables.Int<>(1, initialValue));
-        }
+//        DispatcherHolder(T initialValue) {
+//            reference = new AtomicReference<>(new Pair.Immutables.Int<>(1, initialValue));
+//        }
+//
+//        DispatcherHolder(T initialValue, Predicate<T> expectOutput) {
+//            setExpectOutput(expectOutput);
+//            reference = new AtomicReference<>(new Pair.Immutables.Int<>(1, initialValue));
+//        }
 
         private final UnaryOperator<T> CLEARED_MAP = UnaryOperator.identity();
         private volatile UnaryOperator<T> map = CLEARED_MAP;
@@ -174,16 +179,16 @@ final class Holders {
         }
 
     }
-
     static class ActivationHolder<T> extends Dispatcher<T> {
 
         protected boolean deactivationRequirements() {
             return true;
         }
 
-        private final ActivationManager manager;
+        /*private*/ final ActivationManager manager;
 
-        protected boolean activationListenerIsSet() {
+        /**For LinkHolder*/
+        /*protected*/ boolean activationListenerIsSet() {
             return manager.activationListenerIsSet();
         }
 
@@ -278,7 +283,8 @@ final class Holders {
             if (res.aBoolean) tryActivate();
             int snapshot = res.value;
             Runnable runnable = () -> {
-                final Pair.Immutables.Int<T> holderSnap  = holder.getSnapshot();
+                final Pair.Immutables.Int<T> holderSnap  = holder.getSnapshot();//this method could be passed downStream along
+                // with Manager in the executor class, Holder need sto be made package private.
                 if (holderSnap != null && snapshot == holderSnap.getInt() && holder.outPutTest(holderSnap.getValue())) {
                     subscriber.accept(map.apply(holderSnap));
                 }
@@ -301,7 +307,7 @@ final class Holders {
             if (manager.tryDeactivate()) onStateChange(false);
         }
 
-        protected void setActivationListener(BooleanConsumer activationListener) {
+        /*protected*/ void setActivationListener(BooleanConsumer activationListener) {
             manager.setActivationListener(activationListener);
         }
 
@@ -346,11 +352,14 @@ final class Holders {
             holder.setExpectOutput(expectOutput);
         }
 
+        protected void invalidate() {
+            holder.invalidate();
+        }
+
     }
 
-
     abstract static class ExecutorHolder<T> extends ActivationHolder<T> {
-        private final ActivationManager.EService eService = ActivationManager.EService.INSTANCE;
+        private final EService eService = EService.INSTANCE;
 
         public ExecutorHolder(boolean activationListener) {
             super(activationListener);
@@ -417,6 +426,39 @@ final class Holders {
         protected void deactivate() {
             onInactive();
         }
+
+        public enum EService {
+            INSTANCE;
+            private ExecutorService service;
+            private boolean active;
+            private final ThresholdListeners.ThresholdListener thresholdSwitch = ThresholdListeners.getAtomicOf(
+                    0, 0,
+                    isActive -> {
+                        if (isActive) create();
+                        else destroy();
+                    }
+            );
+            public void create() {
+                if (thresholdSwitch.thresholdCrossed() && !active) {
+                    active = true;
+                    service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+                }
+            }
+            public void destroy() {
+                active = false;
+                service.shutdown();
+            }
+            public void increment() {thresholdSwitch.increment();}
+            public void decrement() {thresholdSwitch.decrement();}
+            public void execute(Runnable runnable) {
+                if (thresholdSwitch.thresholdCrossed()
+                        && service != null
+                        && !service.isShutdown()) {
+                    service.execute(runnable);
+                }
+            }
+        }
+
 
     }
 }

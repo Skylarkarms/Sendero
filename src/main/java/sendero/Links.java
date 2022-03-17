@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.*;
 
 import static sendero.Links.Bound.appointAcceptCreator;
+import static sendero.Links.Bound.appointUpdateCreator;
 
 public class Links<T> extends Path<T> implements BaseLink {
 
@@ -19,13 +20,13 @@ public class Links<T> extends Path<T> implements BaseLink {
         super(holderBuilder, actMgmtBuilder);
     }
 
-    private<S> Links(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+    <S> Links(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
         super(holderBuilder, basePathSupplier, toAppointFun);
     }
 
-    public<S> Links(Supplier<BasePath<S>> basePathSupplier, Function<Consumer<Pair.Immutables.Int<T>>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
-        super(basePathSupplier, toAppointFun);
-    }
+//    public<S> Links(Supplier<BasePath<S>> basePathSupplier, Function<Consumer<Pair.Immutables.Int<T>>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+//        super(basePathSupplier, toAppointFun);
+//    }
 
     @Override
     public boolean isBound() {
@@ -109,7 +110,7 @@ public class Links<T> extends Path<T> implements BaseLink {
             throw new IllegalStateException("Not allowed!!");
         }
 
-        private static <T, S> Consumer<Pair.Immutables.Int<S>> appointUpdateCreator(
+        static <T, S> Consumer<Pair.Immutables.Int<S>> appointUpdateCreator(
                 AtomicInteger version,
                 Updater<T> intConsumer,
                 BiFunction<S, T, T> update
@@ -151,7 +152,7 @@ public class Links<T> extends Path<T> implements BaseLink {
                 Predicate<T> expectOut
         ) {
             super(
-                    Holders.DispatcherHolder.get(sBuilder -> sBuilder.withInitial(initialValue).expectOut(expectOut)),
+                    Builders.get(sBuilder -> sBuilder.withInitial(initialValue).expectOut(expectOut)),
                     () -> fixedPath,
                     new Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>>() {
                         private final AtomicInteger version = new AtomicInteger();
@@ -169,7 +170,7 @@ public class Links<T> extends Path<T> implements BaseLink {
                 Function<S, T> map
         ) {
             super(
-                    Holders.DispatcherHolder.get(dispatcherBuilder),
+                    Builders.get(dispatcherBuilder),
                     () -> fixedPath,
                     tDispatcherHolder -> appointAcceptCreator(tDispatcherHolder::acceptVersionValue, map)
             );
@@ -180,8 +181,9 @@ public class Links<T> extends Path<T> implements BaseLink {
                 Function<S, T> map
         ) {
             super(
+                    Builders.get(UnaryOperator.identity()),
                     () -> fixedPath,
-                    tDispatcherHolder -> appointAcceptCreator(tDispatcherHolder, map)
+                    tDispatcherHolder -> appointAcceptCreator(tDispatcherHolder::acceptVersionValue, map)
             );
         }
 
@@ -197,14 +199,37 @@ public class Links<T> extends Path<T> implements BaseLink {
         }
     }
 
-    static class SingleLink<T> extends BasePath.Injective<T> {
+    public static class SingleLink<T> extends BasePath.Injective<T> {
 
 
         protected <S> SingleLink(Supplier<BasePath<S>> basePathSupplier, Function<Consumer<Pair.Immutables.Int<T>>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
             super(basePathSupplier, toAppointFun);
         }
 
+        <S> SingleLink(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+            super(holderBuilder, basePathSupplier, toAppointFun);
+        }
+
         static class Bound<T> extends SingleLink<T> {
+
+            protected  <S> Bound(
+                    T initialValue,
+                    BasePath<S> fixedPath,
+                    BiFunction<S, T, T> update,
+                    Predicate<T> expectOut
+            ) {
+                super(
+                        Builders.get(sBuilder -> sBuilder.withInitial(initialValue).expectOut(expectOut)),
+                        () -> fixedPath,
+                        new Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>>() {
+                            private final AtomicInteger version = new AtomicInteger();
+                            @Override
+                            public Consumer<Pair.Immutables.Int<S>> apply(Holders.DispatcherHolder<T> tDispatcherHolder) {
+                                return appointUpdateCreator(version, tDispatcherHolder, update);
+                            }
+                        }
+                );
+            }
 
             <S> Bound(
                     BasePath<S> fixedPath,
@@ -215,6 +240,8 @@ public class Links<T> extends Path<T> implements BaseLink {
                         tDispatcherHolder -> appointAcceptCreator(tDispatcherHolder, map)
                 );
             }
+
+
         }
     }
 }

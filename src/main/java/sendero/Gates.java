@@ -109,13 +109,14 @@ public final class Gates {
         }
     }
     static final class Outs {
+
         static class OutBasePath<T> extends Path<T> {
             public OutBasePath() {
             }
 
-            public OutBasePath(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
-                super(selfMap);
-            }
+//            public OutBasePath(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+//                super(selfMap);
+//            }
 
             protected static class Many<T> extends OutBasePath<T> implements Out.Many<T> {
 
@@ -186,9 +187,9 @@ public final class Gates {
                 private final ConsumerRegister.IConsumerRegister.SnapshottingConsumerRegister<Integer, T>
                         locale = ConsumerRegister.IConsumerRegister.getInstance(this::getVersion);
 
-                public Single(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
-                    super(selfMap);
-                }
+//                public Single(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+//                    super(selfMap);
+//                }
 
                 @Override
                 protected void dispatch(Pair.Immutables.Int<T> t) {

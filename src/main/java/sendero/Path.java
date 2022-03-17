@@ -19,17 +19,17 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
         super(activationListener);
     }
 
-    protected Path(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+    Path(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
         super(selfMap);
     }
 
-    protected<S> Path(Supplier<BasePath<S>> basePathSupplier, Function<Consumer<Pair.Immutables.Int<T>>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
-        super(
-                dispatcher -> BasePath.activationListenerCreator(basePathSupplier, toAppointFun.apply(dispatcher))
-        ) ;
-    }
+//    protected<S> Path(Supplier<BasePath<S>> basePathSupplier, Function<Consumer<Pair.Immutables.Int<T>>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+//        super(
+//                dispatcher -> BasePath.activationListenerCreator(basePathSupplier, toAppointFun.apply(dispatcher))
+//        ) ;
+//    }
 
-    protected<S> Path(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+    <S> Path(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
         super(holderBuilder,
                 dispatcher -> ActivationManager.getBuilder().withFixed(BasePath.activationListenerCreator(basePathSupplier, toAppointFun.apply(dispatcher)))
                 );
@@ -203,6 +203,5 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
                 switchMutateFunctionBuilder(mutate)
         ) {};
     }
-
 }
 

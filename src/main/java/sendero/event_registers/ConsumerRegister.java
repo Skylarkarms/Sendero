@@ -253,6 +253,7 @@ public class ConsumerRegister<T> implements Consumer<T>, Register<T> {
             interface Atomic extends BinaryConsumerRegister {
                 BooleanSnapshot register(BooleanSupplier booleanValue, BooleanConsumer toRegister);
                 BooleanSnapshot unregister(BooleanSupplier booleanValue);
+                BooleanSnapshot unregister(BooleanConsumer expect, BooleanSupplier booleanValue);
                 final class BooleanSnapshot {
                     public final boolean set;
                     public final boolean snapshotValue;
@@ -310,6 +311,7 @@ public class ConsumerRegister<T> implements Consumer<T>, Register<T> {
             /**Dispatches false if the state was true at thte moment of unregister
              * @return*/
             BooleanConsumer unregisterDispatch();
+            BooleanConsumer unregisterDispatch(BooleanConsumer expect);
             BooleanConsumer unregister();
         }
         protected static final class StateAwareBinaryConsumerRegisterImpl implements StateAwareBinaryConsumerRegister {
@@ -406,12 +408,25 @@ public class ConsumerRegister<T> implements Consumer<T>, Register<T> {
             }
 
             @Override
+            public BooleanConsumer unregisterDispatch(BooleanConsumer expect) {
+                final BinaryConsumerRegister.Atomic.BooleanSnapshot removed = snapshottingUnregister(expect);
+                final BooleanConsumer prev = removed.prev;
+                if (removed.snapshotValue) {
+                    if (prev != null) prev.accept(false);
+                }
+                return prev;
+            }
+
+            @Override
             public BooleanConsumer unregister() {
                 return binaryConsumerRegister.unregister();
             }
 
             private BinaryConsumerRegister.Atomic.BooleanSnapshot snapshottingUnregister() {
                 return binaryConsumerRegister.unregister(volatileBinaryState);
+            }
+            private BinaryConsumerRegister.Atomic.BooleanSnapshot snapshottingUnregister(BooleanConsumer expect) {
+                return binaryConsumerRegister.unregister(expect, volatileBinaryState);
             }
         }
 
@@ -428,6 +443,21 @@ public class ConsumerRegister<T> implements Consumer<T>, Register<T> {
                     current = booleanValue.getAsBoolean();
                 } while (!ref.compareAndSet(prev, CLEARED));
                 return new BooleanSnapshot(current, prev == CLEARED ? null : prev, true);
+            }
+
+            @Override
+            public BooleanSnapshot unregister(BooleanConsumer expect, BooleanSupplier booleanValue) {
+                BooleanConsumer prev = ref.get();
+                boolean current = booleanValue.getAsBoolean(), set = prev == expect;
+                for (boolean same = true;;) {
+                    if (!same) {
+                        current = booleanValue.getAsBoolean();
+                        set = prev == expect;
+                    }
+                    if (set && ref.compareAndSet(prev, CLEARED)) break;
+                    if (same == (prev == (prev = ref.get()))) break; //If same then !set
+                }
+                return new BooleanSnapshot(current, prev == CLEARED ? null : prev, set);
             }
 
             @Override

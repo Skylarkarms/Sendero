@@ -7,10 +7,16 @@ import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 public class Builders {
+    public static <T>HolderBuilder<T> get(UnaryOperator<Builders.HolderBuilder<T>> op) {
+        return op.apply(new HolderBuilder<>());
+    }
     public static class HolderBuilder<T> {
         private AtomicReference<Pair.Immutables.Int<T>> reference;
         private Predicate<T> expectOutput;
         private UnaryOperator<T> map;
+
+        private HolderBuilder() {
+        }
 
         public HolderBuilder<T> withInitial(T value) {
             reference = new AtomicReference<>(new Pair.Immutables.Int<>(1, value));

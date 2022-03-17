@@ -6,6 +6,7 @@ import sendero.pairs.Pair;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
 public class SinglePath<T> extends BasePath.Injective<T> implements Forkable<T> {
@@ -17,6 +18,16 @@ public class SinglePath<T> extends BasePath.Injective<T> implements Forkable<T> 
 //    public<S> SinglePath(Supplier<BasePath<S>> basePathSupplier, Function<Consumer<Pair.Immutables.Int<T>>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
 //        super(basePathSupplier, toAppointFun);
 //    }
+
+//    <S> SinglePath(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+//        super(holderBuilder,
+//                dispatcher -> ActivationManager.getBuilder().withFixed(BasePath.activationListenerCreator(basePathSupplier, toAppointFun.apply(dispatcher)))
+//        );
+//    }
+
+//    super(holderBuilder,
+//    dispatcher -> ActivationManager.getBuilder().withFixed(BasePath.activationListenerCreator(basePathSupplier, toAppointFun.apply(dispatcher)))
+//            );
 
     private <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> mainForkingFunctionBuilder(Function<Consumer<Pair.Immutables.Int<S>>, Consumer<Pair.Immutables.Int<T>>> converter) {
         return intConsumer -> {

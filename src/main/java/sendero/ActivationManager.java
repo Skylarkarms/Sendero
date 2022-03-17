@@ -14,37 +14,37 @@ abstract class ActivationManager {
 
     private final Switchers.Switch switchRegister;
 
-    public enum EService {
-        INSTANCE;
-        private ExecutorService service;
-        private boolean active;
-        private final ThresholdListeners.ThresholdListener thresholdSwitch = ThresholdListeners.getAtomicOf(
-                0, 0,
-                isActive -> {
-                    if (isActive) create();
-                    else destroy();
-                }
-        );
-        public void create() {
-            if (thresholdSwitch.thresholdCrossed() && !active) {
-                active = true;
-                service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-            }
-        }
-        public void destroy() {
-            active = false;
-            service.shutdown();
-        }
-        public void increment() {thresholdSwitch.increment();}
-        public void decrement() {thresholdSwitch.decrement();}
-        public void execute(Runnable runnable) {
-            if (thresholdSwitch.thresholdCrossed()
-                    && service != null
-                    && !service.isShutdown()) {
-                service.execute(runnable);
-            }
-        }
-    }
+//    public enum EService {
+//        INSTANCE;
+//        private ExecutorService service;
+//        private boolean active;
+//        private final ThresholdListeners.ThresholdListener thresholdSwitch = ThresholdListeners.getAtomicOf(
+//                0, 0,
+//                isActive -> {
+//                    if (isActive) create();
+//                    else destroy();
+//                }
+//        );
+//        public void create() {
+//            if (thresholdSwitch.thresholdCrossed() && !active) {
+//                active = true;
+//                service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+//            }
+//        }
+//        public void destroy() {
+//            active = false;
+//            service.shutdown();
+//        }
+//        public void increment() {thresholdSwitch.increment();}
+//        public void decrement() {thresholdSwitch.decrement();}
+//        public void execute(Runnable runnable) {
+//            if (thresholdSwitch.thresholdCrossed()
+//                    && service != null
+//                    && !service.isShutdown()) {
+//                service.execute(runnable);
+//            }
+//        }
+//    }
 
     protected ActivationManager() {
         switchRegister = Switchers.getAtomic();
@@ -94,6 +94,8 @@ abstract class ActivationManager {
         }
     }
 
+    private static final Runnable ON_MUTABLE = Functions.emptyRunnable();
+
     private ActivationManager(BooleanConsumer fixedActivationListener, boolean mutableActivationListener) {
         this.switchRegister = fixedActivationListener != null ?
                 BinaryEventRegisters.getAtomicWith(fixedActivationListener)
@@ -102,7 +104,7 @@ abstract class ActivationManager {
                         BinaryEventRegisters.getAtomicRegister()
                         :
                         Switchers.getAtomic();
-        this.thrower = mutableActivationListener ? Functions.emptyRunnable() : createThrower();
+        this.thrower = mutableActivationListener ? ON_MUTABLE : createThrower();
     }
 
     protected ActivationManager(boolean withActivationListener) {
@@ -145,8 +147,16 @@ abstract class ActivationManager {
         return ((BinaryEventRegisters.BinaryEventRegister)switchRegister).unregister();
     }
 
+    protected boolean expectClearActivationListener(BooleanConsumer activationListener) {
+        return ((BinaryEventRegisters.BinaryEventRegister.Atomic)switchRegister).unregister(activationListener);
+    }
+
     protected boolean isIdle() {
         return !switchRegister.isActive();
+    }
+
+    boolean isMutable() {
+        return this.thrower == ON_MUTABLE;
     }
 }
 
