@@ -1,23 +1,20 @@
 package sendero;
 
 import sendero.atomics.AtomicUtils;
-import sendero.event_registers.BinaryEventRegisters;
 import sendero.event_registers.ConsumerRegister;
 import sendero.interfaces.BooleanConsumer;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;
 
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.*;
 
 public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
 
-    //Todo: Does not need to be a path
-    private final SelfAppointer<T> pathListener = new SelfAppointer<>(this);
+    /*private*/ final SelfAppointer<T> selfAppointer = new SelfAppointer<>(this);
 
     //Todo: this needs to ne pushed downstream
-    private final ActivePathListener<T> absBaseLinkManager;
+//    private final ActivePathListener<T> absBaseLinkManager;
     private final boolean mutableManager;
     private void throwException() {
         throw new IllegalStateException(
@@ -26,41 +23,38 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
                         "\n BasePath(boolean mutableActivationListener) set true, " +
                         "\n Or ActivationManager.Builder withMutable(boolean activationListener) set true");
     }
-    private ActivePathListener<T> build(ActivationManager manager) {
-        return mutableManager ? new ActivePathListener<T>(manager, pathListener) {
-            @Override
-            void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
-                BasePath.this.acceptVersionValue(versionValue);
-            }
-        } : null;
-    }
+//    private ActivePathListener<T> build(ActivationManager manager, SelfAppointer<T> selfAppointer) {
+//        return mutableManager ? new ActivePathListener<T>(manager, selfAppointer) {
+//            @Override
+//            void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
+//                BasePath.this.acceptVersionValue(versionValue);
+//            }
+//        } : null;
+//    }
 
     public BasePath(boolean mutableActivationListener) {
         super(mutableActivationListener);
         mutableManager = mutableActivationListener;
-        absBaseLinkManager = build(manager);
+//        absBaseLinkManager = build(manager, selfAppointer);
     }
-//    /**Disconnect by unregistering activationListener
-//     * this method is unable to infer repeating connections to same basePath*/
-//    protected<S> void connect(BasePath<S> other, Function<S, T> map) {
-//        setActivationListener(activationListenerCreator(() -> other, sInt -> acceptVersionValue(new Pair.Immutables.Int<>(sInt.getInt(), map.apply(sInt.getValue())))));
-//    }
-    static class Appointer<A> {
-        public void setAppointerVersion(int appointerVersion) {
-            this.appointerVersion = appointerVersion;
-        }
 
-        int appointerVersion;
+    static class Appointer<A> {
+        final int appointerVersion;
         final BasePath<A> producer;
         final Consumer<Pair.Immutables.Int<A>> toAppoint;
 
-        Appointer(int appointerVersion, BasePath<A> producer, Consumer<Pair.Immutables.Int<A>> toAppoint) {
-            this.appointerVersion = appointerVersion;
-            this.producer = producer;
-            this.toAppoint = toAppoint;
+        boolean isCleared() {
+            return producer == null;
         }
 
-        Appointer(BasePath<A> producer, Consumer<Pair.Immutables.Int<A>> toAppoint) {
+        public static final Appointer<?> initiating = new Appointer<>(-1, null, null);
+
+        public final Appointer<A> getCleared() {
+            return new Appointer<>(appointerVersion + 1, null, null);
+        }
+
+        Appointer(int appointerVersion, BasePath<A> producer, Consumer<Pair.Immutables.Int<A>> toAppoint) {
+            this.appointerVersion = appointerVersion;
             this.producer = producer;
             this.toAppoint = toAppoint;
         }
@@ -85,115 +79,103 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
             return Objects.equals(producer, appointer.producer);
         }
 
+        public<P> boolean equalTo(BasePath<P> basePath) {
+            return producer.equals(basePath);
+        }
+
+        /**Returns this - other*/
+        public int compareTo(Appointer<?> other) {
+            return appointerVersion - other.appointerVersion;
+        }
+
         @Override
         public int hashCode() {
             return Objects.hash(producer);
         }
     }
+
+    interface PathListener<T> {
+        /**@return previous Path OR null under contention*/
+        <S, P extends BasePath<S>> Appointer<?> setPath(P basePath, Function<S, T> map);
+        <S, P extends BasePath<S>> void setAndStart(P basePath, Function<S, T> map);
+        <P extends BasePath<T>> void setAndStart(P basePath);
+        void stopAndClearPath();
+
+        Appointer<?> get();
+
+        /**@return null if cleared already*/
+        Appointer<?> clearAndGet();
+    }
+
     static class SelfAppointer<T> implements PathListener<T> {
-        private final AtomicUtils.TaggedAtomicReference<BasePath<?>, Appointer<?>> basePathAtomicReference;
+        private final AtomicUtils.WitnessAtomicReference<Appointer<?>> witnessAtomicReference = new AtomicUtils.WitnessAtomicReference<>(Appointer.initiating);
         private final Holders.ActivationHolder<T> self;
 
         private SelfAppointer(Holders.ActivationHolder<T> self) {
             this.self = self;
-            basePathAtomicReference = new AtomicUtils.TaggedAtomicReference<>();
         }
 
-        private SelfAppointer(Holders.ActivationHolder<T> self, Appointer<T> appointer) {
-            this.self = self;
-            this.basePathAtomicReference = new AtomicUtils.TaggedAtomicReference<>(appointer);
-        }
-
-
-
-        //Returns same Appointer if same basePath
-        private final AtomicInteger appointVersion = new AtomicInteger();
         @Override
         public <S, P extends BasePath<S>> Appointer<?> setPath(P basePath, Function<S, T> map) {
-            final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt -> self.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply((S) anInt.getValue())));
-//            final Appointer<?> next = new Appointer<>(basePath, intConsumer);
-            //            boolean prevNotNull = prev != null;
-//            if (next != prevOrNext) {
-////                if (prevNotNull) prev.demote();//Do not demote, let BooleanCosumer take care of demotion.
-//                return next;
-//            }
-            return basePathAtomicReference.diffUpdateAndGet(basePath, () -> new Appointer<>(appointVersion.incrementAndGet(), basePath, intConsumer));
+            return witnessAtomicReference.contentiousCAS(
+                    prev -> prev.producer != basePath,
+                    prev -> {
+                        final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt -> self.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply((S) anInt.getValue())));
+                        return new Appointer<>(prev.appointerVersion + 1, basePath, intConsumer);
+                    }
+            ).next;
         }
 
         @Override
         public <S, P extends BasePath<S>> void setAndStart(P basePath, Function<S, T> map) {
-            final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt -> self.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply((S) anInt.getValue())));
-            final Appointer<?> next = new Appointer<>(basePath, intConsumer);
-            final Appointer<?> prev = basePathAtomicReference.getAndDiffUpdate(basePath, next);
-            if (next != prev) {
-                boolean prevNotNull = prev != null;
-                if (prevNotNull) prev.demote();
+            assert basePath != null;
+            final AtomicUtils.WitnessAtomicReference.Witness<Appointer<?>> witness = witnessAtomicReference.contentiousCAS(
+                    prev -> prev == Appointer.initiating || !prev.equalTo(basePath) || map != identity, // always update if map is NOT identity
+                    prev -> {
+                        final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt ->
+                                self.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply((S) anInt.getValue())));
+                        return new Appointer<>(prev.appointerVersion + 1, basePath, intConsumer);
+                    }
+            );
+            final Appointer<?> prev = witness.prev, next = witness.next;
+            if (next != null && prev != next) {
+                boolean prevWasSet = prev != Appointer.initiating && !prev.isCleared();
+                if (prevWasSet) prev.demote();
                 //contention check
-                if (basePathAtomicReference.contains(basePath)) {
-                    if (prevNotNull) self.invalidate();
+                if (witnessAtomicReference.get().equalTo(basePath)) {
+                    if (prevWasSet) self.invalidate();
                     next.appoint();
                 }
             }
         }
 
-//        @Override
-//        public  <S, P extends BasePath<S>> void listen(P basePath, Function<S, T> map) {
-//            final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt -> self.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply((S) anInt.getValue())));
-//            final Appointer<?> next = new Appointer<>(basePath, intConsumer);
-//            final Appointer<?> prev = basePathAtomicReference.getAndDiffUpdate(basePath, next);
-//            if (next != prev) {
-//                boolean prevNotNull = prev != null;
-//                if (prevNotNull) prev.demote();
-//                //contention check
-//                if (basePathAtomicReference.contains(basePath)) {
-//                    if (prevNotNull) self.invalidate();
-//                    next.appoint();
-//                }
-//            }
-//        }
+        private final UnaryOperator<T> identity = UnaryOperator.identity();
 
         @Override
         public <P extends BasePath<T>> void setAndStart(P basePath) {
-            setAndStart(basePath, UnaryOperator.identity());
-        }
-
-        @Override
-        public void stopPath() {
-            Appointer<?> appointer = basePathAtomicReference.get();
-            if (appointer != null) appointer.demote();
-        }
-
-        @Override
-        public void startPath() {
-            Appointer<?> appointer = basePathAtomicReference.get();
-            if (appointer != null) appointer.appoint();
+            setAndStart(basePath, identity);
         }
 
         @Override
         public void stopAndClearPath() {
-            Appointer<?> appointer = basePathAtomicReference.getAndClear();
-            if (appointer != null) {
+            Appointer<?> appointer = witnessAtomicReference.getAndUpdate(Appointer::getCleared);
+            if (appointer != Appointer.initiating && !appointer.isCleared()) {
                 appointer.demote();
-                //contention check
-//                if (basePathAtomicReference.isCleared()) self.invalidate();
             }
         }
 
         @Override
-        public void clearAndDemote(Appointer<?> expect) {
-            if (basePathAtomicReference.expectAndClear(expect)) {
-                expect.demote();
-            }
+        public Appointer<?> get() {
+            return witnessAtomicReference.get();
         }
 
         @Override
-        public void clear(Appointer<?> expect) {
-            basePathAtomicReference.expectAndClear(expect);
-        }
-
-        @Override
-        public Appointer<?> getAndClear() {
-            return basePathAtomicReference.getAndClear();
+        public Appointer<?> clearAndGet() {
+            AtomicUtils.WitnessAtomicReference.Witness<Appointer<?>> witness = witnessAtomicReference.contentiousCAS(
+                    ((Predicate<Appointer<?>>) Appointer::isCleared).negate(),
+                    Appointer::getCleared
+            );
+            return witness.next;
         }
     }
 
@@ -202,64 +184,64 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
     }
 
     protected <S, P extends BasePath<S>> void listen(P basePath, Function<S, T> map) {
-        pathListener.setAndStart(basePath, map);
-        if (unbond()) pathIsBoundWarning();
+//        if (unbond()) pathIsBoundWarning();
+        selfAppointer.setAndStart(basePath, map);
     }
 
     protected <P extends BasePath<T>> void listen(P basePath) {
-        pathListener.setAndStart(basePath);
-        if (unbond()) pathIsBoundWarning();
+//        if (unbond()) pathIsBoundWarning();
+        selfAppointer.setAndStart(basePath);
     }
 
     protected void stopListeningPath() {
-        pathListener.stopAndClearPath();
+        selfAppointer.stopAndClearPath();
     }
 
-    protected  <P extends BasePath<T>> void bind(P basePath) {
-        if (mutableManager) absBaseLinkManager.bind(basePath);
-        else throwException();
-    }
+//    protected  <P extends BasePath<T>> void bind(P basePath) {
+//        if (mutableManager) absBaseLinkManager.bind(basePath);
+//        else throwException();
+//    }
 
-    protected  <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
-        if (mutableManager) absBaseLinkManager.bindMap(basePath, map);
-        else throwException();
-    }
+//    protected  <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
+//        if (mutableManager) absBaseLinkManager.bindMap(basePath, map);
+//        else throwException();
+//    }
 
-    protected boolean isBound() {
-        return absBaseLinkManager.isBound();
-    }
+//    protected boolean isBound() {
+//        return absBaseLinkManager.isBound();
+//    }
 
-    protected boolean unbond() {
-        return absBaseLinkManager.unbound();
-    }
+//    protected boolean unbond() {
+//        return absBaseLinkManager.unbound();
+//    }
 
-    @Override
-    protected void setActivationListener(BooleanConsumer activationListener) {
-        if (mutableManager) absBaseLinkManager.forcedSet(activationListener);
-        else super.setActivationListener(activationListener);
-    }
+//    @Override
+//    protected void setActivationListener(BooleanConsumer activationListener) {
+//        if (mutableManager) absBaseLinkManager.forcedSet(activationListener);
+//        else super.setActivationListener(activationListener);
+//    }
 
     public BasePath() {
         mutableManager = false;
-        absBaseLinkManager = null;
+//        absBaseLinkManager = null;
     }
 
     protected BasePath(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
         super(selfMap);
         mutableManager = false;
-        absBaseLinkManager = null;
+//        absBaseLinkManager = null;
     }
 
     BasePath(Builders.HolderBuilder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
         super(holderBuilder, actMgmtBuilder);
         mutableManager = manager.isMutable();
-        absBaseLinkManager = build(manager);
+//        absBaseLinkManager = build(manager, selfAppointer);
     }
 
     protected BasePath(Builders.HolderBuilder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
         super(holderBuilder, actMgmtBuilder);
         mutableManager = manager.isMutable();
-        absBaseLinkManager = build(manager);
+//        absBaseLinkManager = build(manager, selfAppointer);
     }
 
     static<S> BooleanConsumer activationListenerCreator(

@@ -28,14 +28,12 @@ final class BaseLinks {
 
     static abstract class AbsLink2<T> implements sendero.Link.Unbound.UnboundSwitch<T> {
 
-//        private final AtomicUtils.TaggedAtomicReference<BasePath<?>, BooleanConsumer> ownerCache = new AtomicUtils.TaggedAtomicReference<>();
         private final ActivePathListener<T> activePathListener;
 
         protected AbsLink2(ActivePathListener<T> activePathListener) {
             this.activePathListener = activePathListener;
         }
 
-//        protected abstract Holders.ActivationHolder<T> holderSupplier();
 
         protected abstract void onResult(Pair.Immutables.Int<T> tPair);
 
@@ -117,12 +115,10 @@ final class BaseLinks {
 
         @Override
         public <S> void switchFun(BasePath<S> path, Function<Consumer<? super BasePath<T>>, ? extends Consumers.BaseConsumer<S>> exit) {
-//            final Holders.ActivationHolder<T> thisHolder = holderSupplier();
             final LinkHolder<T> domainSubscriber = new LinkHolder<T>() {
                 @Override
                 protected void coldDispatch(Pair.Immutables.Int<T> t) {
                     onResult(t);
-//                    thisHolder.acceptVersionValue(t);
                 }
             };
 
@@ -176,7 +172,7 @@ final class BaseLinks {
                 Consumer<Pair.Immutables.Int<S>> exit
         ) {
             holderSupplier().setActivationListener(
-                    ownerCache.diffUpdateAndGet(observable, () -> BasePath.activationListenerCreator(
+                    ownerCache.diffSetAndGet(observable, () -> BasePath.activationListenerCreator(
                     () -> observable, exit
             )));
         }

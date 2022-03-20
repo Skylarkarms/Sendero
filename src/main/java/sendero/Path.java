@@ -23,22 +23,11 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
         super(selfMap);
     }
 
-//    protected<S> Path(Supplier<BasePath<S>> basePathSupplier, Function<Consumer<Pair.Immutables.Int<T>>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
-//        super(
-//                dispatcher -> BasePath.activationListenerCreator(basePathSupplier, toAppointFun.apply(dispatcher))
-//        ) ;
-//    }
-
     <S> Path(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
         super(holderBuilder,
                 dispatcher -> ActivationManager.getBuilder().withFixed(BasePath.activationListenerCreator(basePathSupplier, toAppointFun.apply(dispatcher)))
                 );
     }
-
-
-//    protected Path(Holders.DispatcherHolder.Builder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
-//        super(holderBuilder, actMgmtBuilder);
-//    }
 
     protected Path(Builders.HolderBuilder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
         super(holderBuilder, actMgmtBuilder);

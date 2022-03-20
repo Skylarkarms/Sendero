@@ -2,98 +2,89 @@ package sendero;
 
 import sendero.atomics.AtomicUtils;
 import sendero.interfaces.BooleanConsumer;
-import sendero.pairs.Pair;
 
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 //A BooleanConsumer is bounded by a BasePath Producer, so Appointer can be final.
-public abstract class ActivePathListener<T> /*extends BasePath<T>*/ /*implements BaseLink2<T>*/{
+public /*abstract*/ class ActivePathListener<T> /*extends BasePath<T>*/ /*implements BaseLink2<T>*/{
     private final ActivationManager manager;
     private final BasePath.SelfAppointer<T> appointer;
 
-    abstract void acceptVersionValue(Pair.Immutables.Int<T> versionValue);
+//    abstract void acceptVersionValue(Pair.Immutables.Int<T> versionValue);
 
-    private final AtomicUtils.TaggedAtomicReference<BasePath.Appointer<?>, BooleanConsumer> ownerCache = new AtomicUtils.TaggedAtomicReference<>();
-//    private final AtomicUtils.TaggedAtomicReference<BasePath<?>, BooleanConsumer> ownerCache = new AtomicUtils.TaggedAtomicReference<>();
+    private final AtomicUtils.WitnessAtomicReference<AppointerConsumer<?>> appointerConsumerCache = new AtomicUtils.WitnessAtomicReference<>(AppointerConsumer.not_set);
+
+    private static final class AppointerConsumer<T> {
+        final BasePath.Appointer<T> appointer;
+        final BooleanConsumer consumer;
+
+        static final AppointerConsumer<?> not_set = new AppointerConsumer<>(BasePath.Appointer.initiating);
+
+        AppointerConsumer(BasePath.Appointer<T> appointer) {
+            this.appointer = appointer;
+            this.consumer = isActive -> {
+                if (isActive) this.appointer.appoint();
+                else this.appointer.demote();
+            };
+        }
+
+        boolean equalTo(BasePath<?> basePath) {
+            return appointer.equalTo(basePath);
+        }
+
+        /**This minus other*/
+        int compareTo(BasePath.Appointer<?> other) {
+            return this.appointer.appointerVersion - other.appointerVersion;
+        }
+    }
 
     protected ActivePathListener(ActivationManager manager, BasePath.SelfAppointer<T> appointer) {
+//    protected ActivePathListener(ActivationManager manager, BasePath.SelfAppointer<T> appointer) {
         this.manager = manager;
         this.appointer = appointer;
     }
 
-//    private static<S> BooleanConsumer activationListenerCreator2(
-//            Supplier<BasePath<S>> basePathSupplier,
-//            Consumer<Pair.Immutables.Int<S>> toAppoint
-//    ) {
-//        return new BooleanConsumer() {
-//            //The supplier is for the Client to be allowed to  create a path at super()
-//            final BasePath<S> basePath = basePathSupplier.get();
-//            @Override
-//            public void accept(boolean isActive) {
-//                if (isActive) basePath.appoint(toAppoint);
-//                else if (basePath instanceof BasePath.ToMany) {
-//                    ((BasePath.ToMany<S>) basePath).demote(toAppoint);
-//                } else if (basePath instanceof BasePath.Injective) {
-//                    ((BasePath.Injective<S>) basePath).demote();
-//                }
-//            }
-//        };
-//    }
-    private static<S> BooleanConsumer activeFixedAppointerListenerFactory(
-            final BasePath.Appointer<S> fixedAppointer
-    ) {
-        return new BooleanConsumer() {
-            //The supplier is for the Client to be allowed to  create a path at super()
-//            final BasePath.Appointer<S> booleanAppointer = fixedAppointer;
-            @Override
-            public void accept(boolean isActive) {
-                if (isActive) fixedAppointer.appoint();
-                else fixedAppointer.demote();
-            }
-
-            @Override
-            public boolean equals(Object obj) {
-                assert obj instanceof BasePath.Appointer;
-                return fixedAppointer.equals(obj);
-            }
-        };
-    }
     /**should be protected*/
     protected  <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
-//        manager.setActivationListener(
-//                ownerCache.diffUpdateAndGet(basePath, () -> activationListenerCreator2(
-//                        () -> basePath, sInt -> acceptVersionValue(new Pair.Immutables.Int<>(sInt.getInt(), map.apply(sInt.getValue())))
-//                )));
-        manager.setActivationListener(
-//                appointer.setPath(basePath, map);
-                ownerCache.diffUpdateAndGet(appointer.setPath(basePath, map),
-                        ActivePathListener::activeFixedAppointerListenerFactory
-//                        () -> activeFixedAppointerListenerFactory(
-////                ownerCache.diffUpdateAndGet(basePath, () -> activeFixedAppointerListenerFactory(
-//                                new BasePath.Appointer<>(basePath, sInt -> acceptVersionValue(new Pair.Immutables.Int<>(sInt.getInt(), map.apply(sInt.getValue()))))
-//                        )
-                ));
+
+        final BasePath.Appointer<?> baseAppointer = appointer.setPath(basePath, map);
+
+        // will be null if equal.
+        if (baseAppointer != null) {
+            //Will attempt to retry only under contention
+            AppointerConsumer<?> nextAppointerConsumer = appointerConsumerCache.spinSwap(
+                    appointerConsumer -> baseAppointer.compareTo(appointer.get()) == 0 //stalls winning threads
+                            && (appointerConsumer == AppointerConsumer.not_set || appointerConsumer.compareTo(baseAppointer) < 0),
+                    appointerConsumer -> new AppointerConsumer<>(baseAppointer),
+                    appointerConsumer -> baseAppointer.compareTo(appointer.get()) == 0 //stops winning threads
+            ).next;
+
+            if (nextAppointerConsumer != null) {
+                manager.setActivationListener(nextAppointerConsumer.consumer);
+            }
+        }
     }
 
-    //Why should I hide manager???
-    //activation lsitener is protected
-    //any user implementation can be performed with a mixture of listen() and method onStateChange(boolean isActive) override.
-    //Why is Activation Listener needed then?
-    //ActivationListener offers a "swap" function in which a change of listenner is able to remember the last state of activation, delivering a deactivation to the last listener accordingly.
-    //This swap function is useful on "bind" operation and fast re-"bind" operations.
-    //Is not only useful, it is a requirement.
-    //This requirement can be mimmicked by the client but in a lesser and less performant extent.
-    //By misxing both onStateChange(boolean isActive) override plus an implementation of both "listen(Path) AND stopListeningPath();"
-    //In reality the cient should never feel in the need to do this since a bindMap operation can be found in the Path protected implementation, all it needs to do is eiather make it public OR
-    //Use the Link class.
     void forcedSet(BooleanConsumer activationListener) {
-//        ownerCache.set(activationListener);
-//        ownerCache.set(activationListener);
-//        manager.setActivationListener(ownerCache.expectTagAndSet(appointer.getAndClear(), activationListener));
-        manager.setActivationListener(ownerCache.forceUpdateAndGet(activationListener, appointer::clear));
-//        manager.setActivationListener(ownerCache.forceUpdateAndGet(activationListener, appointer1 -> appointer1.demote()));
-//        manager.setActivationListener(activationListener);
+        BasePath.Appointer<?> app = appointer.clearAndGet();
+        if (app != null && appointerConsumerCache.spinSwap(
+                prev -> prev == AppointerConsumer.not_set || prev.compareTo(app) < 0, //If equal, do not set as it already changed
+                prev -> new AppointerConsumer<>(app),
+                //retries only if appointer is not in contention && this version is still lesser than newVersion
+                // Which means:
+                // winning forced sets will not update
+                // && losing forced sets will continue spinning until update,
+                // unless new contention is perceived at the tail of the contention stream,
+                // OR a new set performed directly to appointer.
+                prev -> app.compareTo(appointer.get()) == 0 && (prev != AppointerConsumer.not_set && prev.compareTo(app) < 0)
+        ).next != null) {
+            //If no contention reached set activationListener.
+            manager.setActivationListener(activationListener);
+        } else if (app == null) {
+            //If appointer was cleared already.
+            manager.setActivationListener(activationListener);
+        }
     }
 
     /**should be protected*/
@@ -106,8 +97,20 @@ public abstract class ActivePathListener<T> /*extends BasePath<T>*/ /*implements
     }
 
     protected boolean unbound() {
-        return manager.expectClearActivationListener(ownerCache.expectTagAndClear(appointer.getAndClear()));
-        //Todo: Wrong
-//        return ownerCache.expectAndClear(manager.getAndClearActivationListener());
+        final BasePath.Appointer<?> app = appointer.clearAndGet();
+        if (app != null) {
+            final AtomicUtils.WitnessAtomicReference.Witness<AppointerConsumer<?>> witness = appointerConsumerCache.spinSwap(
+                    appointerConsumer -> appointerConsumer != AppointerConsumer.not_set
+                            && appointerConsumer.compareTo(app) < 0,
+                    appointerConsumer -> new AppointerConsumer<>(app),
+                    //If prev isNotSet OR lesser than after checking that appointer is still same, should break
+                    prev -> app.compareTo(appointer.get()) == 0 && (prev != AppointerConsumer.not_set && prev.compareTo(app) < 0)
+            );
+            final AppointerConsumer<?> nextAppointerConsumer = witness.next;
+            if (nextAppointerConsumer != null) {
+                return manager.expectClearActivationListener(nextAppointerConsumer.consumer);
+            }
+        }
+        return false;
     }
 }
