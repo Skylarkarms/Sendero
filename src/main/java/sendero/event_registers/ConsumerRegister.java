@@ -155,7 +155,6 @@ public class ConsumerRegister<T> implements Consumer<T>, Register<T> {
 
         @Override
         public RegisterSnapshot<S> register(Supplier<S> currentValue, Consumer<T> toRegister) {
-
             Consumer<T> prev = ref.get();
             boolean shouldReplace = prev != toRegister;
             S current = currentValue.get();

@@ -1,14 +1,15 @@
 package sendero;
 
+import sendero.atomics.AtomicUtils;
 import sendero.functions.Functions;
 import sendero.interfaces.BooleanConsumer;
 import sendero.interfaces.Updater;
 import sendero.pairs.Pair;
 import sendero.threshold_listener.ThresholdListeners;
 
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
@@ -17,23 +18,96 @@ final class Holders {
     interface HolderIO<T> extends Updater<T>, Consumer<T>, Supplier<T> {
     }
 
-//    interface StatefulHolder<T> extends BaseHolder<T> {
     interface StatefulHolder<T> extends HolderIO<T> {
-        /**The map function happens BEFORE the expect predicate test*/
+        /**The map function happens BEFORE the "expect" predicate test*/
         StatefulHolder<T> setMap(UnaryOperator<T> map);
         StatefulHolder<T> expectIn(Predicate<T> expect);
         StatefulHolder<T> expectOut(Predicate<T> expect);
     }
 
-    static class DispatcherHolder<T> extends DispatcherImpl<T> implements StatefulHolder<T> {
+    interface ColdHolder<T> {
+        void acceptVersionValue(Pair.Immutables.Int<T> versionValue);
+        void invalidate();
+    }
+
+    public static class SingleHolder<T> implements ColdHolder<T> {
+        @SuppressWarnings("unchecked")
+        protected final T INVALID = (T) new Object();
+        private final Pair.Immutables.Int<T> FIRST = new Pair.Immutables.Int<>(0, INVALID);
+        private final Consumer<Pair.Immutables.Int<T>> dispatcher;
+        private final Predicate<T> expect;
+        private final AtomicReference<Pair.Immutables.Int<T>> reference;
+
+        SingleHolder(
+                Consumer<Pair.Immutables.Int<T>> dispatcher,
+                Predicate<T> expect
+        ) {
+            this.dispatcher = dispatcher;
+            this.expect = expect;
+            reference = new AtomicReference<>(FIRST);
+        }
+
+        private T process(T t) {
+            return expect.test(t) ? t : INVALID;
+        }
+        @Override
+        public void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
+            versionValueCAS(versionValue.getInt(), process(versionValue.getValue()));
+        }
+        private void versionValueCAS(int newVersion, T processed) {
+            if (processed == INVALID) return;
+            Pair.Immutables.Int<T> prev = reference.get(), next = prev;
+            for (boolean lesser;;) {
+                lesser = prev.compareTo(newVersion) < 0;
+                if (lesser) {
+                    next = new Pair.Immutables.Int<>(newVersion, processed);
+                }
+                if (lesser && reference.compareAndSet(prev, next)) {
+                    dispatcher.accept(next);
+                    break;
+                }
+                if (prev.compareTo(prev = reference.get()) >= 0) break;
+            }
+        }
+
+        @Override
+        public void invalidate() {
+            reference.getAndSet(FIRST);
+        }
+    }
+
+    static class TestDispatcher<T> extends Dispatcher<T> {
+
+        private final Predicate<T> CLEARED_PREDICATE = Functions.always(true);
+        private volatile Predicate<T> expectOutput = CLEARED_PREDICATE;
+
+        @Override
+        protected void setExpectOutput(Predicate<T> expectOutput) {
+            this.expectOutput = expectOutput;
+        }
+
+        protected void inferDispatch(Pair.Immutables.Int<T> t, boolean isCold) {
+            if (expectOutput.test(t.getValue())) {
+                if (isCold) coldDispatch(t);
+                else dispatch(t);
+            }
+        }
+
+        protected boolean outPutTest(T value) {
+            return expectOutput.test(value);
+        }
+
+        @Override
+        protected void coldDispatch(Pair.Immutables.Int<T> t) {}
+        @Override
+        protected void dispatch(Pair.Immutables.Int<T> t) {}
+    }
+
+    static class DispatcherHolder<T> extends TestDispatcher<T> implements StatefulHolder<T>, ColdHolder<T> {
         @SuppressWarnings("unchecked")
         protected final T INVALID = (T) new Object();
         private final Pair.Immutables.Int<T> FIRST = new Pair.Immutables.Int<>(0, INVALID);
         private final AtomicReference<Pair.Immutables.Int<T>> reference;
-
-//        static<S> Builders.HolderBuilder<S> get(UnaryOperator<Builders.HolderBuilder<S>> op) {
-//            return op.apply(Builders.get());
-//        }
 
         public DispatcherHolder() {
             reference = new AtomicReference<>(FIRST);
@@ -44,15 +118,6 @@ final class Holders {
             this.map = map == null ? CLEARED_MAP : map;
             this.expectInput = expectInput == null ? CLEARED_PREDICATE : expectInput;
         }
-
-//        DispatcherHolder(T initialValue) {
-//            reference = new AtomicReference<>(new Pair.Immutables.Int<>(1, initialValue));
-//        }
-//
-//        DispatcherHolder(T initialValue, Predicate<T> expectOutput) {
-//            setExpectOutput(expectOutput);
-//            reference = new AtomicReference<>(new Pair.Immutables.Int<>(1, initialValue));
-//        }
 
         private final UnaryOperator<T> CLEARED_MAP = UnaryOperator.identity();
         private volatile UnaryOperator<T> map = CLEARED_MAP;
@@ -113,14 +178,12 @@ final class Holders {
         public void update(UnaryOperator<T> update) {
             lazyCASAccept(lazyProcess(update));
         }
+
         private T process(T t) {
             T mapped = map.apply(t);
             return expectInput.test(mapped) ? mapped : INVALID;
         }
 
-        protected Pair.Immutables.Int<T> getVolatileValue() {
-            return reference.get();
-        }
         private void CASAccept(T t) {
             if (t == INVALID) return;
             for (Pair.Immutables.Int<T> current;;) {
@@ -128,7 +191,6 @@ final class Holders {
                 final Pair.Immutables.Int<T> newPair = new Pair.Immutables.Int<>(current.getInt() + 1, t);
                 if (reference.compareAndSet(current, newPair)) {
                     inferDispatch(newPair, false);
-//                    dispatch(newPair);
                     break;
                 }
             }
@@ -139,7 +201,7 @@ final class Holders {
             CASAccept(process(t));
         }
 
-        protected void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
+        public void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
             versionValueCAS(versionValue.getInt(), process(versionValue.getValue()));
         }
 
@@ -165,8 +227,8 @@ final class Holders {
             return pair == FIRST ? null : pair.getValue();
         }
 
-        protected Pair.Immutables.Int<T> invalidate() {
-            return reference.getAndSet(FIRST);
+        public void invalidate() {
+            reference.getAndSet(FIRST);
         }
 
         protected int getVersion() {
@@ -185,19 +247,15 @@ final class Holders {
             return true;
         }
 
-        /*private*/ final ActivationManager manager;
+        final ActivationManager manager;
 
         /**For LinkHolder*/
-        /*protected*/ boolean activationListenerIsSet() {
+        boolean activationListenerIsSet() {
             return manager.activationListenerIsSet();
         }
 
         protected boolean clearActivationListener() {
             return manager.clearActivationListener();
-        }
-
-        protected BooleanConsumer getAndClearActivationListener() {
-            return manager.getAndClearActivationListener();
         }
 
         protected ActivationHolder() {
@@ -270,7 +328,7 @@ final class Holders {
             };
         }
 
-        private final DispatcherHolder<T> holder;
+        final DispatcherHolder<T> holder;
 
         protected <S> void onRegistered(
                 Consumer<? super S> subscriber,
@@ -307,12 +365,8 @@ final class Holders {
             if (manager.tryDeactivate()) onStateChange(false);
         }
 
-        /*protected*/ void setActivationListener(BooleanConsumer activationListener) {
+        void setActivationListener(BooleanConsumer activationListener) {
             manager.setActivationListener(activationListener);
-        }
-
-        protected Pair.Immutables.Int<T> getSnapshot() {
-            return holder.getSnapshot();
         }
 
         protected void accept(T t) {
@@ -352,14 +406,12 @@ final class Holders {
             holder.setExpectOutput(expectOutput);
         }
 
-        protected void invalidate() {
-            holder.invalidate();
-        }
-
     }
 
     abstract static class ExecutorHolder<T> extends ActivationHolder<T> {
         private final EService eService = EService.INSTANCE;
+
+        private final AtomicScheduler scheduler = new AtomicScheduler(eService::getService, 50, TimeUnit.MILLISECONDS);
 
         public ExecutorHolder(boolean activationListener) {
             super(activationListener);
@@ -396,10 +448,8 @@ final class Holders {
         }
 
         protected void execute(Runnable action) {
-            eService.execute(action);
+            scheduler.scheduleOrReplace(action);
         }
-
-
 
         protected <S> void parallelDispatch(int beginAt, Consumer<? super S>[] subs, Pair.Immutables.Int<T> t, Function<Pair.Immutables.Int<T>, S> map) {
             execute(
@@ -429,37 +479,39 @@ final class Holders {
 
         public enum EService {
             INSTANCE;
-            private ExecutorService service;
-            private boolean active;
+            private volatile boolean active;
+            private final AtomicUtils.SwapScheduler.Long delayer = new AtomicUtils.SwapScheduler.Long(100);
+            private volatile ScheduledExecutorService service;
+
             private final ThresholdListeners.ThresholdListener thresholdSwitch = ThresholdListeners.getAtomicOf(
-                    0, 0,
-                    isActive -> {
-                        if (isActive) create();
-                        else destroy();
-                    }
+                    0, 0
             );
             public void create() {
-                if (thresholdSwitch.thresholdCrossed() && !active) {
+                if (!delayer.interrupt()) if (thresholdSwitch.thresholdCrossed() && !active) {
                     active = true;
-                    service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+                    service = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
                 }
             }
             public void destroy() {
-                active = false;
-                service.shutdown();
+                delayer.scheduleOrSwap(
+                        () -> {
+                            active = false;
+                            service.shutdown();
+                        }
+                );
             }
-            public void increment() {thresholdSwitch.increment();}
-            public void decrement() {thresholdSwitch.decrement();}
-            public void execute(Runnable runnable) {
-                if (thresholdSwitch.thresholdCrossed()
-                        && service != null
-                        && !service.isShutdown()) {
-                    service.execute(runnable);
-                }
+            public void increment() {
+                if (thresholdSwitch.increment()) create();
+
+            }
+            public void decrement() {
+                if (thresholdSwitch.decrement()) destroy();
+            }
+
+            public ScheduledExecutorService getService() {
+                return service;
             }
         }
-
-
     }
 }
 

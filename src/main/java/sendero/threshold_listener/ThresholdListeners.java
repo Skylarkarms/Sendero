@@ -23,8 +23,10 @@ public final class ThresholdListeners {
     public interface ThresholdListener {
         /**returns true greater (>) than threshold*/
         boolean increment();
+//        Witness witnessIncrement();
         /**returns true if less or equal (<=) than threshold*/
         boolean decrement();
+//        Witness witnessDecrement();
 
         /**True if greater than (>) threshold, false if less or equal (<=)*/
         boolean thresholdCrossed();
@@ -47,11 +49,14 @@ public final class ThresholdListeners {
         }
 
     }
+
     private static final class Atomics {
         private static abstract class AbsThresholdListener implements ThresholdListener {
             private final AtomicInteger count;
             private final Switchers.Switch aSwitch = Switchers.getAtomic();
             private final int initialCount;
+
+
 
             protected AbsThresholdListener(int initialCount) {
                 this.initialCount = initialCount;
@@ -63,6 +68,7 @@ public final class ThresholdListeners {
                     return aSwitch.on();
                 } else return aSwitch.off();
             }
+
             protected boolean remapState(IntSupplier thresholdSupplier) {
                 if (count.get() > thresholdSupplier.getAsInt()) {
                     return aSwitch.on();
@@ -76,7 +82,7 @@ public final class ThresholdListeners {
 
             @Override
             public boolean decrement() {
-                return !inferTrespass(count::decrementAndGet);
+                return inferTrespass(count::decrementAndGet);
             }
 
             @Override

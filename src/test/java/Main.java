@@ -36,7 +36,7 @@ public class Main {
                 }
         );
 
-        System.out.println("setting hello...");
+        System.err.println("setting hello...");
         hello.accept("Hello");
 
         ComplexHelloWorld test2 = new ComplexHelloWorld();
@@ -45,10 +45,12 @@ public class Main {
         ForkedMultiplication multiplication = new ForkedMultiplication();
         multiplication.commence();
 
-        System.out.println("Test Hard");
+        System.err.println("Test Hard");
 
         TestHard testHard = new TestHard();
         testHard.commence();
+
+
 
     }
 }

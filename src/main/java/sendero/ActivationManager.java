@@ -4,10 +4,7 @@ import sendero.event_registers.BinaryEventRegisters;
 import sendero.functions.Functions;
 import sendero.interfaces.BooleanConsumer;
 import sendero.switchers.Switchers;
-import sendero.threshold_listener.ThresholdListeners;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.BooleanSupplier;
 
 abstract class ActivationManager {

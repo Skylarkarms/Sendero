@@ -60,11 +60,12 @@ public class Merge<T> extends Path<T> implements BaseMerge<T> {
             public void accept(boolean isActive) {
                 if (isActive) jointDomain.appoint(toAppoint);
                 else {
-                    if (jointDomain instanceof Injective) {
-                        ((Injective<S>) jointDomain).demote();
-                    } else if (jointDomain instanceof ToMany) {
-                        ((ToMany<S>) jointDomain).demote(toAppoint);
-                    }
+//                    if (jointDomain instanceof Injective) {
+//                        ((Injective<S>) jointDomain).demote();
+//                    } else if (jointDomain instanceof ToMany) {
+//                        ((ToMany<S>) jointDomain).demote(toAppoint);
+//                    }
+                    jointDomain.demotionOverride(toAppoint);
                 }
             }
 

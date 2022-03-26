@@ -158,7 +158,7 @@ public final class Gates {
                     Consumer<? super T>[] locals = locale.copy();
                     final int length = locals.length;
                     if (length != 0) parallelDispatch(0, locals, t, Pair.Immutables.Int::getValue); // first locals, then keep with domain
-                    super.coldDispatch(t);//to remotes
+                    super.coldDispatch(t);//to appointees
                 }
 
                 @Override

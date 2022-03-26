@@ -30,7 +30,7 @@ class ComplexHelloWorld {
             holder2.accept(3);
         }
 
-        private final Links.UnBound<Integer> integerSubscriber = new Links.UnBound<>();
+        private final Link.Unbound<Integer> integerSubscriber = new Link.Unbound<>();
 
         private final BasePath<String> process = integerSubscriber.forkSwitch(
                 domainCache::get
@@ -88,16 +88,16 @@ class ComplexHelloWorld {
         );
 
         void commence() {
-            System.out.println("registering observer...");
+            System.err.println("registering observer...");
             finalRes.register(
                     exitGate
             );
 
-            System.out.println("binding...");
+            System.err.println("binding...");
             integerSubscriber.bind(holder3);
-            System.out.println("accepting integer...");
+            System.err.println("accepting integer...");
             holder2.accept(1);
-            System.out.println("accepting string...");
+            System.err.println("accepting string...");
             holderCache2.accept(cache.get(2));
         }
 }

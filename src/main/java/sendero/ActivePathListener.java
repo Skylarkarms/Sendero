@@ -7,26 +7,26 @@ import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 //A BooleanConsumer is bounded by a BasePath Producer, so Appointer can be final.
-public /*abstract*/ class ActivePathListener<T> /*extends BasePath<T>*/ /*implements BaseLink2<T>*/{
+class ActivePathListener<T> {
     private final ActivationManager manager;
-    private final BasePath.SelfAppointer<T> appointer;
-
-//    abstract void acceptVersionValue(Pair.Immutables.Int<T> versionValue);
+    private final Appointers.SelfAppointer<T> appointerCache;
 
     private final AtomicUtils.WitnessAtomicReference<AppointerConsumer<?>> appointerConsumerCache = new AtomicUtils.WitnessAtomicReference<>(AppointerConsumer.not_set);
 
     private static final class AppointerConsumer<T> {
-        final BasePath.Appointer<T> appointer;
+        final Appointers.Appointer<T> appointer;
         final BooleanConsumer consumer;
 
-        static final AppointerConsumer<?> not_set = new AppointerConsumer<>(BasePath.Appointer.initiating);
+        static final AppointerConsumer<?> not_set = new AppointerConsumer<>(Appointers.Appointer.initiating);
 
-        AppointerConsumer(BasePath.Appointer<T> appointer) {
+        AppointerConsumer(Appointers.Appointer<T> appointer) {
             this.appointer = appointer;
-            this.consumer = isActive -> {
-                if (isActive) this.appointer.appoint();
-                else this.appointer.demote();
-            };
+            if (!appointer.isCleared()) {
+                this.consumer = isActive -> {
+                    if (isActive) this.appointer.appoint();
+                    else this.appointer.demote();
+                };
+            } else this.consumer = BooleanConsumer.cleared();
         }
 
         boolean equalTo(BasePath<?> basePath) {
@@ -34,30 +34,29 @@ public /*abstract*/ class ActivePathListener<T> /*extends BasePath<T>*/ /*implem
         }
 
         /**This minus other*/
-        int compareTo(BasePath.Appointer<?> other) {
+        int compareTo(Appointers.Appointer<?> other) {
             return this.appointer.appointerVersion - other.appointerVersion;
         }
     }
 
-    protected ActivePathListener(ActivationManager manager, BasePath.SelfAppointer<T> appointer) {
-//    protected ActivePathListener(ActivationManager manager, BasePath.SelfAppointer<T> appointer) {
+    protected ActivePathListener(ActivationManager manager, Appointers.SelfAppointer<T> appointerCache) {
         this.manager = manager;
-        this.appointer = appointer;
+        this.appointerCache = appointerCache;
     }
 
     /**should be protected*/
     protected  <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
 
-        final BasePath.Appointer<?> baseAppointer = appointer.setPath(basePath, map);
+        final Appointers.Appointer<?> baseAppointer = appointerCache.setPath(basePath, map);
 
         // will be null if equal.
         if (baseAppointer != null) {
             //Will attempt to retry only under contention
-            AppointerConsumer<?> nextAppointerConsumer = appointerConsumerCache.spinSwap(
-                    appointerConsumer -> baseAppointer.compareTo(appointer.get()) == 0 //stalls winning threads
+            AppointerConsumer<?> nextAppointerConsumer = appointerConsumerCache.compliantCAS(
+                    appointerConsumer -> baseAppointer.compareTo(appointerCache.getAppointer()) == 0 //stalls winning threads
                             && (appointerConsumer == AppointerConsumer.not_set || appointerConsumer.compareTo(baseAppointer) < 0),
                     appointerConsumer -> new AppointerConsumer<>(baseAppointer),
-                    appointerConsumer -> baseAppointer.compareTo(appointer.get()) == 0 //stops winning threads
+                    appointerConsumer -> baseAppointer.compareTo(appointerCache.getAppointer()) == 0 //stops winning threads
             ).next;
 
             if (nextAppointerConsumer != null) {
@@ -67,22 +66,25 @@ public /*abstract*/ class ActivePathListener<T> /*extends BasePath<T>*/ /*implem
     }
 
     void forcedSet(BooleanConsumer activationListener) {
-        BasePath.Appointer<?> app = appointer.clearAndGet();
-        if (app != null && appointerConsumerCache.spinSwap(
-                prev -> prev == AppointerConsumer.not_set || prev.compareTo(app) < 0, //If equal, do not set as it already changed
-                prev -> new AppointerConsumer<>(app),
+        final Appointers.Appointer<?> appointer = appointerCache.clearAndGet();
+        boolean cleared = appointer != null;
+        if (cleared && appointerConsumerCache.compliantCAS(
+                prev -> prev == AppointerConsumer.not_set || prev.compareTo(appointer) < 0, //If equal, do not set as it already changed
+                prev -> new AppointerConsumer<>(appointer),
                 //retries only if appointer is not in contention && this version is still lesser than newVersion
                 // Which means:
                 // winning forced sets will not update
                 // && losing forced sets will continue spinning until update,
                 // unless new contention is perceived at the tail of the contention stream,
                 // OR a new set performed directly to appointer.
-                prev -> app.compareTo(appointer.get()) == 0 && (prev != AppointerConsumer.not_set && prev.compareTo(app) < 0)
+                prev -> {
+                    return appointer.compareTo(appointerCache.getAppointer()) == 0 && (prev != AppointerConsumer.not_set && prev.compareTo(appointer) < 0);
+                }
         ).next != null) {
             //If no contention reached set activationListener.
             manager.setActivationListener(activationListener);
-        } else if (app == null) {
-            //If appointer was cleared already.
+        } else {
+            //If appointer was cleared already, fast set.
             manager.setActivationListener(activationListener);
         }
     }
@@ -92,19 +94,19 @@ public /*abstract*/ class ActivePathListener<T> /*extends BasePath<T>*/ /*implem
         bindMap(basePath, UnaryOperator.identity());
     }
 
-    protected boolean isBound() {
-        return manager.activationListenerIsSet();
-    }
+//    protected boolean isBound() {
+//        return manager.activationListenerIsSet();
+//    }
 
     protected boolean unbound() {
-        final BasePath.Appointer<?> app = appointer.clearAndGet();
+        final Appointers.Appointer<?> app = appointerCache.clearAndGet();
         if (app != null) {
-            final AtomicUtils.WitnessAtomicReference.Witness<AppointerConsumer<?>> witness = appointerConsumerCache.spinSwap(
+            final AtomicUtils.WitnessAtomicReference.Witness<AppointerConsumer<?>> witness = appointerConsumerCache.compliantCAS(
                     appointerConsumer -> appointerConsumer != AppointerConsumer.not_set
                             && appointerConsumer.compareTo(app) < 0,
                     appointerConsumer -> new AppointerConsumer<>(app),
                     //If prev isNotSet OR lesser than after checking that appointer is still same, should break
-                    prev -> app.compareTo(appointer.get()) == 0 && (prev != AppointerConsumer.not_set && prev.compareTo(app) < 0)
+                    prev -> app.compareTo(appointerCache.getAppointer()) == 0 && (prev != AppointerConsumer.not_set && prev.compareTo(app) < 0)
             );
             final AppointerConsumer<?> nextAppointerConsumer = witness.next;
             if (nextAppointerConsumer != null) {

@@ -11,14 +11,14 @@ public class ForkedMultiplication {
         Path<Integer> firstFork = in.forkMap(
                 (UnaryOperator<Integer>) integer -> {
                     int firstForkRes = integer * 2;
-                    System.out.println("First fork result is: " + firstForkRes);
+                    System.err.println("First fork result is: " + firstForkRes);
                     return firstForkRes;
                 }
         );
         Path<Integer> secondFork = in.forkMap(
                 (UnaryOperator<Integer>) integer -> {
                     int secondForkResult = integer * 3;
-                    System.out.println("Second fork result si: " + secondForkResult);
+                    System.err.println("Second fork result si: " + secondForkResult);
                     return secondForkResult;
                 }
         );
@@ -27,7 +27,7 @@ public class ForkedMultiplication {
                 integerUpdater -> integer -> integerUpdater.update(
                         mergeInteger -> {
                             int firstMerge = mergeInteger + integer;
-                            System.out.println("First merge is: " + firstMerge + "\n of prev: " + mergeInteger + ", \n and next: " + integer);
+                            System.err.println("First merge is: " + firstMerge + "\n of prev: " + mergeInteger + ", \n and next: " + integer);
                             return firstMerge;
                         }
                 )
@@ -36,7 +36,7 @@ public class ForkedMultiplication {
                 integerUpdater -> integer -> integerUpdater.update(
                         mergedInteger -> {
                             int secondMerge = mergedInteger + integer;
-                            System.out.println("Second merge is: " + secondMerge + "\n of prev: " + mergedInteger + ", \n and next: " + integer);
+                            System.err.println("Second merge is: " + secondMerge + "\n of prev: " + mergedInteger + ", \n and next: " + integer);
                             return secondMerge;
                         }
                 )
@@ -50,11 +50,11 @@ public class ForkedMultiplication {
     public void commence() {
         for (int i = 1; i < 6; i++) {
             int finalI = i;
-            System.out.println("integer is: " +finalI);
+            System.err.println("integer is: " +finalI);
             in.update(
                     integer -> {
                         int res = integer + finalI;
-                        System.out.println("first sum is: " + res);
+                        System.err.println("first sum is: " + res);
                         return res;
                     }
             );

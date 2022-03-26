@@ -1,5 +1,5 @@
 import sendero.Gates;
-import sendero.Links;
+import sendero.Link;
 import sendero.Path;
 
 import java.util.HashMap;
@@ -9,7 +9,7 @@ public class TestHard {
 
     Gates.In<Integer> input = new Gates.In<>();
     Gates.In<Integer> input2 = new Gates.In<>(3);
-    Links.UnBound<String> ALink = new Links.UnBound<>();
+    Link.Unbound.Switch<String> ALink = new Link.Unbound.Switch<>();
 
     Gates.In<String> hello = new Gates.In<>("Hello");
     Path<String> hey = hello.forkMap(
