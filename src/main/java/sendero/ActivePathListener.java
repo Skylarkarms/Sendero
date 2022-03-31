@@ -9,7 +9,7 @@ import java.util.function.UnaryOperator;
 //A BooleanConsumer is bounded by a BasePath Producer, so Appointer can be final.
 class ActivePathListener<T> {
     private final ActivationManager manager;
-    private final Appointers.SelfAppointer<T> appointerCache;
+    private final Appointers.HolderAppointer<T> appointerCache;
 
     private final AtomicUtils.WitnessAtomicReference<AppointerConsumer<?>> appointerConsumerCache = new AtomicUtils.WitnessAtomicReference<>(AppointerConsumer.not_set);
 
@@ -22,10 +22,11 @@ class ActivePathListener<T> {
         AppointerConsumer(Appointers.Appointer<T> appointer) {
             this.appointer = appointer;
             if (!appointer.isCleared()) {
-                this.consumer = isActive -> {
-                    if (isActive) this.appointer.appoint();
-                    else this.appointer.demote();
-                };
+                this.consumer = Appointers.Appointer.booleanConsumerAppointer(this.appointer);
+//                this.consumer = isActive -> {
+//                    if (isActive) this.appointer.appoint();
+//                    else this.appointer.demote();
+//                };
             } else this.consumer = BooleanConsumer.cleared();
         }
 
@@ -39,7 +40,7 @@ class ActivePathListener<T> {
         }
     }
 
-    protected ActivePathListener(ActivationManager manager, Appointers.SelfAppointer<T> appointerCache) {
+    protected ActivePathListener(ActivationManager manager, Appointers.HolderAppointer<T> appointerCache) {
         this.manager = manager;
         this.appointerCache = appointerCache;
     }
@@ -51,7 +52,7 @@ class ActivePathListener<T> {
 
         // will be null if equal.
         if (baseAppointer != null) {
-            //Will attempt to retry only under contention
+            //Will **attempt** to retry only under contention
             AppointerConsumer<?> nextAppointerConsumer = appointerConsumerCache.compliantCAS(
                     appointerConsumer -> baseAppointer.compareTo(appointerCache.getAppointer()) == 0 //stalls winning threads
                             && (appointerConsumer == AppointerConsumer.not_set || appointerConsumer.compareTo(baseAppointer) < 0),
@@ -93,10 +94,6 @@ class ActivePathListener<T> {
     protected  <S, P extends BasePath<T>> void bind(P basePath) {
         bindMap(basePath, UnaryOperator.identity());
     }
-
-//    protected boolean isBound() {
-//        return manager.activationListenerIsSet();
-//    }
 
     protected boolean unbound() {
         final Appointers.Appointer<?> app = appointerCache.clearAndGet();

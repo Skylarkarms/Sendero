@@ -2,6 +2,7 @@ import sendero.Gates;
 import sendero.Merge;
 import sendero.Path;
 
+import java.util.Arrays;
 import java.util.function.UnaryOperator;
 
 public class ForkedMultiplication {
@@ -22,36 +23,70 @@ public class ForkedMultiplication {
                     return secondForkResult;
                 }
         );
-        Merge<Integer> finalResult = new Merge<>(2, integer -> true).from(
+        Merge<int[]> finalResult = new Merge<>(new int[3], ints -> {
+            for (int i:ints
+                 ) {
+                System.err.println("integers are: " + i);
+                if (i == 0) {
+                    System.err.println("HAS A ZERO!!!>>>");
+                    return false;
+                }
+            }
+            System.err.println("should pass???: " + true);
+            return true;
+        }).from(
                 firstFork,
-                integerUpdater -> integer -> integerUpdater.update(
-                        mergeInteger -> {
-                            int firstMerge = mergeInteger + integer;
-                            System.err.println("First merge is: " + firstMerge + "\n of prev: " + mergeInteger + ", \n and next: " + integer);
-                            return firstMerge;
-                        }
-                )
+                integerUpdater -> integer -> {
+                    System.err.println("<<<<From first fork is: " + integer + ", to updater: " + integerUpdater);
+                    integerUpdater.update(
+                            50,
+                            ints -> {
+                                System.err.println("<FROM FIRST UPDATE!!>, prev ARRAY is: " + ints + ", at updater: " + integerUpdater);
+                                int prev = ints[2];
+                                System.err.println("<FROM FIRST UPDATE!!>, prev is: " + prev + ", at updater: " + integerUpdater);
+                                int[] clone = ints.clone();
+                                clone[0] = integer;
+                                clone[2] = solveArr(clone);
+                                System.err.println("First merged total is: " + clone[2] + "\n of prev: " + prev + ", \n by adding: " + integer);
+                                return clone;
+                            }
+                    );
+                }
         ).from(
                 secondFork,
-                integerUpdater -> integer -> integerUpdater.update(
-                        mergedInteger -> {
-                            int secondMerge = mergedInteger + integer;
-                            System.err.println("Second merge is: " + secondMerge + "\n of prev: " + mergedInteger + ", \n and next: " + integer);
-                            return secondMerge;
-                        }
-                )
+                integerUpdater -> integer -> {
+                    System.err.println("<<<<From second fork is: " + integer + ", to updater: " + integerUpdater);
+                    integerUpdater.update(
+                            50,
+                            ints -> {
+                                System.err.println("<FROM SECOND UPDATE!!>, prev ARRAY is: " + ints + ", at updater: " + integerUpdater);
+                                int prev = ints[2];
+                                System.err.println("<FROM SECOND UPDATE!!>, prev is: " + prev + ", at updater: " + integerUpdater);
+                                int[] clone = ints.clone();
+                                clone[1] = integer;
+                                clone[2] = solveArr(clone);
+                                System.err.println("Second merged total is: " + clone[2] + "\n of prev: " + prev + ", \n by adding: " + integer);
+                                return clone;
+                            }
+                    );
+                }
         );
-        resultOutput = finalResult.out(Gates.Out.Single.class);
+        resultOutput = finalResult.out(Gates.Out.Single.class, ints -> ints[2]);
         resultOutput.register(
-                System.out::println
+                integer -> System.out.println("Final result is: " + integer)
         );
+    }
+
+    private int solveArr(int[] arr) {
+        return arr[0] + arr[1];
     }
 
     public void commence() {
         for (int i = 1; i < 6; i++) {
             int finalI = i;
-            System.err.println("integer is: " +finalI);
+            System.err.println("iteration is: " +finalI);
             in.update(
+                    50,
                     integer -> {
                         int res = integer + finalI;
                         System.err.println("first sum is: " + res);
@@ -61,6 +96,7 @@ public class ForkedMultiplication {
         }
         try {
             Thread.sleep(2000);
+            System.err.println("<<<Unregistering>>>...");
             resultOutput.unregister();
         } catch (InterruptedException e) {
             e.printStackTrace();

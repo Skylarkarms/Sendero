@@ -252,6 +252,7 @@ public class ConsumerRegister<T> implements Consumer<T>, Register<T> {
             interface Atomic extends BinaryConsumerRegister {
                 BooleanSnapshot register(BooleanSupplier booleanValue, BooleanConsumer toRegister);
                 BooleanSnapshot unregister(BooleanSupplier booleanValue);
+                /**Retries until there is no more contention*/
                 BooleanSnapshot unregister(BooleanConsumer expect, BooleanSupplier booleanValue);
                 final class BooleanSnapshot {
                     public final boolean set;

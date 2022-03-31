@@ -12,7 +12,7 @@ public class Builders {
     }
     public static class HolderBuilder<T> {
         private AtomicReference<Pair.Immutables.Int<T>> reference;
-        private Predicate<T> expectOutput;
+        private Predicate<T> expectInput, expectOut;
         private UnaryOperator<T> map;
 
         private HolderBuilder() {
@@ -23,8 +23,13 @@ public class Builders {
             return this;
         }
 
-        public HolderBuilder<T> expectOut(Predicate<T> expectOutput) {
-            this.expectOutput = expectOutput;
+        public HolderBuilder<T> expectIn(Predicate<T> expectInput) {
+            this.expectInput = expectInput;
+            return this;
+        }
+
+        public HolderBuilder<T> expectOut(Predicate<T> expectOut) {
+            this.expectOut = expectOut;
             return this;
         }
 
@@ -34,15 +39,15 @@ public class Builders {
         }
 
         Holders.DispatcherHolder<T> build(Dispatcher<T> dispatcher) {
-            return new Holders.DispatcherHolder<T>(reference, map, expectOutput){
+            return new Holders.DispatcherHolder<T>(reference, map, expectInput, expectOut){
                 @Override
                 protected void coldDispatch(Pair.Immutables.Int<T> t) {
                     dispatcher.coldDispatch(t);
                 }
 
                 @Override
-                protected void dispatch(Pair.Immutables.Int<T> t) {
-                    dispatcher.dispatch(t);
+                protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
+                    dispatcher.dispatch(delay, t);
                 }
             };
         }

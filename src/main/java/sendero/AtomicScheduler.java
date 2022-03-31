@@ -57,8 +57,18 @@ public class AtomicScheduler {
         this.baseUnit = baseUnit;
     }
 
+    public AtomicScheduler(Supplier<ScheduledExecutorService> service, TimeUnit baseUnit) {
+        this.reference = new AtomicReference<>(AtomicSchedulerService.init(service));
+        this.tolerance = 0;
+        this.baseUnit = baseUnit;
+    }
+
     public void scheduleOrReplace(Runnable runnable) {
         reference.get().swap(reference, runnable, tolerance, baseUnit);
+    }
+
+    public void scheduleOrReplace(long delay, Runnable runnable) {
+        reference.get().swap(reference, runnable, delay, baseUnit);
     }
 
     public boolean cancel() {

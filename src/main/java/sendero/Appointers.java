@@ -1,6 +1,7 @@
 package sendero;
 
 import sendero.atomics.AtomicUtils;
+import sendero.interfaces.BooleanConsumer;
 import sendero.pairs.Pair;
 import sendero.switchers.Switchers;
 
@@ -18,8 +19,40 @@ public class Appointers {
 
         final Switchers.Switch aSwitch = Switchers.getAtomic();
 
+        private static<T, S> Consumer<Pair.Immutables.Int<S>> toAppointCreator(Consumer<Pair.Immutables.Int<T>> holder, Function<S, T> map) {
+            return sInt -> holder.accept(new Pair.Immutables.Int<T>(sInt.getInt(), map.apply(sInt.getValue())));
+        }
+
+        private static<S, T> Appointer<S> fixedAppointer(BasePath<S> producer, Consumer<Pair.Immutables.Int<T>> holder, Function<S, T> map) {
+            return new Appointer<>(-1, producer, toAppointCreator(holder, map));
+        }
+
+        private static<T> Appointer<T> fixedAppointer(BasePath<T> producer, Consumer<Pair.Immutables.Int<T>> holder) {
+            return new Appointer<>(-1, producer, holder);
+        }
+
+        public static<S, T> BooleanConsumer booleanConsumerAppointer(BasePath<S> producer, Consumer<Pair.Immutables.Int<T>> holder, Function<S, T> map) {
+            final Appointer<S> finalAppointer = fixedAppointer(producer, holder, map);
+            return booleanConsumerAppointer(finalAppointer);
+        }
+
+        public static<T> BooleanConsumer booleanConsumerAppointer(BasePath<T> producer, Consumer<Pair.Immutables.Int<T>> holder) {
+            final Appointer<T> finalAppointer = fixedAppointer(producer, holder);
+            return booleanConsumerAppointer(finalAppointer);
+        }
+
+        public static<T> BooleanConsumer booleanConsumerAppointer(Appointer<T> appointer) {
+            final Appointer<T> finalAppointer = appointer;
+            return aBoolean -> {
+                if (aBoolean) finalAppointer.appoint();
+                else finalAppointer.demote();
+            };
+        }
+
+        private final boolean cleared;
+
         boolean isCleared() {
-            return producer == null;
+            return cleared;
         }
 
         public static final Appointer<?> initiating = new Appointer<>(-1, null, null);
@@ -31,6 +64,7 @@ public class Appointers {
         Appointer(int appointerVersion, BasePath<A> producer, Consumer<Pair.Immutables.Int<A>> toAppoint) {
             this.appointerVersion = appointerVersion;
             this.producer = producer;
+            cleared = producer == null;
             this.toAppoint = toAppoint;
         }
 
@@ -40,22 +74,12 @@ public class Appointers {
 
         boolean appoint() {
             boolean on = !isCleared() && aSwitch.on();
-            if (on) {
-                producer.appoint(toAppoint);
-            }
+            if (on) producer.appoint(toAppoint);
             return on;
         }
         boolean demote() {
             boolean off = aSwitch.off();
-            if (off) {
-//                if (producer instanceof BasePath.ToMany) {
-//                    ((BasePath.ToMany<A>) producer).demote(toAppoint);
-//                } else {
-//                    assert producer instanceof BasePath.Injective;
-//                    ((BasePath.Injective<A>) producer).demote();
-//                }
-                producer.demotionOverride(toAppoint);
-            }
+            if (off) producer.demotionOverride(toAppoint);
             return off;
         }
 
@@ -100,7 +124,7 @@ public class Appointers {
 
     final static class SimpleAppointer<T> extends Holders.SingleHolder<T> implements PathListener<T> {
 
-        private final SelfAppointer<T> selfAppointer = new SelfAppointer<>(this);
+        private final HolderAppointer<T> holderAppointer = new HolderAppointer<>(this);
 
         SimpleAppointer(Consumer<Pair.Immutables.Int<T>> dispatcher, Predicate<T> expect) {
             super(dispatcher, expect);
@@ -109,57 +133,57 @@ public class Appointers {
 
         @Override
         public <S, P extends BasePath<S>> Appointer<?> setPath(P basePath, Function<S, T> map) {
-            return selfAppointer.setPath(basePath, map);
+            return holderAppointer.setPath(basePath, map);
         }
 
         @Override
         public <S, P extends BasePath<S>> void setAndStart(P basePath, Function<S, T> map) {
-            selfAppointer.setAndStart(basePath, map);
+            holderAppointer.setAndStart(basePath, map);
         }
 
         @Override
         public <P extends BasePath<T>> void setAndStart(P basePath) {
-            selfAppointer.setAndStart(basePath);
+            holderAppointer.setAndStart(basePath);
         }
 
         @Override
         public void stopAndClearPath() {
-            selfAppointer.stopAndClearPath();
+            holderAppointer.stopAndClearPath();
         }
 
         @Override
         public boolean start() {
-            return selfAppointer.start();
+            return holderAppointer.start();
         }
 
         @Override
         public boolean stop() {
-            return selfAppointer.stop();
+            return holderAppointer.stop();
         }
 
         @Override
         public boolean isActive() {
-            return selfAppointer.isActive();
+            return holderAppointer.isActive();
         }
 
         @Override
         public Appointer<?> getAppointer() {
-            return selfAppointer.getAppointer();
+            return holderAppointer.getAppointer();
         }
 
         @Override
         public Appointer<?> clearAndGet() {
-            return selfAppointer.clearAndGet();
+            return holderAppointer.clearAndGet();
         }
     }
 
-    static class SelfAppointer<T> implements PathListener<T> {
-        private final AtomicUtils.WitnessAtomicReference<Appointer<?>> witnessAtomicReference = new AtomicUtils.WitnessAtomicReference<>(Appointer.initiating);
-        private final Holders.ColdHolder<T> self;
-//        private final Holders.DispatcherHolder<T> self;
+    static class HolderAppointer<T> implements PathListener<T> {
+        private final AtomicUtils.WitnessAtomicReference<Appointer<?>> witnessAtomicReference;
+        private final Holders.ColdHolder<T> holder;
 
-        SelfAppointer(Holders.ColdHolder<T> self) {
-            this.self = self;
+        HolderAppointer(Holders.ColdHolder<T> holder) {
+            this.holder = holder;
+            witnessAtomicReference = new AtomicUtils.WitnessAtomicReference<>(Appointer.initiating);
         }
 
         @Override
@@ -167,7 +191,7 @@ public class Appointers {
             return witnessAtomicReference.contentiousCAS(
                     prev -> prev.producer != basePath,
                     prev -> {
-                        final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt -> self.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply((S) anInt.getValue())));
+                        final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt -> holder.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply((S) anInt.getValue())));
                         return new Appointer<>(prev.appointerVersion + 1, basePath, intConsumer);
                     }
             ).next;
@@ -181,7 +205,7 @@ public class Appointers {
                     prev -> {
                         final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt ->
                         {
-                            self.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply((S) anInt.getValue())));
+                            holder.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply((S) anInt.getValue())));
                         };
                         return new Appointer<>(prev.appointerVersion + 1, basePath, intConsumer);
                     }
@@ -192,7 +216,7 @@ public class Appointers {
                 if (prevWasSet && prev.isActive()) prev.demote();
                 //contention check
                 if (witnessAtomicReference.get().equalTo(basePath)) {
-                    if (prevWasSet) self.invalidate();
+                    if (prevWasSet) holder.invalidate();
                     next.appoint();
                 }
             }

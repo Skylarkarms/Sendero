@@ -13,22 +13,22 @@ import java.util.function.UnaryOperator;
 
 public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
 
-    final Appointers.SelfAppointer<T> selfAppointer = new Appointers.SelfAppointer<>(holder);
+    final Appointers.HolderAppointer<T> holderAppointer = new Appointers.HolderAppointer<>(holder);
 
     public BasePath(boolean mutableActivationListener) {
         super(mutableActivationListener);
     }
 
     protected <S, P extends BasePath<S>> void listen(P basePath, Function<S, T> map) {
-        selfAppointer.setAndStart(basePath, map);
+        holderAppointer.setAndStart(basePath, map);
     }
 
     protected <P extends BasePath<T>> void listen(P basePath) {
-        selfAppointer.setAndStart(basePath);
+        holderAppointer.setAndStart(basePath);
     }
 
     protected void stopListeningPath() {
-        selfAppointer.stopAndClearPath();
+        holderAppointer.stopAndClearPath();
     }
 
     public BasePath() {
@@ -46,27 +46,17 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         super(holderBuilder, actMgmtBuilder);
     }
 
-    static<S> BooleanConsumer activationListenerCreator(
-            Supplier<BasePath<S>> basePathSupplier,
-            Consumer<Pair.Immutables.Int<S>> toAppoint
-    ) {
-        return new BooleanConsumer() {
-            //The supplier is for the Client to be allowed to  create a path at super()
-            final BasePath<S> basePath = basePathSupplier.get();
-            @Override
-            public void accept(boolean isActive) {
-                if (isActive) basePath.appoint(toAppoint);
-                else basePath.demotionOverride(toAppoint);
-//                else if (basePath instanceof ToMany) {
-//                    ((ToMany<S>) basePath).demote(toAppoint);
-//                } else if (basePath instanceof Injective) {
-//                    ((Injective<S>) basePath).demote();
-//                }
-            }
-        };
+    BasePath(Builders.HolderBuilder<T> holderBuilder) {
+        super(holderBuilder);
     }
 
     protected abstract void appoint(Consumer<Pair.Immutables.Int<T>> subscriber);
+
+    /**boolean continuation is:
+     * <li>true if: is a dispatch product from the continuation of events in a forking path stream</li>
+     * <li>false if: is a dispatch product from a client's input via update() or accept()</li>
+     * */
+    abstract void pathDispatch(boolean fullyParallel, Pair.Immutables.Int<T> t);
 
     // ------------------ Forking Functions ------------------
 
@@ -86,14 +76,14 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         return mainForkingFunctionBuilder(UnaryOperator.identity());
     }
 
-    protected <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> mapFunctionBuilder(Function<T, S> map) {
+    <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> mapFunctionBuilder(Function<T, S> map) {
         return mainForkingFunctionBuilder(
                 intConsumer ->
                         tInt -> intConsumer.accept(new Pair.Immutables.Int<>(tInt.getInt(), map.apply(tInt.getValue())))
         );
     }
 
-    protected <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> mutateFunctionBuilder(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
+    <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> mutateFunctionBuilder(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
         return mainForkingFunctionBuilder(
                 intConsumer ->
                         tInt -> {
@@ -105,7 +95,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         );
     }
 
-    protected <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> switchFunctionBuilder(Function<T, BasePath<S>> switchMap) {
+    <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> switchFunctionBuilder(Function<T, BasePath<S>> switchMap) {
         return intConsumer -> {
             final Appointers.SimpleAppointer<S> appointer = new Appointers.SimpleAppointer<>(intConsumer,t -> true);
             final Consumer<Pair.Immutables.Int<T>> toAppoint = new Consumer<Pair.Immutables.Int<T>>() {
@@ -138,7 +128,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         };
     }
 
-    protected <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> switchMutateFunctionBuilder(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
+    <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> switchMutateFunctionBuilder(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
         return intConsumer -> {
             //Controls domain subscription
             final Appointers.SimpleAppointer<S> appointer = new Appointers.SimpleAppointer<>(intConsumer,t -> true);
@@ -190,7 +180,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
 
         protected<S> Injective(Supplier<BasePath<S>> basePathSupplier, Function<Consumer<Pair.Immutables.Int<T>>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
             super(
-                    dispatcher -> activationListenerCreator(basePathSupplier, toAppointFun.apply(dispatcher))
+                    dispatcher -> Appointers.Appointer.booleanConsumerAppointer(basePathSupplier.get(), toAppointFun.apply(dispatcher))
             );
         }
 
@@ -200,24 +190,20 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
 
         <S> Injective(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
             super(holderBuilder,
-                    dispatcher -> ActivationManager.getBuilder().withFixed(BasePath.activationListenerCreator(basePathSupplier, toAppointFun.apply(dispatcher)))
+                    dispatcher -> ActivationManager.getBuilder().withFixed(
+                            Appointers.Appointer.booleanConsumerAppointer(basePathSupplier.get(), toAppointFun.apply(dispatcher))
+                    )
             );
         }
 
         @Override
-        protected void dispatch(Pair.Immutables.Int<T> t) {
-            if (remote.isRegistered()) {
-                if (t.compareTo(getVersion()) != 0) return;
-                remote.accept(t);
-            }
+        protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
+            pathDispatch(false, t);
         }
 
         @Override
         protected void coldDispatch(Pair.Immutables.Int<T> t) {
-            if (remote.isRegistered()) {
-                if (t.compareTo(getVersion()) != 0) return;
-                remote.accept(t);
-            }
+            pathDispatch(false, t);
         }
 
         @Override
@@ -228,6 +214,15 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
                     consumer -> remote.snapshotRegister((Consumer<Pair.Immutables.Int<T>>) consumer),
                     UnaryOperator.identity()
             );
+        }
+
+        @Override
+        void pathDispatch(boolean fullyParallel, Pair.Immutables.Int<T> t) {
+            if (remote.isRegistered()) {
+                if (t.compareTo(getVersion()) != 0) return;
+                remote.accept(t);
+            }
+            if (fullyParallel) throw new IllegalStateException("Injective.class dispatch cannot be parallel.");
         }
 
         @Override
@@ -254,6 +249,10 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
             super();
         }
 
+        public ToMany(Builders.HolderBuilder<T> holderBuilder) {
+            super(holderBuilder);
+        }
+
         protected ToMany(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
             super(selfMap);
         }
@@ -266,30 +265,21 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
             super(holderBuilder, actMgmtBuilder);
         }
 
-        @Override
-        protected void dispatch(Pair.Immutables.Int<T> t) {
-            //Last local observers on same thread
-            dispatchRemotes(false, t);
 
+
+        @Override
+        protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
+            //Last local observers on same thread
+                scheduleExecution(
+                        delay,
+                        () -> pathDispatch(false, t)
+                );
         }
 
         @Override
         protected void coldDispatch(Pair.Immutables.Int<T> t) {
             //From local observers on forked thread (if extended)
-            dispatchRemotes(false, t);
-        }
-
-        protected void dispatchRemotes(boolean fullyParallel, Pair.Immutables.Int<T> t) {
-            final Consumer<Pair.Immutables.Int<T>>[] subs = remote.copy();
-            final int length = subs.length;
-            if (length == 0) return;
-            if (!fullyParallel) {
-                if (length > 1) parallelDispatch(1, subs, t, UnaryOperator.identity());
-
-                subs[0].accept(t); //Keep in thread
-            } else {
-                parallelDispatch(0, subs, t, UnaryOperator.identity());
-            }
+            pathDispatch(false, t);
         }
 
         @Override
@@ -300,6 +290,21 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
                     consumer -> remote.add((Consumer<Pair.Immutables.Int<T>>) consumer),
                     UnaryOperator.identity()
             );
+        }
+
+        @Override
+        void pathDispatch(boolean fullyParallel, Pair.Immutables.Int<T> t) {
+            final Consumer<Pair.Immutables.Int<T>>[] subs = remote.copy();
+            final int length = subs.length;
+            if (length == 0) return;
+            if (!fullyParallel) {
+                if (length > 1) parallelDispatch(1, subs, t, UnaryOperator.identity());
+
+                subs[0].accept(t); //Keep in thread
+            } else {
+                parallelDispatch(0, subs, t, UnaryOperator.identity());
+            }
+
         }
 
         @Override

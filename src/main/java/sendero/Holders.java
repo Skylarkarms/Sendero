@@ -7,6 +7,7 @@ import sendero.interfaces.Updater;
 import sendero.pairs.Pair;
 import sendero.threshold_listener.ThresholdListeners;
 
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -24,6 +25,8 @@ final class Holders {
         StatefulHolder<T> expectIn(Predicate<T> expect);
         StatefulHolder<T> expectOut(Predicate<T> expect);
     }
+
+
 
     interface ColdHolder<T> {
         void acceptVersionValue(Pair.Immutables.Int<T> versionValue);
@@ -81,26 +84,32 @@ final class Holders {
         private final Predicate<T> CLEARED_PREDICATE = Functions.always(true);
         private volatile Predicate<T> expectOutput = CLEARED_PREDICATE;
 
+        public TestDispatcher(Predicate<T> expectOutput) {
+            this.expectOutput = expectOutput == null ? CLEARED_PREDICATE : expectOutput;
+        }
+
+        public TestDispatcher() {
+        }
+
+        static final long COLD = -1, HOT = 0;
+
         @Override
         protected void setExpectOutput(Predicate<T> expectOutput) {
             this.expectOutput = expectOutput;
         }
 
-        protected void inferDispatch(Pair.Immutables.Int<T> t, boolean isCold) {
+        protected void inferDispatch(Pair.Immutables.Int<T> t, long delay) {
             if (expectOutput.test(t.getValue())) {
-                if (isCold) coldDispatch(t);
-                else dispatch(t);
+                if (delay >= HOT) dispatch(delay, t);
+                else coldDispatch(t);
             }
+            if (delay < COLD) throw new IllegalStateException("Illegal delay value");
         }
 
         protected boolean outPutTest(T value) {
             return expectOutput.test(value);
         }
 
-        @Override
-        protected void coldDispatch(Pair.Immutables.Int<T> t) {}
-        @Override
-        protected void dispatch(Pair.Immutables.Int<T> t) {}
     }
 
     static class DispatcherHolder<T> extends TestDispatcher<T> implements StatefulHolder<T>, ColdHolder<T> {
@@ -113,7 +122,8 @@ final class Holders {
             reference = new AtomicReference<>(FIRST);
         }
 
-        DispatcherHolder(AtomicReference<Pair.Immutables.Int<T>> reference, UnaryOperator<T> map, Predicate<T> expectInput) {
+        DispatcherHolder(AtomicReference<Pair.Immutables.Int<T>> reference, UnaryOperator<T> map, Predicate<T> expectInput, Predicate<T> expectOut) {
+            super(expectOut);
             this.reference = reference == null ?  new AtomicReference<>(FIRST) : reference;
             this.map = map == null ? CLEARED_MAP : map;
             this.expectInput = expectInput == null ? CLEARED_PREDICATE : expectInput;
@@ -144,14 +154,22 @@ final class Holders {
         private UnaryOperator<T> lazyProcess(UnaryOperator<T> update) {
             return currentValue -> {
                 //Not valid if same instance
-                T updated = update.apply(currentValue);
-                if (updated == currentValue) return INVALID;
-                T mapped = map.apply(updated);
-                return expectInput.test(mapped) ? mapped : INVALID;
+                try {
+                    T updated, mapped;
+                    updated = update.apply(currentValue);
+                    if (updated == currentValue) {
+                        return INVALID;
+                    }
+                    mapped = map.apply(updated);
+                    return expectInput.test(mapped) ? mapped : INVALID;
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    throw new RuntimeException(e);
+                }
             };
         }
 
-        private void lazyCASAccept(UnaryOperator<T> t) {
+        private void lazyCASAccept(long delay, UnaryOperator<T> t) {
             Pair.Immutables.Int<T> prev = reference.get();
             T newValue = t.apply(prev.getValue());
             Pair.Immutables.Int<T> next = new Pair.Immutables.Int<>(prev.getInt() + 1, newValue);
@@ -163,7 +181,7 @@ final class Holders {
                     wasValid = newValue != INVALID;
                 }
                 if (wasValid && reference.compareAndSet(prev, next)) {
-                    inferDispatch(next, false);
+                    inferDispatch(next, delay);
                     break;
                 }
                 if (!(changed = (prev != (prev = reference.get()))) && !wasValid) {
@@ -176,7 +194,16 @@ final class Holders {
          * when attempted updates fail due to contention among threads.*/
         @Override
         public void update(UnaryOperator<T> update) {
-            lazyCASAccept(lazyProcess(update));
+            lazyCASProcess(TestDispatcher.HOT ,update);
+        }
+
+        @Override
+        public void update(long delay, UnaryOperator<T> update) {
+            lazyCASProcess(delay, update);
+        }
+
+        private void lazyCASProcess(long delay, UnaryOperator<T> update) {
+            lazyCASAccept(delay, lazyProcess(update));
         }
 
         private T process(T t) {
@@ -190,7 +217,7 @@ final class Holders {
                 current = reference.get();
                 final Pair.Immutables.Int<T> newPair = new Pair.Immutables.Int<>(current.getInt() + 1, t);
                 if (reference.compareAndSet(current, newPair)) {
-                    inferDispatch(newPair, false);
+                    inferDispatch(newPair, TestDispatcher.HOT);
                     break;
                 }
             }
@@ -201,6 +228,7 @@ final class Holders {
             CASAccept(process(t));
         }
 
+        @Override
         public void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
             versionValueCAS(versionValue.getInt(), process(versionValue.getValue()));
         }
@@ -214,7 +242,7 @@ final class Holders {
                     next = new Pair.Immutables.Int<>(newVersion, processed);
                 }
                 if (lesser && reference.compareAndSet(prev, next)) {
-                    inferDispatch(next, true);
+                    inferDispatch(next, TestDispatcher.COLD);
                     break;
                 }
                 if (prev.compareTo(prev = reference.get()) >= 0) break;
@@ -227,6 +255,7 @@ final class Holders {
             return pair == FIRST ? null : pair.getValue();
         }
 
+        @Override
         public void invalidate() {
             reference.getAndSet(FIRST);
         }
@@ -254,15 +283,15 @@ final class Holders {
             return manager.activationListenerIsSet();
         }
 
-        protected boolean clearActivationListener() {
-            return manager.clearActivationListener();
-        }
+//        protected boolean clearActivationListener() {
+//            return manager.clearActivationListener();
+//        }
 
         protected ActivationHolder() {
             holder = new DispatcherHolder<T>() {
                 @Override
-                protected void dispatch(Pair.Immutables.Int<T> t) {
-                    ActivationHolder.this.dispatch(t);
+                protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
+                    ActivationHolder.this.dispatch(delay,t);
                 }
 
                 @Override
@@ -281,8 +310,8 @@ final class Holders {
         protected ActivationHolder(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
             holder = new DispatcherHolder<T>() {
                 @Override
-                protected void dispatch(Pair.Immutables.Int<T> t) {
-                    ActivationHolder.this.dispatch(t);
+                protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
+                    ActivationHolder.this.dispatch(delay, t);
                 }
 
                 @Override
@@ -308,11 +337,21 @@ final class Holders {
             this.manager = actMgmtBuilder.build(this::deactivationRequirements);
         }
 
+        protected ActivationHolder(Builders.HolderBuilder<T> holderBuilder) {
+            this.holder = holderBuilder.build(this);
+            this.manager = new ActivationManager(){
+                @Override
+                protected boolean deactivationRequirements() {
+                    return ActivationHolder.this.deactivationRequirements();
+                }
+            };
+        }
+
         protected ActivationHolder(boolean activationListener) {
             holder = new DispatcherHolder<T>() {
                 @Override
-                protected void dispatch(Pair.Immutables.Int<T> t) {
-                    ActivationHolder.this.dispatch(t);
+                protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
+                    ActivationHolder.this.dispatch(delay, t);
                 }
 
                 @Override
@@ -342,7 +381,7 @@ final class Holders {
             int snapshot = res.value;
             Runnable runnable = () -> {
                 final Pair.Immutables.Int<T> holderSnap  = holder.getSnapshot();//this method could be passed downStream along
-                // with Manager in the executor class, Holder need sto be made package private.
+                // with Manager in the executor class, Holder needs to be made package private.
                 if (holderSnap != null && snapshot == holderSnap.getInt() && holder.outPutTest(holderSnap.getValue())) {
                     subscriber.accept(map.apply(holderSnap));
                 }
@@ -363,10 +402,6 @@ final class Holders {
 
         protected void tryDeactivate() {
             if (manager.tryDeactivate()) onStateChange(false);
-        }
-
-        void setActivationListener(BooleanConsumer activationListener) {
-            manager.setActivationListener(activationListener);
         }
 
         protected void accept(T t) {
@@ -393,6 +428,10 @@ final class Holders {
             holder.update(update);
         }
 
+        protected void update(long delay, UnaryOperator<T> update) {
+            holder.update(delay, update);
+        }
+
         protected T get() {
             return holder.get();
         }
@@ -411,7 +450,8 @@ final class Holders {
     abstract static class ExecutorHolder<T> extends ActivationHolder<T> {
         private final EService eService = EService.INSTANCE;
 
-        private final AtomicScheduler scheduler = new AtomicScheduler(eService::getService, 50, TimeUnit.MILLISECONDS);
+        //Only if isColdHolder == true;
+        private final AtomicScheduler scheduler = new AtomicScheduler(eService::getScheduledService, TimeUnit.MILLISECONDS);
 
         public ExecutorHolder(boolean activationListener) {
             super(activationListener);
@@ -436,6 +476,10 @@ final class Holders {
             super(holderBuilder, actMgmtBuilder);
         }
 
+        ExecutorHolder(Builders.HolderBuilder<T> holderBuilder) {
+            super(holderBuilder);
+        }
+
         @Override
         protected void tryActivate() {
             eService.increment();
@@ -447,12 +491,17 @@ final class Holders {
             eService.decrement();
         }
 
-        protected void execute(Runnable action) {
-            scheduler.scheduleOrReplace(action);
+        protected void fastExecute(Runnable action) {
+            eService.fastExecute(action);
         }
 
-        protected <S> void parallelDispatch(int beginAt, Consumer<? super S>[] subs, Pair.Immutables.Int<T> t, Function<Pair.Immutables.Int<T>, S> map) {
-            execute(
+        protected void scheduleExecution(long delay, Runnable action) {
+            if (delay > TestDispatcher.HOT) scheduler.scheduleOrReplace(delay, action);
+            else action.run();
+        }
+
+        <S> void parallelDispatch(int beginAt, Consumer<? super S>[] subs, Pair.Immutables.Int<T> t, Function<Pair.Immutables.Int<T>, S> map) {
+            fastExecute(
                     () -> {
                         int length = subs.length;
                         for (int i = beginAt; i < length; i++) {
@@ -469,7 +518,7 @@ final class Holders {
                     subscriber,
                     snapshotFun,
                     map,
-                    this::execute
+                    this::fastExecute
             );
         }
 
@@ -477,39 +526,73 @@ final class Holders {
             onInactive();
         }
 
-        public enum EService {
-            INSTANCE;
-            private volatile boolean active;
+        private static abstract class LifeCycledThreshold {
             private final AtomicUtils.SwapScheduler.Long delayer = new AtomicUtils.SwapScheduler.Long(100);
-            private volatile ScheduledExecutorService service;
-
             private final ThresholdListeners.ThresholdListener thresholdSwitch = ThresholdListeners.getAtomicOf(
                     0, 0
             );
-            public void create() {
-                if (!delayer.interrupt()) if (thresholdSwitch.thresholdCrossed() && !active) {
-                    active = true;
-                    service = Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors());
-                }
-            }
-            public void destroy() {
-                delayer.scheduleOrSwap(
-                        () -> {
-                            active = false;
-                            service.shutdown();
-                        }
-                );
-            }
-            public void increment() {
-                if (thresholdSwitch.increment()) create();
 
+            protected abstract void onCreate();
+            protected abstract void onDestroy();
+
+            public void tryActivate() {if (thresholdSwitch.increment()) if (!delayer.interrupt()) onCreate();}
+            public void tryDeactivate() {if (thresholdSwitch.decrement()) delayer.scheduleOrSwap(this::onDestroy);}
+        }
+
+        private static final class LifeCycledExecutor<S extends ExecutorService> extends LifeCycledThreshold {
+
+            private volatile S service;
+            private final Supplier<S> serviceSupplier;
+            private final Consumer<S> serviceDestroyer;
+
+            private LifeCycledExecutor(Supplier<S> serviceSupplier, Consumer<S> serviceDestroyer) {
+                this.serviceSupplier = serviceSupplier;
+                this.serviceDestroyer = serviceDestroyer;
+            }
+
+            @Override
+            protected void onCreate() {
+                service = serviceSupplier.get();
+            }
+
+            @Override
+            protected void onDestroy() {
+                serviceDestroyer.accept(service);
+            }
+
+            public S getService() {
+                return service;
+            }
+        }
+
+        public enum EService {
+            INSTANCE;
+            private final LifeCycledExecutor<ScheduledExecutorService> lifeCycledSchedulerExecutor = new LifeCycledExecutor<>(
+                    () -> Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors()),
+                    ExecutorService::shutdown
+            );
+
+            private void create() {
+                lifeCycledSchedulerExecutor.tryActivate();
+            }
+
+            private void destroy() {
+                lifeCycledSchedulerExecutor.tryDeactivate();
+            }
+
+            public void increment() {
+                create();
             }
             public void decrement() {
-                if (thresholdSwitch.decrement()) destroy();
+                destroy();
             }
 
-            public ScheduledExecutorService getService() {
-                return service;
+            public ScheduledExecutorService getScheduledService() {
+                return lifeCycledSchedulerExecutor.getService();
+            }
+
+            void fastExecute(Runnable command) {
+                lifeCycledSchedulerExecutor.getService().schedule(command, 0, TimeUnit.NANOSECONDS);
             }
         }
     }

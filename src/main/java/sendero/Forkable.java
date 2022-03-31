@@ -7,6 +7,7 @@ import java.util.function.Function;
 
 interface Forkable<T> {
     <O extends Gates.Out<T>> O out(Class<? super O> outputType);
+    <S, O extends Gates.Out<S>> O out(Class<? super O> outputType, Function<T, S> map);
     <S> Forkable<S> forkMap(Function<T, S> map);
     <S> Forkable<S> forkFun(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit);
     <S> Forkable<S> forkSwitch(Function<T, BasePath<S>> switchMap);

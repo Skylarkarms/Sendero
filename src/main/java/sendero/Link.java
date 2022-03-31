@@ -28,8 +28,13 @@ public class Link<T> extends Path<T> implements BaseLink {
 
     @Override
     public boolean unbound() {
-        return clearActivationListener();
+        throw new IllegalStateException("Must be overridden by its children");
     }
+
+//    @Override
+//    public boolean unbound() {
+//        return clearActivationListener();
+//    }
 
     public static class Unbound<T> extends Link<T> implements UnboundLink<T> {
 
@@ -37,23 +42,13 @@ public class Link<T> extends Path<T> implements BaseLink {
 
         public Unbound() {
             super(true);
-            activePathListener = new ActivePathListener<T>(manager, selfAppointer) {
-//                @Override
-//                void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
-//                    Unbound.this.acceptVersionValue(versionValue);
-//                }
-            };
+            activePathListener = new ActivePathListener<T>(manager, holderAppointer);
 
         }
 
         public Unbound(Builders.HolderBuilder<T> holderBuilder) {
             super(holderBuilder, true);
-            activePathListener = new ActivePathListener<T>(manager, selfAppointer) {
-//                @Override
-//                void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
-//                    Unbound.this.acceptVersionValue(versionValue);
-//                }
-            };
+            activePathListener = new ActivePathListener<T>(manager, holderAppointer);
         }
 
         private final Supplier<IllegalAccessException> getExc = () -> new IllegalAccessException(
@@ -94,7 +89,6 @@ public class Link<T> extends Path<T> implements BaseLink {
         }
 
         interface UnboundSwitch<T> {
-            //        void bind(BasePath<T> path);
             <S> void bindFun(BasePath<S> path, Function<Consumer<? super T>, ? extends Consumers.BaseConsumer<S>> exit);
             <S> void switchMap(
                     BasePath<S> path,
@@ -108,7 +102,7 @@ public class Link<T> extends Path<T> implements BaseLink {
 
         public static class Switch<T> extends Unbound<T> implements UnboundSwitch<T> {
 
-            private final BaseLinks.AbsLink2<T> absLink = new BaseLinks.AbsLink2<T>(activePathListener) {
+            private final AbsLink<T> absLink = new AbsLink<T>(activePathListener) {
                 @Override
                 protected void onResult(Pair.Immutables.Int<T> tPair) {
                     Switch.this.acceptVersionValue(tPair);

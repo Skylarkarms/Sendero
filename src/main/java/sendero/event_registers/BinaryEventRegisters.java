@@ -129,7 +129,8 @@ public final class BinaryEventRegisters {
 
         @Override
         public boolean unregister(BooleanConsumer expect) {
-            return false;
+            return register.unregisterDispatch(expect) != null;
+//            return false;
         }
     }
 

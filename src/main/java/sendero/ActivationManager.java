@@ -11,38 +11,6 @@ abstract class ActivationManager {
 
     private final Switchers.Switch switchRegister;
 
-//    public enum EService {
-//        INSTANCE;
-//        private ExecutorService service;
-//        private boolean active;
-//        private final ThresholdListeners.ThresholdListener thresholdSwitch = ThresholdListeners.getAtomicOf(
-//                0, 0,
-//                isActive -> {
-//                    if (isActive) create();
-//                    else destroy();
-//                }
-//        );
-//        public void create() {
-//            if (thresholdSwitch.thresholdCrossed() && !active) {
-//                active = true;
-//                service = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-//            }
-//        }
-//        public void destroy() {
-//            active = false;
-//            service.shutdown();
-//        }
-//        public void increment() {thresholdSwitch.increment();}
-//        public void decrement() {thresholdSwitch.decrement();}
-//        public void execute(Runnable runnable) {
-//            if (thresholdSwitch.thresholdCrossed()
-//                    && service != null
-//                    && !service.isShutdown()) {
-//                service.execute(runnable);
-//            }
-//        }
-//    }
-
     protected ActivationManager() {
         switchRegister = Switchers.getAtomic();
         thrower = createThrower();
@@ -134,14 +102,6 @@ abstract class ActivationManager {
 
     protected boolean activationListenerIsSet() {
         return ((BinaryEventRegisters.BinaryEventRegister)switchRegister).isRegistered();
-    }
-
-    protected boolean clearActivationListener() {
-        return ((BinaryEventRegisters.BinaryEventRegister)switchRegister).unregister() != null;
-    }
-
-    protected BooleanConsumer getAndClearActivationListener() {
-        return ((BinaryEventRegisters.BinaryEventRegister)switchRegister).unregister();
     }
 
     protected boolean expectClearActivationListener(BooleanConsumer activationListener) {

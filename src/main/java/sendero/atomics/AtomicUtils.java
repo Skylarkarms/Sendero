@@ -133,7 +133,7 @@ public final class AtomicUtils {
                             if (semaphore.get() == BUSY) { // Last check, it may have changed to QUEUE
                                 runnable.run();
                                 semaphore.set(FINISH);
-                            } else System.err.println("Queueing...!!!>>>>>>>>>>>>>>");
+                            }
                         }
                         prev = semaphore.get(); //re-check FINISH (may change to QUEUE)
                         // || failure if compareAndSet failed (May have been a CLOSE but now is a QUEUE).

@@ -10,27 +10,46 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 public class Merge<T> extends Path<T> implements BaseMerge<T> {
-    private final Updater<T> updater = Merge.this::update;
+//    private final Updater<T> updater = Merge.this::update;
+//    private final Updater<T> updater = holder;
 
+//    private final Updater<T> updater = new Updater<T>() {
+//        @Override
+//        public void update(UnaryOperator<T> update) {
+//            Merge.this.update(update);
+//        }
+//
+//        @Override
+//        public void update(long delay, UnaryOperator<T> update) {
+//            Merge.this.update(delay, update);
+//        }
+//    };
+//
     private final SimpleLists.SimpleList.LockFree.Snapshotting<BooleanConsumer, Boolean> joints = SimpleLists.getSnapshotting(
             BooleanConsumer.class,
             () -> !isIdle()
     );
 
     public Merge(T initialValue, Predicate<T> expectOutput) {
-        super(true);
-        setActivationListener(
-                isActive -> {
-                    final BooleanConsumer[] toDispatch = joints.copy();
-                    final int length = toDispatch.length;
-                    for (int i = 0; i < length; i++) {
-                        final BooleanConsumer j = toDispatch[i];
-                        j.accept(isActive);
-                    }
-                }
+        super(
+                Builders.get(tHolderBuilder -> tHolderBuilder.expectOut(expectOutput).withInitial(initialValue))
+//                ActivationManager.getBuilder().withFixed(
+//                        this::acceptAction
+//                )
         );
-        setExpectOutput(expectOutput);
-        accept(initialValue);
+//        super(true);
+//        setActivationListener(
+//                isActive -> {
+//                    final BooleanConsumer[] toDispatch = joints.copy();
+//                    final int length = toDispatch.length;
+//                    for (int i = 0; i < length; i++) {
+//                        final BooleanConsumer j = toDispatch[i];
+//                        j.accept(isActive);
+//                    }
+//                }
+//        );
+//        setExpectOutput(expectOutput);
+//        accept(initialValue);
     }
 
     @Override
@@ -43,7 +62,8 @@ public class Merge<T> extends Path<T> implements BaseMerge<T> {
         }
         final BooleanConsumer joint = new BooleanConsumer() {
             final BasePath<S> jointDomain = path;
-            final Consumer<S> sConsumer = observer.apply(updater);
+            final Consumer<S> sConsumer = observer.apply(holder);
+//            final Consumer<S> sConsumer = observer.apply(updater);
             final Consumer<Pair.Immutables.Int<S>> toAppoint = new Consumer<Pair.Immutables.Int<S>>() {
                 final Holders.DispatcherHolder<S> simpleHolder = new Holders.DispatcherHolder<S>(){
                     @Override
@@ -58,15 +78,10 @@ public class Merge<T> extends Path<T> implements BaseMerge<T> {
             };
             @Override
             public void accept(boolean isActive) {
-                if (isActive) jointDomain.appoint(toAppoint);
-                else {
-//                    if (jointDomain instanceof Injective) {
-//                        ((Injective<S>) jointDomain).demote();
-//                    } else if (jointDomain instanceof ToMany) {
-//                        ((ToMany<S>) jointDomain).demote(toAppoint);
-//                    }
-                    jointDomain.demotionOverride(toAppoint);
+                if (isActive) {
+                    jointDomain.appoint(toAppoint);
                 }
+                else jointDomain.demotionOverride(toAppoint);
             }
 
             @Override
@@ -74,10 +89,10 @@ public class Merge<T> extends Path<T> implements BaseMerge<T> {
                 return jointDomain.equals(o);
             }
 
-            @Override
-            public int hashCode() {
-                return jointDomain.hashCode();
-            }
+//            @Override
+//            public int hashCode() {
+//                return jointDomain.hashCode();
+//            }
         };
         final Pair.Immutables.Bool<Boolean> res = joints.add(joint);
         if (res.value) joint.accept(true);
@@ -91,5 +106,14 @@ public class Merge<T> extends Path<T> implements BaseMerge<T> {
         return joints.removeIf(booleanConsumer -> booleanConsumer.equals(path));
     }
 
+    @Override
+    protected void onStateChange(boolean isActive) {
+        final BooleanConsumer[] toDispatch = joints.copy();
+        final int length = toDispatch.length;
+        for (int i = 0; i < length; i++) {
+            final BooleanConsumer j = toDispatch[i];
+            j.accept(isActive);
+        }
+    }
 }
 
