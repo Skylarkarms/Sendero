@@ -57,8 +57,12 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         return holderAppointer.stop();
     }
 
-    protected boolean pathIsSet() {
+    protected boolean pathIsActive() {
         return holderAppointer.isActive();
+    }
+
+    protected boolean pathIsSet() {
+        return holderAppointer.isCleared();
     }
 
     public BasePath() {

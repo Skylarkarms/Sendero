@@ -139,6 +139,7 @@ public class Appointers {
         boolean start();
         boolean stop();
         boolean isActive();
+        boolean isCleared();
 
         Appointer<?> getAppointer();
 
@@ -187,6 +188,11 @@ public class Appointers {
         @Override
         public boolean isActive() {
             return holderAppointer.isActive();
+        }
+
+        @Override
+        public boolean isCleared() {
+            return holderAppointer.isCleared();
         }
 
         @Override
@@ -273,6 +279,11 @@ public class Appointers {
         @Override
         public boolean isActive() {
             return witnessAtomicReference.get().isActive();
+        }
+
+        @Override
+        public boolean isCleared() {
+            return witnessAtomicReference.get().isCleared();
         }
 
         @Override
