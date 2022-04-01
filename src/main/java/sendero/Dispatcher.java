@@ -13,6 +13,4 @@ abstract class Dispatcher<T> {
 
     /**dispatch is trigger by client input*/
     protected void dispatch(long delay,Pair.Immutables.Int<T> t) {}
-//    protected void dispatch(boolean delayed,Pair.Immutables.Int<T> t) {}
-//    protected void dispatch(Pair.Immutables.Int<T> t) {}
 }

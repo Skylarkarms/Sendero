@@ -23,10 +23,6 @@ class ActivePathListener<T> {
             this.appointer = appointer;
             if (!appointer.isCleared()) {
                 this.consumer = Appointers.Appointer.booleanConsumerAppointer(this.appointer);
-//                this.consumer = isActive -> {
-//                    if (isActive) this.appointer.appoint();
-//                    else this.appointer.demote();
-//                };
             } else this.consumer = BooleanConsumer.cleared();
         }
 

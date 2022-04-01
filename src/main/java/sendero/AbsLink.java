@@ -25,11 +25,6 @@ abstract class AbsLink<T> implements sendero.Link.Unbound.UnboundSwitch<T>{
         activePathListener.forcedSet(
                 Appointers.Appointer.booleanConsumerAppointer(observable, exit)
         );
-
-//        activePathListener.forcedSet(
-//                BasePath.activationListenerCreator(
-//                        () -> observable, exit
-//                ));
     }
 
     @Override
@@ -46,8 +41,6 @@ abstract class AbsLink<T> implements sendero.Link.Unbound.UnboundSwitch<T>{
     public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
         final Appointers.SimpleAppointer<T> appointer = new Appointers.SimpleAppointer<>(this::onResult,t -> true);
 
-//        final sendero.Link.SingleLink<BasePath<T>> basePathSingleLink = new sendero.Link.SingleLink.Bound<>(path, switchMap::apply);
-
         final BooleanConsumer booleanConsumerAppointer = Appointers.Appointer.booleanConsumerAppointer(
                 path,
                 new Holders.DispatcherHolder<BasePath<T>>() {
@@ -59,30 +52,10 @@ abstract class AbsLink<T> implements sendero.Link.Unbound.UnboundSwitch<T>{
                 switchMap::apply
         );
 
-//        final BooleanConsumer booleanConsumer = BasePath.activationListenerCreator(
-//                () -> basePathSingleLink,
-//                new Consumer<Pair.Immutables.Int<BasePath<T>>>() {
-//                    final Holders.DispatcherHolder<BasePath<T>> domainHolder = new Holders.DispatcherHolder<BasePath<T>>() {
-//                        @Override
-//                        protected void coldDispatch(Pair.Immutables.Int<BasePath<T>> t) {
-//                            appointer.setAndStart(t.getValue());
-//                        }
-//                    };
-//                    {
-//                        domainHolder.expectIn(
-//                                tDomain -> tDomain != null && tDomain != domainHolder.get()
-//                        );
-//                    }@Override
-//                    public void accept(Pair.Immutables.Int<BasePath<T>> basePathInt) {
-//                        domainHolder.acceptVersionValue(basePathInt.deepCopy());
-//                    }
-//                }
-//        );
         final BooleanConsumer finalConsumer = isActive -> {
             if (isActive) appointer.start();
             else appointer.stop();
             booleanConsumerAppointer.accept(isActive);
-//            booleanConsumer.accept(isActive);
         };
         activePathListener.forcedSet(finalConsumer);
     }
@@ -117,38 +90,11 @@ abstract class AbsLink<T> implements sendero.Link.Unbound.UnboundSwitch<T>{
                     }
                 }
         );
-//        final BooleanConsumer booleanConsumer = BasePath.activationListenerCreator(
-//                () -> path,
-//                new Consumer<Pair.Immutables.Int<S>>() {
-//                    final Holders.DispatcherHolder<BasePath<T>> domainHolder = new Holders.DispatcherHolder<BasePath<T>>() {
-//                        @Override
-//                        protected void coldDispatch(Pair.Immutables.Int<BasePath<T>> t) {
-//                            appointer.setAndStart(t.getValue());
-//                        }
-//                    };
-//
-//                    {
-//                        domainHolder.expectIn(
-//                                tDomain -> tDomain != null && tDomain != domainHolder.get()
-//                        );
-//                    }
-//                    @Override
-//                    public void accept(Pair.Immutables.Int<S> sInt) {
-//                        S s = sInt.getValue();
-//                        int intS = sInt.getInt();
-//                        Consumer<S> computedExit = exit.apply(
-//                                tDomain -> domainHolder.acceptVersionValue(new Pair.Immutables.Int<>(intS, tDomain))
-//                        );
-//                        computedExit.accept(s);
-//                    }
-//                }
-//        );
         final BooleanConsumer finalActivationListener = isActive -> {
             if (isActive) appointer.start();
             else appointer.stop();
 
             booleanConsumerAppointer.accept(isActive);
-//            booleanConsumer.accept(isActive);
         };
         activePathListener.forcedSet(finalActivationListener);
     }

@@ -188,7 +188,6 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         <S> Injective(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
             super(holderBuilder,
                     dispatcher -> Builders.getManagerBuild().withFixed(
-//                    dispatcher -> ActivationManager.getBuilder().withFixed(
                             Appointers.Appointer.booleanConsumerAppointer(basePathSupplier.get(), toAppointFun.apply(dispatcher))
                     )
             );

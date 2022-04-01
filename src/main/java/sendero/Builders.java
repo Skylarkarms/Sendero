@@ -8,7 +8,7 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
-public class Builders {
+public final class Builders {
     public static <T>HolderBuilder<T> getHolderBuild(UnaryOperator<Builders.HolderBuilder<T>> op) {
         return op.apply(new HolderBuilder<>());
     }
