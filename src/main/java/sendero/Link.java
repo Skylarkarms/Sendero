@@ -9,12 +9,16 @@ import java.util.function.*;
 
 public class Link<T> extends Path<T> implements BaseLink {
 
-    private <S> Link(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+    private <S> Link(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<Updater<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
         super(holderBuilder, basePath, toAppointFun);
     }
 
     private Link(Builders.HolderBuilder<T> holderBuilder, boolean mutableManager) {
         super(holderBuilder, Builders.getManagerBuild().withMutable(mutableManager));
+    }
+
+    private<S> Link(Builders.HolderBuilder<T> holderBuilder, Function<Holders.ColdHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun, BasePath<S> basePath) {
+        super(holderBuilder, toAppointFun, basePath);
     }
 
     private Link(boolean activationListener) {
@@ -184,10 +188,12 @@ public class Link<T> extends Path<T> implements BaseLink {
             super(
                     Builders.getHolderBuild(sBuilder -> sBuilder.withInitial(initialValue).expectOut(expectOut)),
                     fixedPath,
-                    new Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>>() {
+                    new Function<Updater<T>, Consumer<Pair.Immutables.Int<S>>>() {
+//                    new Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>>() {
                         private final AtomicInteger version = new AtomicInteger();
                         @Override
-                        public Consumer<Pair.Immutables.Int<S>> apply(Holders.DispatcherHolder<T> tDispatcherHolder) {
+                        public Consumer<Pair.Immutables.Int<S>> apply(Updater<T> tDispatcherHolder) {
+//                        public Consumer<Pair.Immutables.Int<S>> apply(Holders.DispatcherHolder<T> tDispatcherHolder) {
                             return appointUpdateCreator(version, tDispatcherHolder, update);
                         }
                     }
@@ -201,8 +207,8 @@ public class Link<T> extends Path<T> implements BaseLink {
         ) {
             super(
                     Builders.getHolderBuild(dispatcherBuilder),
-                    fixedPath,
-                    tDispatcherHolder -> appointAcceptCreator(tDispatcherHolder::acceptVersionValue, map)
+                    tDispatcherHolder -> appointAcceptCreator(tDispatcherHolder::acceptVersionValue, map),
+                    fixedPath
             );
         }
 
@@ -212,8 +218,8 @@ public class Link<T> extends Path<T> implements BaseLink {
         ) {
             super(
                     Builders.getHolderBuild(UnaryOperator.identity()),
-                    fixedPath,
-                    tDispatcherHolder -> appointAcceptCreator(tDispatcherHolder::acceptVersionValue, map)
+                    tDispatcherHolder -> appointAcceptCreator(tDispatcherHolder::acceptVersionValue, map),
+                    fixedPath
             );
         }
 

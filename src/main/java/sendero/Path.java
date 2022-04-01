@@ -2,6 +2,7 @@ package sendero;
 
 import sendero.functions.Consumers;
 import sendero.interfaces.BooleanConsumer;
+import sendero.interfaces.Updater;
 import sendero.pairs.Pair;
 
 import java.util.function.Consumer;
@@ -21,7 +22,15 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
         super(selfMap);
     }
 
-    protected <S> Path(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+    protected <S> Path(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<Updater<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+        super(holderBuilder,
+                dispatcher -> Builders.getManagerBuild().withFixed(
+                        Appointers.Appointer.booleanConsumerAppointer(basePath, toAppointFun.apply(dispatcher))
+
+                ));
+    }
+
+    <S> Path(Builders.HolderBuilder<T> holderBuilder, Function<Holders.ColdHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun, BasePath<S> basePath) {
         super(holderBuilder,
                 dispatcher -> Builders.getManagerBuild().withFixed(
                         Appointers.Appointer.booleanConsumerAppointer(basePath, toAppointFun.apply(dispatcher))
