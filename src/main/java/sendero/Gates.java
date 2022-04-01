@@ -19,7 +19,7 @@ public final class Gates {
         }
 
         public IO(T value) {
-            super(Builders.get(holderBuilder -> holderBuilder.withInitial(value)));
+            super(Builders.getHolderBuild(holderBuilder -> holderBuilder.withInitial(value)));
         }
 
         @Override
@@ -67,7 +67,7 @@ public final class Gates {
         }
 
         public In(T value) {
-            super(Builders.get(tHolderBuilder -> tHolderBuilder.withInitial(value)));
+            super(Builders.getHolderBuild(tHolderBuilder -> tHolderBuilder.withInitial(value)));
         }
 
         @Override

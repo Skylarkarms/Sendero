@@ -43,9 +43,18 @@ public class Appointers {
 
         public static<T> BooleanConsumer booleanConsumerAppointer(Appointer<T> appointer) {
             final Appointer<T> finalAppointer = appointer;
-            return aBoolean -> {
-                if (aBoolean) finalAppointer.appoint();
-                else finalAppointer.demote();
+            return new BooleanConsumer() {
+                @Override
+                public void accept(boolean aBoolean) {
+                    if (aBoolean) finalAppointer.appoint();
+                    else finalAppointer.demote();
+                }
+
+                @Override
+                public boolean equals(Object obj) {
+                    assert obj instanceof BasePath;
+                    return finalAppointer.equalProducer((BasePath<?>) obj);
+                }
             };
         }
 
@@ -91,6 +100,10 @@ public class Appointers {
             return Objects.equals(producer, appointer.producer);
         }
 
+        public boolean equalProducer(BasePath<?> other) {
+            return this.producer == other;
+        }
+
         public<P> boolean equalTo(BasePath<P> basePath) {
             return producer.equals(basePath);
         }
@@ -122,7 +135,7 @@ public class Appointers {
         Appointer<?> clearAndGet();
     }
 
-    final static class SimpleAppointer<T> extends Holders.SingleHolder<T> implements PathListener<T> {
+    final static class SimpleAppointer<T> extends Holders.SingleColdHolder<T> implements PathListener<T> {
 
         private final HolderAppointer<T> holderAppointer = new HolderAppointer<>(this);
 

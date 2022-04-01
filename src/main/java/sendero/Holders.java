@@ -33,7 +33,7 @@ final class Holders {
         void invalidate();
     }
 
-    public static class SingleHolder<T> implements ColdHolder<T> {
+    public static class SingleColdHolder<T> implements ColdHolder<T> {
         @SuppressWarnings("unchecked")
         protected final T INVALID = (T) new Object();
         private final Pair.Immutables.Int<T> FIRST = new Pair.Immutables.Int<>(0, INVALID);
@@ -41,7 +41,7 @@ final class Holders {
         private final Predicate<T> expect;
         private final AtomicReference<Pair.Immutables.Int<T>> reference;
 
-        SingleHolder(
+        SingleColdHolder(
                 Consumer<Pair.Immutables.Int<T>> dispatcher,
                 Predicate<T> expect
         ) {
@@ -283,10 +283,6 @@ final class Holders {
             return manager.activationListenerIsSet();
         }
 
-//        protected boolean clearActivationListener() {
-//            return manager.clearActivationListener();
-//        }
-
         protected ActivationHolder() {
             holder = new DispatcherHolder<T>() {
                 @Override
@@ -327,12 +323,12 @@ final class Holders {
             };
         }
 
-        protected ActivationHolder(Builders.HolderBuilder<T> holderBuilder, Function<DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
+        protected ActivationHolder(Builders.HolderBuilder<T> holderBuilder, Function<DispatcherHolder<T>, Builders.ManagerBuilder> actMgmtBuilder) {
             this.holder = holderBuilder.build(this);
             this.manager = actMgmtBuilder.apply(holder).build(this::deactivationRequirements);
         }
 
-        protected ActivationHolder(Builders.HolderBuilder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
+        protected ActivationHolder(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
             this.holder = holderBuilder.build(this);
             this.manager = actMgmtBuilder.build(this::deactivationRequirements);
         }
@@ -467,12 +463,12 @@ final class Holders {
         protected ExecutorHolder(
                 Builders.HolderBuilder<T> holderBuilder,
                 Function<DispatcherHolder<T>,
-                        ActivationManager.Builder> actMgmtBuilder
+                        Builders.ManagerBuilder> actMgmtBuilder
         ) {
             super(holderBuilder, actMgmtBuilder);
         }
 
-        protected ExecutorHolder(Builders.HolderBuilder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
+        protected ExecutorHolder(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
             super(holderBuilder, actMgmtBuilder);
         }
 

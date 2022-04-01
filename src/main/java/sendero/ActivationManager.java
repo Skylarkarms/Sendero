@@ -24,44 +24,9 @@ abstract class ActivationManager {
         };
     }
 
-    static Builder getBuilder() {
-        return new Builder();
-    }
-
-    protected static class Builder {
-        private BooleanConsumer activationListener;
-        private boolean mutableActivationListener;
-
-        public Builder withFixed(BooleanConsumer activationListener) {
-            if (mutableActivationListener) throwException();
-            this.activationListener = activationListener;
-            this.mutableActivationListener = false;
-            return this;
-        }
-
-        void throwException() {
-            throw new IllegalStateException("Only one at a time.");
-        }
-
-        public Builder withMutable(boolean activationListener) {
-            if (this.activationListener != null) throwException();
-            this.mutableActivationListener = activationListener;
-            return this;
-        }
-
-        protected ActivationManager build(BooleanSupplier deactivation) {
-            return new ActivationManager(activationListener, mutableActivationListener) {
-                @Override
-                protected boolean deactivationRequirements() {
-                    return deactivation.getAsBoolean();
-                }
-            };
-        }
-    }
-
     private static final Runnable ON_MUTABLE = Functions.emptyRunnable();
 
-    private ActivationManager(BooleanConsumer fixedActivationListener, boolean mutableActivationListener) {
+    ActivationManager(BooleanConsumer fixedActivationListener, boolean mutableActivationListener) {
         this.switchRegister = fixedActivationListener != null ?
                 BinaryEventRegisters.getAtomicWith(fixedActivationListener)
                 :
@@ -112,8 +77,5 @@ abstract class ActivationManager {
         return !switchRegister.isActive();
     }
 
-    boolean isMutable() {
-        return this.thrower == ON_MUTABLE;
-    }
 }
 

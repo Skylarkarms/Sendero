@@ -9,12 +9,12 @@ import java.util.function.*;
 
 public class Link<T> extends Path<T> implements BaseLink {
 
-    private <S> Link(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
-        super(holderBuilder, basePathSupplier, toAppointFun);
+    private <S> Link(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+        super(holderBuilder, basePath, toAppointFun);
     }
 
     private Link(Builders.HolderBuilder<T> holderBuilder, boolean mutableManager) {
-        super(holderBuilder, ActivationManager.getBuilder().withMutable(mutableManager));
+        super(holderBuilder, Builders.getManagerBuild().withMutable(mutableManager));
     }
 
     private Link(boolean activationListener) {
@@ -30,11 +30,6 @@ public class Link<T> extends Path<T> implements BaseLink {
     public boolean unbound() {
         throw new IllegalStateException("Must be overridden by its children");
     }
-
-//    @Override
-//    public boolean unbound() {
-//        return clearActivationListener();
-//    }
 
     public static class Unbound<T> extends Link<T> implements UnboundLink<T> {
 
@@ -187,8 +182,8 @@ public class Link<T> extends Path<T> implements BaseLink {
                 Predicate<T> expectOut
         ) {
             super(
-                    Builders.get(sBuilder -> sBuilder.withInitial(initialValue).expectOut(expectOut)),
-                    () -> fixedPath,
+                    Builders.getHolderBuild(sBuilder -> sBuilder.withInitial(initialValue).expectOut(expectOut)),
+                    fixedPath,
                     new Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>>() {
                         private final AtomicInteger version = new AtomicInteger();
                         @Override
@@ -205,8 +200,8 @@ public class Link<T> extends Path<T> implements BaseLink {
                 Function<S, T> map
         ) {
             super(
-                    Builders.get(dispatcherBuilder),
-                    () -> fixedPath,
+                    Builders.getHolderBuild(dispatcherBuilder),
+                    fixedPath,
                     tDispatcherHolder -> appointAcceptCreator(tDispatcherHolder::acceptVersionValue, map)
             );
         }
@@ -216,8 +211,8 @@ public class Link<T> extends Path<T> implements BaseLink {
                 Function<S, T> map
         ) {
             super(
-                    Builders.get(UnaryOperator.identity()),
-                    () -> fixedPath,
+                    Builders.getHolderBuild(UnaryOperator.identity()),
+                    fixedPath,
                     tDispatcherHolder -> appointAcceptCreator(tDispatcherHolder::acceptVersionValue, map)
             );
         }
@@ -254,7 +249,7 @@ public class Link<T> extends Path<T> implements BaseLink {
                     Predicate<T> expectOut
             ) {
                 super(
-                        Builders.get(sBuilder -> sBuilder.withInitial(initialValue).expectOut(expectOut)),
+                        Builders.getHolderBuild(sBuilder -> sBuilder.withInitial(initialValue).expectOut(expectOut)),
                         () -> fixedPath,
                         new Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>>() {
                             private final AtomicInteger version = new AtomicInteger();

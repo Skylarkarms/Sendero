@@ -1,14 +1,20 @@
 package sendero;
 
+import sendero.interfaces.BooleanConsumer;
 import sendero.pairs.Pair;
 
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 public class Builders {
-    public static <T>HolderBuilder<T> get(UnaryOperator<Builders.HolderBuilder<T>> op) {
+    public static <T>HolderBuilder<T> getHolderBuild(UnaryOperator<Builders.HolderBuilder<T>> op) {
         return op.apply(new HolderBuilder<>());
+    }
+
+    public static ManagerBuilder getManagerBuild() {
+        return new ManagerBuilder();
     }
     public static class HolderBuilder<T> {
         private AtomicReference<Pair.Immutables.Int<T>> reference;
@@ -53,5 +59,37 @@ public class Builders {
         }
 
     }
+
+    public static class ManagerBuilder {
+        private BooleanConsumer activationListener;
+        private boolean mutableActivationListener;
+
+        public ManagerBuilder withFixed(BooleanConsumer activationListener) {
+            if (mutableActivationListener) throwException();
+            this.activationListener = activationListener;
+            this.mutableActivationListener = false;
+            return this;
+        }
+
+        void throwException() {
+            throw new IllegalStateException("Only one at a time.");
+        }
+
+        public ManagerBuilder withMutable(boolean activationListener) {
+            if (this.activationListener != null) throwException();
+            this.mutableActivationListener = activationListener;
+            return this;
+        }
+
+        protected ActivationManager build(BooleanSupplier deactivation) {
+            return new ActivationManager(activationListener, mutableActivationListener) {
+                @Override
+                protected boolean deactivationRequirements() {
+                    return deactivation.getAsBoolean();
+                }
+            };
+        }
+    }
+
 
 }

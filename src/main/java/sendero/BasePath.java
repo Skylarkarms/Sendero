@@ -38,11 +38,11 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         super(selfMap);
     }
 
-    BasePath(Builders.HolderBuilder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
+    BasePath(Builders.HolderBuilder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, Builders.ManagerBuilder> actMgmtBuilder) {
         super(holderBuilder, actMgmtBuilder);
     }
 
-    protected BasePath(Builders.HolderBuilder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
+    protected BasePath(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
         super(holderBuilder, actMgmtBuilder);
     }
 
@@ -65,10 +65,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
     private <S> Function<Consumer<Pair.Immutables.Int<S>>, BooleanConsumer> mainForkingFunctionBuilder(Function<Consumer<Pair.Immutables.Int<S>>, Consumer<Pair.Immutables.Int<T>>> converter) {
         return intConsumer -> {
             final Consumer<Pair.Immutables.Int<T>> converted = converter.apply(intConsumer);
-            return isActive -> {
-                if (isActive) appoint(converted);
-                else demotionOverride(converted);
-            };
+            return Appointers.Appointer.booleanConsumerAppointer(this, converted);
         };
     }
 
@@ -184,13 +181,14 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
             );
         }
 
-        Injective(Builders.HolderBuilder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
+        Injective(Builders.HolderBuilder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, Builders.ManagerBuilder> actMgmtBuilder) {
             super(holderBuilder, actMgmtBuilder);
         }
 
         <S> Injective(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
             super(holderBuilder,
-                    dispatcher -> ActivationManager.getBuilder().withFixed(
+                    dispatcher -> Builders.getManagerBuild().withFixed(
+//                    dispatcher -> ActivationManager.getBuilder().withFixed(
                             Appointers.Appointer.booleanConsumerAppointer(basePathSupplier.get(), toAppointFun.apply(dispatcher))
                     )
             );
@@ -257,11 +255,11 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
             super(selfMap);
         }
 
-        ToMany(Builders.HolderBuilder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, ActivationManager.Builder> actMgmtBuilder) {
+        ToMany(Builders.HolderBuilder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, Builders.ManagerBuilder> actMgmtBuilder) {
             super(holderBuilder, actMgmtBuilder);
         }
 
-        protected ToMany(Builders.HolderBuilder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
+        protected ToMany(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
             super(holderBuilder, actMgmtBuilder);
         }
 

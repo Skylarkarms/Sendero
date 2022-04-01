@@ -10,10 +10,10 @@ import java.util.function.Supplier;
 
 public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
 
-    public Path() {
+    protected Path() {
     }
 
-    public Path(boolean activationListener) {
+    protected Path(boolean activationListener) {
         super(activationListener);
     }
 
@@ -21,15 +21,15 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
         super(selfMap);
     }
 
-    <S> Path(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+    protected <S> Path(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
         super(holderBuilder,
-                dispatcher -> ActivationManager.getBuilder().withFixed(
-                        Appointers.Appointer.booleanConsumerAppointer(basePathSupplier.get(), toAppointFun.apply(dispatcher))
-                )
-                );
+                dispatcher -> Builders.getManagerBuild().withFixed(
+                        Appointers.Appointer.booleanConsumerAppointer(basePath, toAppointFun.apply(dispatcher))
+
+                ));
     }
 
-    protected Path(Builders.HolderBuilder<T> holderBuilder, ActivationManager.Builder actMgmtBuilder) {
+    protected Path(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
         super(holderBuilder, actMgmtBuilder);
     }
 

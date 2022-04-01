@@ -32,7 +32,7 @@ public class Merge<T> extends Path<T> implements BaseMerge<T> {
 
     public Merge(T initialValue, Predicate<T> expectOutput) {
         super(
-                Builders.get(tHolderBuilder -> tHolderBuilder.expectOut(expectOutput).withInitial(initialValue))
+                Builders.getHolderBuild(tHolderBuilder -> tHolderBuilder.expectOut(expectOutput).withInitial(initialValue))
 //                ActivationManager.getBuilder().withFixed(
 //                        this::acceptAction
 //                )
@@ -60,42 +60,62 @@ public class Merge<T> extends Path<T> implements BaseMerge<T> {
         if (path == null) {
             throw new IllegalStateException("Observer is null");
         }
-        final BooleanConsumer joint = new BooleanConsumer() {
-            final BasePath<S> jointDomain = path;
-            final Consumer<S> sConsumer = observer.apply(holder);
-//            final Consumer<S> sConsumer = observer.apply(updater);
-            final Consumer<Pair.Immutables.Int<S>> toAppoint = new Consumer<Pair.Immutables.Int<S>>() {
-                final Holders.DispatcherHolder<S> simpleHolder = new Holders.DispatcherHolder<S>(){
+
+        final BooleanConsumer jointAppointer = Appointers.Appointer.booleanConsumerAppointer(
+                path,
+                new Consumer<Pair.Immutables.Int<S>>() {
+                    final Consumer<S> sConsumer = observer.apply(holder);
+                    final Holders.DispatcherHolder<S> simpleHolder = new Holders.DispatcherHolder<S>(){
+                        @Override
+                        protected void coldDispatch(Pair.Immutables.Int<S> versionValue) {
+                            sConsumer.accept(versionValue.getValue());
+                        }
+                    };
                     @Override
-                    protected void coldDispatch(Pair.Immutables.Int<S> versionValue) {
-                        sConsumer.accept(versionValue.getValue());
+                    public void accept(Pair.Immutables.Int<S> sInt) {
+                        simpleHolder.acceptVersionValue(sInt);
                     }
-                };
-                @Override
-                public void accept(Pair.Immutables.Int<S> sInt) {
-                    simpleHolder.acceptVersionValue(sInt);
                 }
-            };
-            @Override
-            public void accept(boolean isActive) {
-                if (isActive) {
-                    jointDomain.appoint(toAppoint);
-                }
-                else jointDomain.demotionOverride(toAppoint);
-            }
+        );
 
-            @Override
-            public boolean equals(Object o) {
-                return jointDomain.equals(o);
-            }
-
+//        final BooleanConsumer joint = new BooleanConsumer() {
+//            final BasePath<S> jointDomain = path;
+//            final Consumer<S> sConsumer = observer.apply(holder);
+////            final Consumer<S> sConsumer = observer.apply(updater);
+//            final Consumer<Pair.Immutables.Int<S>> toAppoint = new Consumer<Pair.Immutables.Int<S>>() {
+//                final Holders.DispatcherHolder<S> simpleHolder = new Holders.DispatcherHolder<S>(){
+//                    @Override
+//                    protected void coldDispatch(Pair.Immutables.Int<S> versionValue) {
+//                        sConsumer.accept(versionValue.getValue());
+//                    }
+//                };
+//                @Override
+//                public void accept(Pair.Immutables.Int<S> sInt) {
+//                    simpleHolder.acceptVersionValue(sInt);
+//                }
+//            };
 //            @Override
-//            public int hashCode() {
-//                return jointDomain.hashCode();
+//            public void accept(boolean isActive) {
+//                if (isActive) {
+//                    jointDomain.appoint(toAppoint);
+//                }
+//                else jointDomain.demotionOverride(toAppoint);
 //            }
-        };
-        final Pair.Immutables.Bool<Boolean> res = joints.add(joint);
-        if (res.value) joint.accept(true);
+//
+//            @Override
+//            public boolean equals(Object o) {
+//                return jointDomain.equals(o);
+//            }
+//
+////            @Override
+////            public int hashCode() {
+////                return jointDomain.hashCode();
+////            }
+//        };
+        final Pair.Immutables.Bool<Boolean> res = joints.add(jointAppointer);
+//        final Pair.Immutables.Bool<Boolean> res = joints.add(joint);
+        if (res.value) jointAppointer.accept(true);
+//        if (res.value) joint.accept(true);
         return this;
     }
 
