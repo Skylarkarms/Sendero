@@ -33,16 +33,32 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         super(mutableActivationListener);
     }
 
-    protected <S, P extends BasePath<S>> void listen(P basePath, Function<S, T> map) {
+    protected <S, P extends BasePath<S>> void setPath(P basePath, Function<S, T> map) {
+        holderAppointer.setPath(basePath, map);
+    }
+
+    protected <S, P extends BasePath<S>> void setAndStart(P basePath, Function<S, T> map) {
         holderAppointer.setAndStart(basePath, map);
     }
 
-    protected <P extends BasePath<T>> void listen(P basePath) {
+    protected <P extends BasePath<T>> void setAndStart(P basePath) {
         holderAppointer.setAndStart(basePath);
     }
 
-    protected void stopListeningPath() {
+    protected void stopListeningPathAndUnregister() {
         holderAppointer.stopAndClearPath();
+    }
+
+    protected boolean startListeningPath() {
+        return holderAppointer.start();
+    }
+
+    protected boolean stopListeningPath() {
+        return holderAppointer.stop();
+    }
+
+    protected boolean pathIsSet() {
+        return holderAppointer.isActive();
     }
 
     public BasePath() {

@@ -56,7 +56,7 @@ public class Link<T> extends Path<T> implements BaseLink {
                 "Attempting to integrate both listen and bind would greatly diminish performance on both ends.");
 
         @Override
-        protected <P extends BasePath<T>> void listen(P basePath) {
+        protected <P extends BasePath<T>> void setAndStart(P basePath) {
             throwException();
         }
 
@@ -69,7 +69,7 @@ public class Link<T> extends Path<T> implements BaseLink {
         }
 
         @Override
-        protected <S, P extends BasePath<S>> void listen(P basePath, Function<S, T> map) {
+        protected <S, P extends BasePath<S>> void setAndStart(P basePath, Function<S, T> map) {
             throwException();
         }
 
