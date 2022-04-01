@@ -6,10 +6,7 @@ import sendero.pairs.Pair;
 import sendero.switchers.Switchers;
 
 import java.util.Objects;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.UnaryOperator;
+import java.util.function.*;
 
 public class Appointers {
     static class Appointer<A> {
@@ -23,8 +20,16 @@ public class Appointers {
             return sInt -> holder.accept(new Pair.Immutables.Int<T>(sInt.getInt(), map.apply(sInt.getValue())));
         }
 
+        private static<T, S> Consumer<Pair.Immutables.Int<S>> updaterAppointCreator(Holders.DispatcherHolder<T> holder, BiFunction<T ,S , T> map) {
+            return sInt -> holder.acceptVersionValue(new Pair.Immutables.Int<T>(sInt.getInt(), map.apply(holder.get(), sInt.getValue())));
+        }
+
         private static<S, T> Appointer<S> fixedAppointer(BasePath<S> producer, Consumer<Pair.Immutables.Int<T>> holder, Function<S, T> map) {
             return new Appointer<>(-1, producer, toAppointCreator(holder, map));
+        }
+
+        private static<S, T> Appointer<S> fixedAppointer(BasePath<S> producer, Holders.DispatcherHolder<T> holder, BiFunction<T, S, T> map) {
+            return new Appointer<>(-1, producer, updaterAppointCreator(holder, map));
         }
 
         private static<T> Appointer<T> fixedAppointer(BasePath<T> producer, Consumer<Pair.Immutables.Int<T>> holder) {
@@ -32,6 +37,11 @@ public class Appointers {
         }
 
         public static<S, T> BooleanConsumer booleanConsumerAppointer(BasePath<S> producer, Consumer<Pair.Immutables.Int<T>> holder, Function<S, T> map) {
+            final Appointer<S> finalAppointer = fixedAppointer(producer, holder, map);
+            return booleanConsumerAppointer(finalAppointer);
+        }
+
+        public static<S, T> BooleanConsumer booleanConsumerAppointer(BasePath<S> producer, Holders.DispatcherHolder<T> holder, BiFunction<T, S, T> map) {
             final Appointer<S> finalAppointer = fixedAppointer(producer, holder, map);
             return booleanConsumerAppointer(finalAppointer);
         }

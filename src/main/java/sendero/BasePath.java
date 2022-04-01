@@ -6,16 +6,30 @@ import sendero.interfaces.BooleanConsumer;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;
 
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
+import java.util.function.*;
 
 public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
 
     final Appointers.HolderAppointer<T> holderAppointer = new Appointers.HolderAppointer<>(holder);
 
-    public BasePath(boolean mutableActivationListener) {
+    <S> BasePath(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
+        super(holderBuilder,
+                dispatcher -> Builders.getManagerBuild().withFixed(
+                        Appointers.Appointer.booleanConsumerAppointer(basePath, dispatcher::acceptVersionValue, map)
+
+                ));
+    }
+
+    <S> BasePath(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> map) {
+        super(holderBuilder,
+                dispatcher -> Builders.getManagerBuild().withFixed(
+                        Appointers.Appointer.booleanConsumerAppointer(basePath, dispatcher, map)
+
+                ));
+    }
+
+
+    BasePath(boolean mutableActivationListener) {
         super(mutableActivationListener);
     }
 
@@ -34,7 +48,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
     public BasePath() {
     }
 
-    protected BasePath(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+    BasePath(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
         super(selfMap);
     }
 
@@ -42,7 +56,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         super(holderBuilder, actMgmtBuilder);
     }
 
-    protected BasePath(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
+    BasePath(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
         super(holderBuilder, actMgmtBuilder);
     }
 
@@ -175,14 +189,18 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
             super(selfMap);
         }
 
-        protected<S> Injective(Supplier<BasePath<S>> basePathSupplier, Function<Consumer<Pair.Immutables.Int<T>>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
-            super(
-                    dispatcher -> Appointers.Appointer.booleanConsumerAppointer(basePathSupplier.get(), toAppointFun.apply(dispatcher))
-            );
+//        protected<S> Injective(Supplier<BasePath<S>> basePathSupplier, Function<Consumer<Pair.Immutables.Int<T>>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
+//            super(
+//                    dispatcher -> Appointers.Appointer.booleanConsumerAppointer(basePathSupplier.get(), toAppointFun.apply(dispatcher))
+//            );
+//        }
+
+        <S> Injective(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
+            super(holderBuilder, basePath, map);
         }
 
-        Injective(Builders.HolderBuilder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, Builders.ManagerBuilder> actMgmtBuilder) {
-            super(holderBuilder, actMgmtBuilder);
+        <S> Injective(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> map) {
+            super(holderBuilder, basePath, map);
         }
 
         <S> Injective(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
@@ -238,31 +256,33 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         private final SimpleLists.SimpleList.LockFree.Snapshotting<Consumer<Pair.Immutables.Int<T>>, Integer>
                 remote = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
 
-        public ToMany(boolean activationListener) {
+        ToMany(boolean activationListener) {
             super(activationListener);
         }
 
-        public ToMany() {
+        ToMany() {
             super();
         }
 
-        public ToMany(Builders.HolderBuilder<T> holderBuilder) {
+        ToMany(Builders.HolderBuilder<T> holderBuilder) {
             super(holderBuilder);
         }
 
-        protected ToMany(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+        ToMany(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
             super(selfMap);
         }
 
-        ToMany(Builders.HolderBuilder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, Builders.ManagerBuilder> actMgmtBuilder) {
+        <S> ToMany(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> map) {
+            super(holderBuilder, basePath, map);
+        }
+
+        ToMany(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
             super(holderBuilder, actMgmtBuilder);
         }
 
-        protected ToMany(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
-            super(holderBuilder, actMgmtBuilder);
+        <S> ToMany(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
+            super(holderBuilder, basePath, map);
         }
-
-
 
         @Override
         protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
