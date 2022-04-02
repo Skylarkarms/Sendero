@@ -42,13 +42,13 @@ public class Link<T> extends Path<T> implements BaseLink {
 
         public Unbound() {
             super(true);
-            activePathListener = new ActivePathListener<T>(manager, holderAppointer);
+            activePathListener = new ActivePathListener<>(manager, holderAppointer);
 
         }
 
         public Unbound(Builders.HolderBuilder<T> holderBuilder) {
             super(holderBuilder, true);
-            activePathListener = new ActivePathListener<T>(manager, holderAppointer);
+            activePathListener = new ActivePathListener<>(manager, holderAppointer);
         }
 
         private final Supplier<IllegalAccessException> getExc = () -> new IllegalAccessException(
@@ -56,8 +56,9 @@ public class Link<T> extends Path<T> implements BaseLink {
                 "Attempting to integrate both listen and bind would greatly diminish performance on both ends.");
 
         @Override
-        protected <P extends BasePath<T>> void setAndStart(P basePath) {
+        protected <P extends BasePath<T>> T setAndStart(P basePath) {
             throwException();
+            return null;
         }
 
         private void throwException() {
@@ -69,8 +70,9 @@ public class Link<T> extends Path<T> implements BaseLink {
         }
 
         @Override
-        protected <S, P extends BasePath<S>> void setAndStart(P basePath, Function<S, T> map) {
+        protected <S, P extends BasePath<S>> T setAndStart(P basePath, Function<S, T> map) {
             throwException();
+            return null;
         }
 
         @Override

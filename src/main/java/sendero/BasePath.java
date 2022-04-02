@@ -37,12 +37,12 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         holderAppointer.setPathAndGet(basePath, map);
     }
 
-    protected <S, P extends BasePath<S>> void setAndStart(P basePath, Function<S, T> map) {
-        holderAppointer.setAndStart(basePath, map);
+    protected <S, P extends BasePath<S>> T setAndStart(P basePath, Function<S, T> map) {
+        return holderAppointer.setAndStart(basePath, map);
     }
 
-    protected <P extends BasePath<T>> void setAndStart(P basePath) {
-        holderAppointer.setAndStart(basePath);
+    protected <P extends BasePath<T>> T setAndStart(P basePath) {
+        return holderAppointer.setAndStart(basePath);
     }
 
     protected void stopListeningPathAndUnregister() {
