@@ -44,7 +44,7 @@ class ActivePathListener<T> {
     /**should be protected*/
     protected  <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
 
-        final Appointers.Appointer<?> baseAppointer = appointerCache.setPath(basePath, map);
+        final Appointers.Appointer<?> baseAppointer = appointerCache.setPathAndGet(basePath, map);
 
         // will be null if equal.
         if (baseAppointer != null) {

@@ -9,8 +9,11 @@ import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 public final class Builders {
+    static <T>HolderBuilder<T> getHolderBuild() {
+        return new HolderBuilder<>();
+    }
     public static <T>HolderBuilder<T> getHolderBuild(UnaryOperator<Builders.HolderBuilder<T>> op) {
-        return op.apply(new HolderBuilder<>());
+        return op.apply(getHolderBuild());
     }
 
     public static ManagerBuilder getManagerBuild() {
@@ -47,13 +50,18 @@ public final class Builders {
         Holders.DispatcherHolder<T> build(Dispatcher<T> dispatcher) {
             return new Holders.DispatcherHolder<T>(reference, map, expectInput, expectOut){
                 @Override
-                protected void coldDispatch(Pair.Immutables.Int<T> t) {
+                void coldDispatch(Pair.Immutables.Int<T> t) {
                     dispatcher.coldDispatch(t);
                 }
 
                 @Override
-                protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
+                void dispatch(long delay, Pair.Immutables.Int<T> t) {
                     dispatcher.dispatch(delay, t);
+                }
+
+                @Override
+                protected void onSwapped(T prev, T next) {
+                    dispatcher.onSwapped(prev, next);
                 }
             };
         }

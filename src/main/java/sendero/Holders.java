@@ -30,7 +30,9 @@ final class Holders {
 
     interface ColdHolder<T> {
         void acceptVersionValue(Pair.Immutables.Int<T> versionValue);
-        void invalidate();
+
+        /**@return: the last value*/
+        T getAndInvalidate();
     }
 
     public static class SingleColdHolder<T> implements ColdHolder<T> {
@@ -74,13 +76,13 @@ final class Holders {
         }
 
         @Override
-        public void invalidate() {
-            reference.getAndSet(FIRST);
+        public T getAndInvalidate() {
+            Pair.Immutables.Int<T> pair = reference.getAndSet(FIRST);
+            return pair == FIRST ? null : pair.getValue();
         }
     }
 
     static class TestDispatcher<T> extends Dispatcher<T> {
-
         private final Predicate<T> CLEARED_PREDICATE = Functions.always(true);
         private volatile Predicate<T> expectOutput = CLEARED_PREDICATE;
 
@@ -98,7 +100,8 @@ final class Holders {
             this.expectOutput = expectOutput;
         }
 
-        protected void inferDispatch(Pair.Immutables.Int<T> t, long delay) {
+        protected void inferDispatch(T prev, Pair.Immutables.Int<T> t, long delay) {
+            onSwapped(prev, t.getValue());
             if (expectOutput.test(t.getValue())) {
                 if (delay >= HOT) dispatch(delay, t);
                 else coldDispatch(t);
@@ -174,14 +177,16 @@ final class Holders {
             T newValue = t.apply(prev.getValue());
             Pair.Immutables.Int<T> next = new Pair.Immutables.Int<>(prev.getInt() + 1, newValue);
             boolean wasValid = newValue != INVALID;
+            T prevValue = prev.getValue();
             for (boolean changed = false;;) {
                 if (changed) {
-                    newValue = t.apply(prev.getValue());
+                    prevValue = prev.getValue();
+                    newValue = t.apply(prevValue);
                     next = new Pair.Immutables.Int<>(prev.getInt() + 1, newValue);
                     wasValid = newValue != INVALID;
                 }
                 if (wasValid && reference.compareAndSet(prev, next)) {
-                    inferDispatch(next, delay);
+                    inferDispatch(prevValue, next, delay);
                     break;
                 }
                 if (!(changed = (prev != (prev = reference.get()))) && !wasValid) {
@@ -217,7 +222,7 @@ final class Holders {
                 current = reference.get();
                 final Pair.Immutables.Int<T> newPair = new Pair.Immutables.Int<>(current.getInt() + 1, t);
                 if (reference.compareAndSet(current, newPair)) {
-                    inferDispatch(newPair, TestDispatcher.HOT);
+                    inferDispatch(current.getValue(), newPair, TestDispatcher.HOT);
                     break;
                 }
             }
@@ -242,7 +247,7 @@ final class Holders {
                     next = new Pair.Immutables.Int<>(newVersion, processed);
                 }
                 if (lesser && reference.compareAndSet(prev, next)) {
-                    inferDispatch(next, TestDispatcher.COLD);
+                    inferDispatch(prev.getValue(), next, TestDispatcher.COLD);
                     break;
                 }
                 if (prev.compareTo(prev = reference.get()) >= 0) break;
@@ -256,8 +261,9 @@ final class Holders {
         }
 
         @Override
-        public void invalidate() {
-            reference.getAndSet(FIRST);
+        public T getAndInvalidate() {
+            Pair.Immutables.Int<T> pair = reference.getAndSet(FIRST);
+            return pair == FIRST ? null : pair.getValue();
         }
 
         protected int getVersion() {
@@ -272,7 +278,7 @@ final class Holders {
     }
     static class ActivationHolder<T> extends Dispatcher<T> {
 
-        protected boolean deactivationRequirements() {
+        boolean deactivationRequirements() {
             return true;
         }
 
@@ -283,19 +289,27 @@ final class Holders {
             return manager.activationListenerIsSet();
         }
 
-        protected ActivationHolder() {
-            holder = new DispatcherHolder<T>() {
+        private DispatcherHolder<T> buildHolder() {
+            return new DispatcherHolder<T>() {
                 @Override
-                protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
+                void dispatch(long delay, Pair.Immutables.Int<T> t) {
                     ActivationHolder.this.dispatch(delay,t);
                 }
 
                 @Override
-                protected void coldDispatch(Pair.Immutables.Int<T> t) {
+                void coldDispatch(Pair.Immutables.Int<T> t) {
                     ActivationHolder.this.coldDispatch(t);
                 }
+
+                @Override
+                protected void onSwapped(T prev, T next) {
+                    ActivationHolder.this.onSwapped(prev, next);
+                }
             };
-            manager = new ActivationManager(){
+        }
+
+        private ActivationManager buildManager() {
+            return new ActivationManager(){
                 @Override
                 protected boolean deactivationRequirements() {
                     return ActivationHolder.this.deactivationRequirements();
@@ -303,18 +317,13 @@ final class Holders {
             };
         }
 
-        protected ActivationHolder(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
-            holder = new DispatcherHolder<T>() {
-                @Override
-                protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
-                    ActivationHolder.this.dispatch(delay, t);
-                }
+        ActivationHolder() {
+            holder = buildHolder();
+            manager = buildManager();
+        }
 
-                @Override
-                protected void coldDispatch(Pair.Immutables.Int<T> t) {
-                    ActivationHolder.this.coldDispatch(t);
-                }
-            };
+        ActivationHolder(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+            holder = buildHolder();
             manager = new ActivationManager(selfMap.apply(holder::acceptVersionValue)){
                 @Override
                 protected boolean deactivationRequirements() {
@@ -323,38 +332,23 @@ final class Holders {
             };
         }
 
-        protected ActivationHolder(Builders.HolderBuilder<T> holderBuilder, Function<DispatcherHolder<T>, Builders.ManagerBuilder> actMgmtBuilder) {
+        ActivationHolder(Builders.HolderBuilder<T> holderBuilder, Function<DispatcherHolder<T>, Builders.ManagerBuilder> actMgmtBuilder) {
             this.holder = holderBuilder.build(this);
             this.manager = actMgmtBuilder.apply(holder).build(this::deactivationRequirements);
         }
 
-        protected ActivationHolder(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
+        ActivationHolder(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
             this.holder = holderBuilder.build(this);
             this.manager = actMgmtBuilder.build(this::deactivationRequirements);
         }
 
-        protected ActivationHolder(Builders.HolderBuilder<T> holderBuilder) {
+        ActivationHolder(Builders.HolderBuilder<T> holderBuilder) {
             this.holder = holderBuilder.build(this);
-            this.manager = new ActivationManager(){
-                @Override
-                protected boolean deactivationRequirements() {
-                    return ActivationHolder.this.deactivationRequirements();
-                }
-            };
+            this.manager = buildManager();
         }
 
-        protected ActivationHolder(boolean activationListener) {
-            holder = new DispatcherHolder<T>() {
-                @Override
-                protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
-                    ActivationHolder.this.dispatch(delay, t);
-                }
-
-                @Override
-                protected void coldDispatch(Pair.Immutables.Int<T> t) {
-                    ActivationHolder.this.coldDispatch(t);
-                }
-            };
+        ActivationHolder(boolean activationListener) {
+            holder = buildHolder();
             manager = new ActivationManager(activationListener){
                 @Override
                 protected boolean deactivationRequirements() {
@@ -365,7 +359,7 @@ final class Holders {
 
         final DispatcherHolder<T> holder;
 
-        protected <S> void onRegistered(
+        <S> void onRegistered(
                 Consumer<? super S> subscriber,
                 Function<Consumer<? super S>,
                         Pair.Immutables.Bool<Integer>> snapshotFun,
@@ -385,7 +379,7 @@ final class Holders {
             executionMethod.accept(runnable);
         }
 
-        protected void tryActivate() {
+        void tryActivate() {
             if (manager.tryActivate()) onStateChange(true);
         }
 
@@ -396,7 +390,7 @@ final class Holders {
             return manager.isIdle();
         }
 
-        protected void tryDeactivate() {
+        void tryDeactivate() {
             if (manager.tryDeactivate()) onStateChange(false);
         }
 
@@ -404,20 +398,18 @@ final class Holders {
             holder.accept(t);
         }
 
-        protected void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
+        void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
             holder.acceptVersionValue(versionValue);
         }
 
-        protected void superSetMap(UnaryOperator<T> map) {
+        protected ActivationHolder<T> setMap(UnaryOperator<T> map) {
             holder.setMap(map);
+            return this;
         }
 
-        protected void superSetExpectInput(Predicate<T> expect) {
+        protected ActivationHolder<T> setExpectInput(Predicate<T> expect) {
             holder.expectIn(expect);
-        }
-
-        protected void superSetExpectOutput(Predicate<T> expect) {
-            holder.expectOut(expect);
+            return this;
         }
 
         protected void update(UnaryOperator<T> update) {
@@ -449,18 +441,18 @@ final class Holders {
         //Only if isColdHolder == true;
         private final AtomicScheduler scheduler = new AtomicScheduler(eService::getScheduledService, TimeUnit.MILLISECONDS);
 
-        public ExecutorHolder(boolean activationListener) {
+        ExecutorHolder(boolean activationListener) {
             super(activationListener);
         }
 
-        public ExecutorHolder() {
+        ExecutorHolder() {
         }
 
         public ExecutorHolder(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
             super(selfMap);
         }
 
-        protected ExecutorHolder(
+        ExecutorHolder(
                 Builders.HolderBuilder<T> holderBuilder,
                 Function<DispatcherHolder<T>,
                         Builders.ManagerBuilder> actMgmtBuilder
@@ -468,7 +460,7 @@ final class Holders {
             super(holderBuilder, actMgmtBuilder);
         }
 
-        protected ExecutorHolder(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
+        ExecutorHolder(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
             super(holderBuilder, actMgmtBuilder);
         }
 
@@ -477,7 +469,7 @@ final class Holders {
         }
 
         @Override
-        protected void tryActivate() {
+        void tryActivate() {
             eService.increment();
             super.tryActivate();
         }
@@ -487,11 +479,11 @@ final class Holders {
             eService.decrement();
         }
 
-        protected void fastExecute(Runnable action) {
+        void fastExecute(Runnable action) {
             eService.fastExecute(action);
         }
 
-        protected void scheduleExecution(long delay, Runnable action) {
+        void scheduleExecution(long delay, Runnable action) {
             if (delay > TestDispatcher.HOT) scheduler.scheduleOrReplace(delay, action);
             else action.run();
         }
@@ -509,7 +501,7 @@ final class Holders {
             );
         }
 
-        protected <S> void onAdd(Consumer<? super S> subscriber, Function<Consumer<? super S>, Pair.Immutables.Bool<Integer>> snapshotFun, Function<Pair.Immutables.Int<T>, S> map) {
+        <S> void onAdd(Consumer<? super S> subscriber, Function<Consumer<? super S>, Pair.Immutables.Bool<Integer>> snapshotFun, Function<Pair.Immutables.Int<T>, S> map) {
             onRegistered(
                     subscriber,
                     snapshotFun,

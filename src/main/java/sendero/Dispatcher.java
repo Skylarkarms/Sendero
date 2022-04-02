@@ -9,8 +9,10 @@ abstract class Dispatcher<T> {
     protected abstract void setExpectOutput(Predicate<T> expectOutput);
 
     /**coldDispatch is trigger by Sendero's inner communication*/
-    protected void coldDispatch(Pair.Immutables.Int<T> t) {}
+    void coldDispatch(Pair.Immutables.Int<T> t) {}
 
     /**dispatch is trigger by client input*/
-    protected void dispatch(long delay,Pair.Immutables.Int<T> t) {}
+    void dispatch(long delay,Pair.Immutables.Int<T> t) {}
+
+    protected void onSwapped(T prev, T next) {}
 }

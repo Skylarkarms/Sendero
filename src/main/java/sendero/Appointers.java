@@ -17,11 +17,11 @@ public class Appointers {
         final Switchers.Switch aSwitch = Switchers.getAtomic();
 
         private static<T, S> Consumer<Pair.Immutables.Int<S>> toAppointCreator(Consumer<Pair.Immutables.Int<T>> holder, Function<S, T> map) {
-            return sInt -> holder.accept(new Pair.Immutables.Int<T>(sInt.getInt(), map.apply(sInt.getValue())));
+            return sInt -> holder.accept(new Pair.Immutables.Int<>(sInt.getInt(), map.apply(sInt.getValue())));
         }
 
         private static<T, S> Consumer<Pair.Immutables.Int<S>> updaterAppointCreator(Holders.DispatcherHolder<T> holder, BiFunction<T ,S , T> map) {
-            return sInt -> holder.acceptVersionValue(new Pair.Immutables.Int<T>(sInt.getInt(), map.apply(holder.get(), sInt.getValue())));
+            return sInt -> holder.acceptVersionValue(new Pair.Immutables.Int<>(sInt.getInt(), map.apply(holder.get(), sInt.getValue())));
         }
 
         private static<S, T> Appointer<S> fixedAppointer(BasePath<S> producer, Consumer<Pair.Immutables.Int<T>> holder, Function<S, T> map) {
@@ -131,9 +131,11 @@ public class Appointers {
 
     interface PathListener<T> {
         /**@return previous Path OR null under contention*/
-        <S, P extends BasePath<S>> Appointer<?> setPath(P basePath, Function<S, T> map);
-        <S, P extends BasePath<S>> void setAndStart(P basePath, Function<S, T> map);
-        <P extends BasePath<T>> void setAndStart(P basePath);
+        <S, P extends BasePath<S>> Appointer<?> setPathAndGet(P basePath, Function<S, T> map);
+        /**@return last holder value*/
+        <S, P extends BasePath<S>> T setAndStart(P basePath, Function<S, T> map);
+//        <S, P extends BasePath<S>> void setAndStart(P basePath, Function<S, T> map);
+        <P extends BasePath<T>> T setAndStart(P basePath);
         void stopAndClearPath();
 
         boolean start();
@@ -156,18 +158,18 @@ public class Appointers {
 
 
         @Override
-        public <S, P extends BasePath<S>> Appointer<?> setPath(P basePath, Function<S, T> map) {
-            return holderAppointer.setPath(basePath, map);
+        public <S, P extends BasePath<S>> Appointer<?> setPathAndGet(P basePath, Function<S, T> map) {
+            return holderAppointer.setPathAndGet(basePath, map);
         }
 
         @Override
-        public <S, P extends BasePath<S>> void setAndStart(P basePath, Function<S, T> map) {
-            holderAppointer.setAndStart(basePath, map);
+        public <S, P extends BasePath<S>> T setAndStart(P basePath, Function<S, T> map) {
+            return holderAppointer.setAndStart(basePath, map);
         }
 
         @Override
-        public <P extends BasePath<T>> void setAndStart(P basePath) {
-            holderAppointer.setAndStart(basePath);
+        public <P extends BasePath<T>> T setAndStart(P basePath) {
+            return holderAppointer.setAndStart(basePath);
         }
 
         @Override
@@ -216,26 +218,25 @@ public class Appointers {
         }
 
         @Override
-        public <S, P extends BasePath<S>> Appointer<?> setPath(P basePath, Function<S, T> map) {
+        public <S, P extends BasePath<S>> Appointer<?> setPathAndGet(P basePath, Function<S, T> map) {
             return witnessAtomicReference.contentiousCAS(
                     prev -> prev.producer != basePath,
                     prev -> {
-                        final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt -> holder.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply((S) anInt.getValue())));
+                        final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt -> holder.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply(anInt.getValue())));
                         return new Appointer<>(prev.appointerVersion + 1, basePath, intConsumer);
                     }
             ).next;
         }
 
         @Override
-        public <S, P extends BasePath<S>> void setAndStart(P basePath, Function<S, T> map) {
+        public <S, P extends BasePath<S>> T setAndStart(P basePath, Function<S, T> map) {
             assert basePath != null;
+            T lastValue = null;
             final AtomicUtils.WitnessAtomicReference.Witness<Appointer<?>> witness = witnessAtomicReference.contentiousCAS(
                     prev -> prev == Appointer.initiating || !prev.equalTo(basePath) || map != identity, // always update if map is NOT identity
                     prev -> {
                         final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt ->
-                        {
-                            holder.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply((S) anInt.getValue())));
-                        };
+                                holder.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply(anInt.getValue())));
                         return new Appointer<>(prev.appointerVersion + 1, basePath, intConsumer);
                     }
             );
@@ -245,17 +246,18 @@ public class Appointers {
                 if (prevWasSet && prev.isActive()) prev.demote();
                 //contention check
                 if (witnessAtomicReference.get().equalTo(basePath)) {
-                    if (prevWasSet) holder.invalidate();
+                    if (prevWasSet) lastValue = holder.getAndInvalidate();
                     next.appoint();
                 }
             }
+            return lastValue;
         }
 
         private final UnaryOperator<T> identity = UnaryOperator.identity();
 
         @Override
-        public <P extends BasePath<T>> void setAndStart(P basePath) {
-            setAndStart(basePath, identity);
+        public <P extends BasePath<T>> T setAndStart(P basePath) {
+            return setAndStart(basePath, identity);
         }
 
         @Override
@@ -291,7 +293,7 @@ public class Appointers {
             return witnessAtomicReference.get();
         }
         /** If next == null, prev was already cleared
-         * @return*/
+         * @return next appointer*/
         @Override
         public Appointer<?> clearAndGet() {
             return witnessAtomicReference.contentiousCAS(

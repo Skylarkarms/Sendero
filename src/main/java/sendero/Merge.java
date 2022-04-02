@@ -37,7 +37,7 @@ public class Merge<T> extends Path<T> implements BaseMerge<T> {
                     final Consumer<S> sConsumer = observer.apply(holder);
                     final Holders.DispatcherHolder<S> simpleHolder = new Holders.DispatcherHolder<S>(){
                         @Override
-                        protected void coldDispatch(Pair.Immutables.Int<S> versionValue) {
+                        void coldDispatch(Pair.Immutables.Int<S> versionValue) {
                             sConsumer.accept(versionValue.getValue());
                         }
                     };

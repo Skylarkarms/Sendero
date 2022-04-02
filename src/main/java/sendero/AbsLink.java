@@ -45,7 +45,7 @@ abstract class AbsLink<T> implements sendero.Link.Unbound.UnboundSwitch<T>{
                 path,
                 new Holders.DispatcherHolder<BasePath<T>>() {
                     @Override
-                    protected void coldDispatch(Pair.Immutables.Int<BasePath<T>> t) {
+                    void coldDispatch(Pair.Immutables.Int<BasePath<T>> t) {
                         appointer.setAndStart(t.getValue());
                     }
                 }::acceptVersionValue,
@@ -69,7 +69,7 @@ abstract class AbsLink<T> implements sendero.Link.Unbound.UnboundSwitch<T>{
                 new Consumer<Pair.Immutables.Int<S>>() {
                     final Holders.DispatcherHolder<BasePath<T>> domainHolder = new Holders.DispatcherHolder<BasePath<T>>() {
                         @Override
-                        protected void coldDispatch(Pair.Immutables.Int<BasePath<T>> t) {
+                        void coldDispatch(Pair.Immutables.Int<BasePath<T>> t) {
                             appointer.setAndStart(t.getValue());
                         }
                     };

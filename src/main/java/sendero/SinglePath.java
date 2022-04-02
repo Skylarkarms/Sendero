@@ -4,22 +4,38 @@ import sendero.functions.Consumers;
 import sendero.interfaces.BooleanConsumer;
 import sendero.pairs.Pair;
 
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class SinglePath<T> extends BasePath.Injective<T> implements Forkable<T> {
 
+    protected SinglePath() {
+    }
+
+    protected SinglePath(boolean mutableActivationListener) {
+        super(mutableActivationListener);
+    }
+
     protected SinglePath(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
         super(selfMap);
+    }
+
+    protected <S> SinglePath(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
+        super(holderBuilder, basePath, map);
+    }
+
+    protected <S> SinglePath(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> map) {
+        super(holderBuilder, basePath, map);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <O extends Gates.Out<T>> O out(Class<? super O> outputType) {
         if (outputType == Gates.Out.Single.class) {
-            return (O) new Gates.Outs.SingleImpl<T>(injectiveFunctionBuilder());
+            return (O) new Gates.Outs.SingleImpl<>(injectiveFunctionBuilder());
         } else if (outputType == Gates.Out.Many.class) {
-            return (O) new Gates.Outs.ManyImpl<T>(injectiveFunctionBuilder());
+            return (O) new Gates.Outs.ManyImpl<>(injectiveFunctionBuilder());
         }
         throw new IllegalStateException("invalid class: " + outputType);
     }
@@ -28,9 +44,9 @@ public class SinglePath<T> extends BasePath.Injective<T> implements Forkable<T> 
     @Override
     public <S, O extends Gates.Out<S>> O out(Class<? super O> outputType, Function<T, S> map) {
         if (outputType == Gates.Out.Single.class) {
-            return (O) new Gates.Outs.SingleImpl<S>(mapFunctionBuilder(map));
+            return (O) new Gates.Outs.SingleImpl<>(mapFunctionBuilder(map));
         } else if (outputType == Gates.Out.Many.class) {
-            return (O) new Gates.Outs.ManyImpl<S>(mapFunctionBuilder(map));
+            return (O) new Gates.Outs.ManyImpl<>(mapFunctionBuilder(map));
         }
         throw new IllegalStateException("invalid class: " + outputType);
     }

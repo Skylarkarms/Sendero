@@ -34,7 +34,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
     }
 
     protected <S, P extends BasePath<S>> void setPath(P basePath, Function<S, T> map) {
-        holderAppointer.setPath(basePath, map);
+        holderAppointer.setPathAndGet(basePath, map);
     }
 
     protected <S, P extends BasePath<S>> void setAndStart(P basePath, Function<S, T> map) {
@@ -103,7 +103,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         };
     }
 
-    protected Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> injectiveFunctionBuilder() {
+    Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> injectiveFunctionBuilder() {
         return mainForkingFunctionBuilder(UnaryOperator.identity());
     }
 
@@ -120,7 +120,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
                         tInt -> {
                             T t = tInt.getValue();
                             int intT = tInt.getInt();
-                            final Consumers.BaseConsumer<T> exitC = exit.apply(s -> intConsumer.accept(new Pair.Immutables.Int<S>(intT, s)));
+                            final Consumers.BaseConsumer<T> exitC = exit.apply(s -> intConsumer.accept(new Pair.Immutables.Int<>(intT, s)));
                             exitC.accept(t);
                         }
         );
@@ -132,7 +132,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
             final Consumer<Pair.Immutables.Int<T>> toAppoint = new Consumer<Pair.Immutables.Int<T>>() {
                 final Holders.DispatcherHolder<BasePath<S>> domainHolder = new Holders.DispatcherHolder<BasePath<S>>() {
                     @Override
-                    protected void coldDispatch(Pair.Immutables.Int<BasePath<S>> t) {
+                    void coldDispatch(Pair.Immutables.Int<BasePath<S>> t) {
                         appointer.setAndStart(t.getValue());
                     }
                 };
@@ -168,7 +168,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
                 //Controls domain version
                 final Holders.DispatcherHolder<BasePath<S>> domainHolder = new Holders.DispatcherHolder<BasePath<S>>() {
                     @Override
-                    protected void coldDispatch(Pair.Immutables.Int<BasePath<S>> t) {
+                    void coldDispatch(Pair.Immutables.Int<BasePath<S>> t) {
                         appointer.setAndStart(t.getValue());
                     }
                 };
@@ -205,15 +205,17 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         private final ConsumerRegister.IConsumerRegister.SnapshottingConsumerRegister<Integer, Pair.Immutables.Int<T>>
                 remote = ConsumerRegister.IConsumerRegister.getInstance(this::getVersion);
 
-        protected Injective(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+        Injective() {
+            super();
+        }
+
+        Injective(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
             super(selfMap);
         }
 
-//        protected<S> Injective(Supplier<BasePath<S>> basePathSupplier, Function<Consumer<Pair.Immutables.Int<T>>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
-//            super(
-//                    dispatcher -> Appointers.Appointer.booleanConsumerAppointer(basePathSupplier.get(), toAppointFun.apply(dispatcher))
-//            );
-//        }
+        Injective(boolean mutableActivationListener) {
+            super(mutableActivationListener);
+        }
 
         <S> Injective(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
             super(holderBuilder, basePath, map);
@@ -232,12 +234,12 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         }
 
         @Override
-        protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
+        void dispatch(long delay, Pair.Immutables.Int<T> t) {
             pathDispatch(false, t);
         }
 
         @Override
-        protected void coldDispatch(Pair.Immutables.Int<T> t) {
+        void coldDispatch(Pair.Immutables.Int<T> t) {
             pathDispatch(false, t);
         }
 
@@ -266,7 +268,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         }
 
         @Override
-        protected boolean deactivationRequirements() {
+        boolean deactivationRequirements() {
             return !remote.isRegistered();
         }
 
@@ -305,7 +307,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         }
 
         @Override
-        protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
+        void dispatch(long delay, Pair.Immutables.Int<T> t) {
             //Last local observers on same thread
                 scheduleExecution(
                         delay,
@@ -314,7 +316,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         }
 
         @Override
-        protected void coldDispatch(Pair.Immutables.Int<T> t) {
+        void coldDispatch(Pair.Immutables.Int<T> t) {
             //From local observers on forked thread (if extended)
             pathDispatch(false, t);
         }
@@ -350,7 +352,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         }
 
         @Override
-        protected boolean deactivationRequirements() {
+        boolean deactivationRequirements() {
             return remote.isEmpty();
         }
 

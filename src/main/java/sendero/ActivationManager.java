@@ -47,13 +47,13 @@ abstract class ActivationManager {
         thrower = createThrower();
     }
 
-    protected abstract boolean deactivationRequirements();
+    abstract boolean deactivationRequirements();
 
-    protected boolean tryActivate() {
+    boolean tryActivate() {
         return switchRegister.on();
     }
 
-    protected boolean tryDeactivate() {
+    boolean tryDeactivate() {
         if (deactivationRequirements()) {
             return switchRegister.off();
         }

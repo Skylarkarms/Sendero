@@ -24,19 +24,19 @@ public final class Gates {
 
         @Override
         public IO<T> setMap(UnaryOperator<T> map) {
-            superSetMap(map);
+            super.setMap(map);
             return this;
         }
 
         @Override
         public IO<T> expectIn(Predicate<T> expect) {
-            superSetExpectInput(expect);
+            super.setExpectInput(expect);
             return this;
         }
 
         @Override
         public IO<T> expectOut(Predicate<T> expect) {
-            superSetExpectOutput(expect);
+            setExpectOutput(expect);
             return this;
         }
 
@@ -72,19 +72,19 @@ public final class Gates {
 
         @Override
         public In<T> setMap(UnaryOperator<T> map) {
-            superSetMap(map);
+            super.setMap(map);
             return this;
         }
 
         @Override
         public In<T> expectIn(Predicate<T> expect) {
-            superSetExpectInput(expect);
+            super.setExpectInput(expect);
             return this;
         }
 
         @Override
         public In<T> expectOut(Predicate<T> expect) {
-            superSetExpectOutput(expect);
+            setExpectOutput(expect);
             return this;
         }
 
@@ -155,10 +155,10 @@ public final class Gates {
                             }
                         }
                     };
-                };
+                }
 
                 @Override
-                protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
+                void dispatch(long delay, Pair.Immutables.Int<T> t) {
                     //It may be the case that the JNI hangs the thread for whatever reason it may deem proper.
                     //One example would arise in the case that the processes between holder CAS and THIS dispatch() take too long to resolve.
                     //And this, could very well be the case if some heavy transformation is being performed (at the subscriber level (If extended by Subscriber))
@@ -173,7 +173,7 @@ public final class Gates {
                 }
 
                 @Override
-                protected void coldDispatch(Pair.Immutables.Int<T> t) {
+                void coldDispatch(Pair.Immutables.Int<T> t) {
                     Consumer<? super T>[] locals = locale.copy();
                     final int length = locals.length;
                     if (length != 0) parallelDispatch(0, locals, t, Pair.Immutables.Int::getValue); // first locals, then keep with domain
@@ -220,7 +220,7 @@ public final class Gates {
                 }
 
                 @Override
-                protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
+                void dispatch(long delay, Pair.Immutables.Int<T> t) {
                     //It may be the case that the JNI hangs the thread for whatever reason it may deem proper.
                     //One example would arise in the case that the processes between holder CAS and THIS dispatch() takes too long to resolve.
                     //And this, could very well be the case if some heavy transformation is being performed (at the subscriber level (If extended by Subscriber))
@@ -235,7 +235,7 @@ public final class Gates {
                 }
 
                 @Override
-                protected void coldDispatch(Pair.Immutables.Int<T> t) {
+                void coldDispatch(Pair.Immutables.Int<T> t) {
                     fastExecute(
                             () -> {
                                 if (t.compareTo(getVersion()) != 0) return;
@@ -246,7 +246,7 @@ public final class Gates {
                 }
 
                 @Override
-                protected boolean deactivationRequirements() {
+                boolean deactivationRequirements() {
                     return !locale.isRegistered() && super.deactivationRequirements();
                 }
 
@@ -282,7 +282,7 @@ public final class Gates {
             }
 
             @Override
-            protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
+            void dispatch(long delay, Pair.Immutables.Int<T> t) {
                 //It may be the case that the JNI hangs the thread for whatever reason it may deem proper.
                 //One example would arise in the case that the processes between holder CAS and THIS dispatch() take too long to resolve.
                 //And this, could very well be the case if some heavy transformation is being performed (at the subscriber level (If extended by Subscriber))
@@ -307,7 +307,7 @@ public final class Gates {
             }
 
             @Override
-            protected void coldDispatch(Pair.Immutables.Int<T> t) {
+            void coldDispatch(Pair.Immutables.Int<T> t) {
                 Consumer<? super T>[] locals = locale.copy();
                 final int length = locals.length;
                 if (length == 0) return;
@@ -351,7 +351,7 @@ public final class Gates {
             }
 
             @Override
-            protected void dispatch(long delay, Pair.Immutables.Int<T> t) {
+            void dispatch(long delay, Pair.Immutables.Int<T> t) {
                 //It may be the case that the JNI hangs the thread for whatever reason it may deem proper.
                 //One example would arise in the case that the processes between holder CAS and THIS dispatch() takes too long to resolve.
                 //And this, could very well be the case if some heavy transformation is being performed (at the subscriber level (If extended by Subscriber))
@@ -371,13 +371,13 @@ public final class Gates {
             }
 
             @Override
-            protected void coldDispatch(Pair.Immutables.Int<T> t) {
+            void coldDispatch(Pair.Immutables.Int<T> t) {
                 if (t.compareTo(getVersion()) != 0) return;
                 locale.accept(t.getValue());
             }
 
             @Override
-            protected boolean deactivationRequirements() {
+            boolean deactivationRequirements() {
                 return !locale.isRegistered() && super.deactivationRequirements();
             }
 
