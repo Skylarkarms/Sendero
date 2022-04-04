@@ -199,44 +199,4 @@ public class Link<T> extends Path<T> implements BaseLink {
             }
         }
     }
-
-    public static class SingleLink<T> extends SinglePath<T> {
-
-        private  <S> SingleLink(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
-            super(holderBuilder, basePath, map);
-        }
-
-        private <S> SingleLink(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> map) {
-            super(holderBuilder, basePath, map);
-        }
-
-        static class Bound<T> extends SingleLink<T> {
-
-            protected  <S> Bound(
-                    T initialValue,
-                    BasePath<S> fixedPath,
-                    BiFunction<T, S, T> update,
-                    Predicate<T> expectOut
-            ) {
-                super(
-                        Builders.getHolderBuild(sBuilder -> sBuilder.withInitial(initialValue).expectOut(expectOut)),
-                        fixedPath,
-                        update
-                );
-            }
-
-            <S> Bound(
-                    BasePath<S> fixedPath,
-                    Function<S, T> map
-            ) {
-                super(
-                        Builders.getHolderBuild(UnaryOperator.identity()),
-                        fixedPath,
-                        map
-                );
-            }
-
-
-        }
-    }
 }
