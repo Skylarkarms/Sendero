@@ -72,12 +72,12 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             }
 
             @Override
-            protected void update(UnaryOperator<T> update) {
+            public void update(UnaryOperator<T> update) {
                 super.update(update);
             }
 
             @Override
-            protected void update(long delay, UnaryOperator<T> update) {
+            public void update(long delay, UnaryOperator<T> update) {
                 super.update(delay, update);
             }
         }
