@@ -200,7 +200,7 @@ public class Link<T> extends Path<T> implements BaseLink {
         }
     }
 
-    public static class SingleLink<T> extends BasePath.Injective<T> {
+    public static class SingleLink<T> extends SinglePath<T> {
 
         private  <S> SingleLink(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
             super(holderBuilder, basePath, map);
