@@ -7,7 +7,7 @@ import java.util.function.UnaryOperator;
 
 public class SingleLink<T> extends SinglePath<T> implements BaseLink{
 
-    private  <S> SingleLink(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
+    private <S> SingleLink(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
         super(holderBuilder, basePath, map);
     }
 
@@ -37,7 +37,7 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             throw new IllegalStateException("Not allowed!!");
         }
 
-        protected  <S> Bound(
+        public <S> Bound(
                 T initialValue,
                 BasePath<S> fixedPath,
                 BiFunction<T, S, T> update,
@@ -50,7 +50,7 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             );
         }
 
-        <S> Bound(
+        public <S> Bound(
                 BasePath<S> fixedPath,
                 Function<S, T> map
         ) {
@@ -63,11 +63,11 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
 
         public static class In<T> extends Bound<T> {
 
-            protected <S> In(T initialValue, BasePath<S> fixedPath, BiFunction<T, S, T> update, Predicate<T> expectOut) {
+            public  <S> In(T initialValue, BasePath<S> fixedPath, BiFunction<T, S, T> update, Predicate<T> expectOut) {
                 super(initialValue, fixedPath, update, expectOut);
             }
 
-            <S> In(BasePath<S> fixedPath, Function<S, T> map) {
+            public <S> In(BasePath<S> fixedPath, Function<S, T> map) {
                 super(fixedPath, map);
             }
 

@@ -147,7 +147,7 @@ public class Link<T> extends Path<T> implements BaseLink {
             throw new IllegalStateException("Not allowed!!");
         }
 
-        protected  <S> Bound(
+        public <S> Bound(
                 T initialValue,
                 BasePath<S> fixedPath,
                 BiFunction<T, S, T> update,
