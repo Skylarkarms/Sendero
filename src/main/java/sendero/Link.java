@@ -1,6 +1,7 @@
 package sendero;
 
 import sendero.functions.Consumers;
+import sendero.interfaces.Updater;
 
 import java.util.function.*;
 
@@ -85,6 +86,26 @@ public class Link<T> extends Path<T> implements BaseLink {
                 baseSwitch.switchFun(path, exit);
             }
         }
+
+        public static class In<T> extends Unbound<T> implements Updater<T> {
+            public In() {
+            }
+
+            public In(Builders.HolderBuilder<T> holderBuilder) {
+                super(holderBuilder);
+            }
+
+            @Override
+            public void update(UnaryOperator<T> update) {
+                super.update(update);
+            }
+
+            @Override
+            public void update(long delay, UnaryOperator<T> update) {
+                super.update(delay, update);
+            }
+        }
+
     }
 
     public static class Bound<T> extends Link<T> {
@@ -135,7 +156,7 @@ public class Link<T> extends Path<T> implements BaseLink {
             );
         }
 
-        public static class In<T> extends Bound<T> {
+        public static class In<T> extends Bound<T> implements Updater<T> {
             public<S> In(T initialValue, BasePath<S> fixedPath, BiFunction<T, S, T> update, Predicate<T> expectOut) {
                 super(initialValue, fixedPath, update, expectOut);
             }
