@@ -217,6 +217,10 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
             super(mutableActivationListener);
         }
 
+        Injective(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
+            super(holderBuilder, actMgmtBuilder);
+        }
+
         <S> Injective(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
             super(holderBuilder, basePath, map);
         }

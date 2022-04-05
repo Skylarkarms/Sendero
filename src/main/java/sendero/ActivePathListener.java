@@ -11,6 +11,10 @@ class ActivePathListener<T> {
     private final ActivationManager manager;
     private final Appointers.HolderAppointer<T> appointerCache;
 
+    Holders.ColdHolder<T> getColdHolder() {
+        return appointerCache.getColdHolder();
+    }
+
     private final AtomicUtils.WitnessAtomicReference<AppointerConsumer<?>> appointerConsumerCache = new AtomicUtils.WitnessAtomicReference<>(AppointerConsumer.not_set);
 
     private static final class AppointerConsumer<T> {

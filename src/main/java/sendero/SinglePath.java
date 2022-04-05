@@ -17,6 +17,10 @@ public class SinglePath<T> extends BasePath.Injective<T> implements Forkable<T> 
         super(mutableActivationListener);
     }
 
+    protected SinglePath(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
+        super(holderBuilder, actMgmtBuilder);
+    }
+
     protected SinglePath(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
         super(selfMap);
     }

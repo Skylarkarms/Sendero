@@ -7,16 +7,18 @@ import sendero.pairs.Pair;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-abstract class AbsLink<T> implements sendero.Link.Unbound.UnboundSwitch<T>{
+final class BaseUnboundSwitch<T> implements UnboundSwitch<T> {
 
     private final ActivePathListener<T> activePathListener;
 
-    protected AbsLink(ActivePathListener<T> activePathListener) {
+    BaseUnboundSwitch(ActivePathListener<T> activePathListener) {
         this.activePathListener = activePathListener;
     }
 
 
-    protected abstract void onResult(Pair.Immutables.Int<T> tPair);
+    private void onResult(Pair.Immutables.Int<T> tPair) {
+        activePathListener.getColdHolder().acceptVersionValue(tPair);
+    };
 
     private <S> void baseConnect(
             BasePath<S> observable,

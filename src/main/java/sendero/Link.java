@@ -1,11 +1,7 @@
 package sendero;
 
 import sendero.functions.Consumers;
-import sendero.interfaces.BooleanConsumer;
-import sendero.interfaces.Updater;
-import sendero.pairs.Pair;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.*;
 
 public class Link<T> extends Path<T> implements BaseLink {
@@ -38,78 +34,34 @@ public class Link<T> extends Path<T> implements BaseLink {
 
     public static class Unbound<T> extends Link<T> implements UnboundLink<T> {
 
-        final ActivePathListener<T> activePathListener;
+        final BaseUnbound<T> baseUnbound = new BaseUnbound<>(this);
 
         public Unbound() {
             super(true);
-            activePathListener = new ActivePathListener<>(manager, holderAppointer);
-
         }
 
         public Unbound(Builders.HolderBuilder<T> holderBuilder) {
             super(holderBuilder, true);
-            activePathListener = new ActivePathListener<>(manager, holderAppointer);
-        }
-
-        private final Supplier<IllegalAccessException> getExc = () -> new IllegalAccessException(
-                "Link.Unbound.class is unable to listen paths. \n " +
-                "Attempting to integrate both listen and bind would greatly diminish performance on both ends.");
-
-        @Override
-        protected <P extends BasePath<T>> T setAndStart(P basePath) {
-            throwException();
-            return null;
-        }
-
-        private void throwException() {
-            try {
-                throw getExc.get();
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            }
-        }
-
-        @Override
-        protected <S, P extends BasePath<S>> T setAndStart(P basePath, Function<S, T> map) {
-            throwException();
-            return null;
         }
 
         @Override
         public <P extends BasePath<T>> void bind(P basePath) {
-            activePathListener.bind(basePath);
+            baseUnbound.bind(basePath);
         }
 
         @Override
         public <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
-            activePathListener.bindMap(basePath, map);
+            baseUnbound.bindMap(basePath, map);
         }
 
         @Override
         public boolean unbound() {
-            return activePathListener.unbound();
-        }
-
-        interface UnboundSwitch<T> {
-            <S> void bindFun(BasePath<S> path, Function<Consumer<? super T>, ? extends Consumers.BaseConsumer<S>> exit);
-            <S> void switchMap(
-                    BasePath<S> path,
-                    Function<S, ? extends BasePath<T>> switchMap
-            );
-            <S> void switchFun(
-                    BasePath<S> path,
-                    Function<Consumer<? super BasePath<T>>, ? extends Consumers.BaseConsumer<S>> exit
-            );
+            return baseUnbound.unbound();
         }
 
         public static class Switch<T> extends Unbound<T> implements UnboundSwitch<T> {
 
-            private final AbsLink<T> absLink = new AbsLink<T>(activePathListener) {
-                @Override
-                protected void onResult(Pair.Immutables.Int<T> tPair) {
-                    Switch.this.acceptVersionValue(tPair);
-                }
-            };
+            private final BaseUnboundSwitch<T> baseSwitch = new BaseUnboundSwitch<T>(baseUnbound.activePathListener);
 
             public Switch() {
             }
@@ -120,17 +72,17 @@ public class Link<T> extends Path<T> implements BaseLink {
 
             @Override
             public <S> void bindFun(BasePath<S> path, Function<Consumer<? super T>, ? extends Consumers.BaseConsumer<S>> exit) {
-                absLink.bindFun(path, exit);
+                baseSwitch.bindFun(path, exit);
             }
 
             @Override
             public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
-                absLink.switchMap(path, switchMap);
+                baseSwitch.switchMap(path, switchMap);
             }
 
             @Override
             public <S> void switchFun(BasePath<S> path, Function<Consumer<? super BasePath<T>>, ? extends Consumers.BaseConsumer<S>> exit) {
-                absLink.switchFun(path, exit);
+                baseSwitch.switchFun(path, exit);
             }
         }
     }
@@ -198,5 +150,53 @@ public class Link<T> extends Path<T> implements BaseLink {
                 super.update(delay, update);
             }
         }
+    }
+
+    private final BaseUnbound.LinkIllegalAccessException exception = new BaseUnbound.LinkIllegalAccessException(getClass());
+
+    @Override
+    protected <S, P extends BasePath<S>> void setPath(P basePath, Function<S, T> map) {
+        exception.throwE();
+    }
+
+    @Override
+    protected <S, P extends BasePath<S>> T setAndStart(P basePath, Function<S, T> map) {
+        exception.throwE();
+        return null;
+    }
+
+    @Override
+    protected <P extends BasePath<T>> T setAndStart(P basePath) {
+        exception.throwE();
+        return null;
+    }
+
+    @Override
+    protected void stopListeningPathAndUnregister() {
+        exception.throwE();
+    }
+
+    @Override
+    protected boolean startListeningPath() {
+        exception.throwE();
+        return false;
+    }
+
+    @Override
+    protected boolean stopListeningPath() {
+        exception.throwE();
+        return false;
+    }
+
+    @Override
+    protected boolean pathIsActive() {
+        exception.throwE();
+        return false;
+    }
+
+    @Override
+    protected boolean pathIsSet() {
+        exception.throwE();
+        return false;
     }
 }

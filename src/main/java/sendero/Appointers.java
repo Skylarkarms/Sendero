@@ -212,6 +212,10 @@ public class Appointers {
         private final AtomicUtils.WitnessAtomicReference<Appointer<?>> witnessAtomicReference;
         private final Holders.ColdHolder<T> holder;
 
+        Holders.ColdHolder<T> getColdHolder() {
+            return holder;
+        }
+
         HolderAppointer(Holders.ColdHolder<T> holder) {
             this.holder = holder;
             witnessAtomicReference = new AtomicUtils.WitnessAtomicReference<>(Appointer.initiating);
