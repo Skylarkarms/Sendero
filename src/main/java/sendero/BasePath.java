@@ -8,7 +8,7 @@ import sendero.pairs.Pair;
 
 import java.util.function.*;
 
-public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
+public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements Forkable<T> {
 
     final Appointers.HolderAppointer<T> holderAppointer = new Appointers.HolderAppointer<>(holder);
 
@@ -200,120 +200,59 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         };
     }
 
-    static class Injective<T> extends BasePath<T> {
+    static abstract class PathDispatcher<T> extends Dispatcher<T> implements IBasePath<T> {
+        private final Holders.ExecutorHolder<T> executorHolder;
 
-        private final ConsumerRegister.IConsumerRegister.SnapshottingConsumerRegister<Integer, Pair.Immutables.Int<T>>
-                remote = ConsumerRegister.IConsumerRegister.getInstance(this::getVersion);
-
-        Injective() {
-            super();
+        void scheduleExecution(long delay, Runnable action) {
+            executorHolder.scheduleExecution(delay, action);
         }
 
-        Injective(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
-            super(selfMap);
+        <S> void parallelDispatch(int beginAt, Consumer<? super S>[] subs, Pair.Immutables.Int<T> t, Function<Pair.Immutables.Int<T>, S> map) {
+            executorHolder.parallelDispatch(beginAt, subs, t, map);
         }
 
-        Injective(boolean mutableActivationListener) {
-            super(mutableActivationListener);
-        }
+            abstract Pair.Immutables.Bool<Integer> onAddRegister(Consumer<Pair.Immutables.Int<T>> subscriber);
+        abstract boolean onRegisterRemoved(Consumer<Pair.Immutables.Int<T>> intConsumer);
 
-        Injective(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
-            super(holderBuilder, actMgmtBuilder);
-        }
-
-        <S> Injective(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
-            super(holderBuilder, basePath, map);
-        }
-
-        <S> Injective(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> map) {
-            super(holderBuilder, basePath, map);
-        }
-
-        <S> Injective(Builders.HolderBuilder<T> holderBuilder, Supplier<BasePath<S>> basePathSupplier, Function<Holders.DispatcherHolder<T>, Consumer<Pair.Immutables.Int<S>>> toAppointFun) {
-            super(holderBuilder,
-                    dispatcher -> Builders.getManagerBuild().withFixed(
-                            Appointers.Appointer.booleanConsumerAppointer(basePathSupplier.get(), toAppointFun.apply(dispatcher))
-                    )
-            );
-        }
-
-        @Override
-        void dispatch(long delay, Pair.Immutables.Int<T> t) {
-            pathDispatch(false, t);
-        }
-
-        @Override
-        void coldDispatch(Pair.Immutables.Int<T> t) {
-            pathDispatch(false, t);
-        }
-
-        @Override
         @SuppressWarnings("unchecked")
-        protected void appoint(Consumer<Pair.Immutables.Int<T>> subscriber) {
-            onAdd(
+        @Override
+        public void appoint(Consumer<Pair.Immutables.Int<T>> subscriber) {
+            executorHolder.onAdd(
                     subscriber,
-                    consumer -> remote.snapshotRegister((Consumer<Pair.Immutables.Int<T>>) consumer),
+                    consumer -> onAddRegister((Consumer<Pair.Immutables.Int<T>>) consumer),
                     UnaryOperator.identity()
             );
         }
 
         @Override
-        void pathDispatch(boolean fullyParallel, Pair.Immutables.Int<T> t) {
-            if (remote.isRegistered()) {
-                if (t.compareTo(getVersion()) != 0) return;
-                remote.accept(t);
-            }
-            if (fullyParallel) throw new IllegalStateException("Injective.class dispatch cannot be parallel.");
+        public void demotionOverride(Consumer<Pair.Immutables.Int<T>> intConsumer) {
+            if (onRegisterRemoved(intConsumer)) executorHolder.deactivate();
         }
 
-        @Override
-        protected void demotionOverride(Consumer<Pair.Immutables.Int<T>> intConsumer) {
-            if (remote.unregister() != null) deactivate();
+        protected PathDispatcher(Holders.ExecutorHolder<T> executorHolder) {
+            this.executorHolder = executorHolder;
         }
 
-        @Override
-        boolean deactivationRequirements() {
-            return !remote.isRegistered();
-        }
+        abstract boolean isInactive();
 
+        int getVersion(){
+            return executorHolder.getVersion();
+        }
     }
 
-    static class ToMany<T> extends BasePath<T> {
+    static final class ToManyPathsDispatcher<T> extends PathDispatcher<T> {
         private final SimpleLists.SimpleList.LockFree.Snapshotting<Consumer<Pair.Immutables.Int<T>>, Integer>
-                remote = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
+                remote;
 
-        ToMany(boolean activationListener) {
-            super(activationListener);
-        }
-
-        ToMany() {
-            super();
-        }
-
-        ToMany(Builders.HolderBuilder<T> holderBuilder) {
-            super(holderBuilder);
-        }
-
-        ToMany(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
-            super(selfMap);
-        }
-
-        <S> ToMany(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> map) {
-            super(holderBuilder, basePath, map);
-        }
-
-        ToMany(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
-            super(holderBuilder, actMgmtBuilder);
-        }
-
-        <S> ToMany(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
-            super(holderBuilder, basePath, map);
+        ToManyPathsDispatcher(Holders.ExecutorHolder<T> executorHolder) {
+            super(executorHolder);
+            remote = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
         }
 
         @Override
         void dispatch(long delay, Pair.Immutables.Int<T> t) {
             //Last local observers on same thread
-                scheduleExecution(
+            scheduleExecution(
                         delay,
                         () -> pathDispatch(false, t)
                 );
@@ -326,17 +265,17 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
         }
 
         @Override
-        @SuppressWarnings("unchecked")
-        protected void appoint(Consumer<Pair.Immutables.Int<T>> subscriber) {
-            onAdd(
-                    subscriber,
-                    consumer -> remote.add((Consumer<Pair.Immutables.Int<T>>) consumer),
-                    UnaryOperator.identity()
-            );
+        Pair.Immutables.Bool<Integer> onAddRegister(Consumer<Pair.Immutables.Int<T>> subscriber) {
+            return remote.add(subscriber);
         }
 
         @Override
-        void pathDispatch(boolean fullyParallel, Pair.Immutables.Int<T> t) {
+        boolean onRegisterRemoved(Consumer<Pair.Immutables.Int<T>> intConsumer) {
+            return remote.remove(intConsumer);
+        }
+
+        @Override
+        public void pathDispatch(boolean fullyParallel, Pair.Immutables.Int<T> t) {
             final Consumer<Pair.Immutables.Int<T>>[] subs = remote.copy();
             final int length = subs.length;
             if (length == 0) return;
@@ -350,16 +289,56 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> {
 
         }
 
-        @Override
-        protected void demotionOverride(Consumer<Pair.Immutables.Int<T>> intConsumer) {
-            if (remote.remove(intConsumer)) deactivate();
-        }
-
-        @Override
-        boolean deactivationRequirements() {
+        boolean isInactive() {
             return remote.isEmpty();
         }
 
     }
+
+    static final class InjectivePathDispatcher<T> extends PathDispatcher<T> {
+
+        private final ConsumerRegister.IConsumerRegister.SnapshottingConsumerRegister<Integer, Pair.Immutables.Int<T>>
+                remote;
+
+        InjectivePathDispatcher(Holders.ExecutorHolder<T> executorHolder) {
+            super(executorHolder);
+            remote = ConsumerRegister.IConsumerRegister.getInstance(this::getVersion);
+        }
+
+        @Override
+        void dispatch(long delay, Pair.Immutables.Int<T> t) {
+            pathDispatch(false, t);
+        }
+
+        @Override
+        void coldDispatch(Pair.Immutables.Int<T> t) {
+            pathDispatch(false, t);
+        }
+
+        @Override
+        Pair.Immutables.Bool<Integer> onAddRegister(Consumer<Pair.Immutables.Int<T>> subscriber) {
+            return remote.snapshotRegister(subscriber);
+        }
+
+        @Override
+        public void pathDispatch(boolean fullyParallel, Pair.Immutables.Int<T> t) {
+            if (remote.isRegistered()) {
+                if (t.compareTo(getVersion()) != 0) return;
+                remote.accept(t);
+            }
+            if (fullyParallel) throw new IllegalStateException("Injective.class dispatch cannot be parallel.");
+        }
+
+        @Override
+        boolean onRegisterRemoved(Consumer<Pair.Immutables.Int<T>> intConsumer) {
+            return remote.unregister() != null;
+        }
+
+        boolean isInactive() {
+            return !remote.isRegistered();
+        }
+
+    }
+
 }
 

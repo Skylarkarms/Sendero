@@ -24,6 +24,7 @@ public class ForkedMultiplication {
                 }
         );
         Merge<int[]> finalResult = new Merge<>(new int[3], ints -> {
+            System.err.println("Expect out size is: " + ints.length);
             for (int i:ints
                  ) {
                 System.err.println("integers are: " + i);

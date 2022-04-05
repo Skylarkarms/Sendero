@@ -8,9 +8,15 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class SinglePath<T> extends BasePath.Injective<T> implements Forkable<T> {
+public class SinglePath<T> extends PathDispatcherHolder<T> {
+
+    @Override
+    PathDispatcher<T> getPathDispatcher() {
+        return new InjectivePathDispatcher<>(this);
+    }
 
     protected SinglePath() {
+        super();
     }
 
     protected SinglePath(boolean mutableActivationListener) {
@@ -33,54 +39,32 @@ public class SinglePath<T> extends BasePath.Injective<T> implements Forkable<T> 
         super(holderBuilder, basePath, map);
     }
 
-    @SuppressWarnings("unchecked")
-    @Override
-    public <O extends Gates.Out<T>> O out(Class<? super O> outputType) {
-        if (outputType == Gates.Out.Single.class) {
-            return (O) new Gates.Outs.SingleImpl<>(injectiveFunctionBuilder());
-        } else if (outputType == Gates.Out.Many.class) {
-            return (O) new Gates.Outs.ManyImpl<>(injectiveFunctionBuilder());
-        }
-        throw new IllegalStateException("invalid class: " + outputType);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public <S, O extends Gates.Out<S>> O out(Class<? super O> outputType, Function<T, S> map) {
-        if (outputType == Gates.Out.Single.class) {
-            return (O) new Gates.Outs.SingleImpl<>(mapFunctionBuilder(map));
-        } else if (outputType == Gates.Out.Many.class) {
-            return (O) new Gates.Outs.ManyImpl<>(mapFunctionBuilder(map));
-        }
-        throw new IllegalStateException("invalid class: " + outputType);
-    }
-
     @Override
     public <S> SinglePath<S> forkMap(Function<T, S> map) {
-        return new SinglePath<S>(
+        return new SinglePath<>(
                 mapFunctionBuilder(map)
-        ) {};
+        );
     }
 
     @Override
     public <S> SinglePath<S> forkFun(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
-        return new SinglePath<S>(
+        return new SinglePath<>(
                 mutateFunctionBuilder(exit)
-        ) {};
+        );
     }
 
     @Override
     public <S> SinglePath<S> forkSwitch(Function<T, BasePath<S>> switchMap) {
-        return new SinglePath<S>(
+        return new SinglePath<>(
                 switchFunctionBuilder(switchMap)
-        ) {};
+        );
     }
 
     @Override
     public <S> SinglePath<S> forkSwitchFun(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
-        return new SinglePath<S>(
+        return new SinglePath<>(
                 switchMutateFunctionBuilder(mutate)
-        ) {};
+        );
     }
 
 }

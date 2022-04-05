@@ -95,7 +95,7 @@ final class Holders {
 
         static final long COLD = -1, HOT = 0;
 
-        @Override
+//        @Override
         protected void setExpectOutput(Predicate<T> expectOutput) {
             this.expectOutput = expectOutput;
         }
@@ -428,7 +428,7 @@ final class Holders {
             return holder.getVersion();
         }
 
-        @Override
+//        @Override
         protected void setExpectOutput(Predicate<T> expectOutput) {
             holder.setExpectOutput(expectOutput);
         }

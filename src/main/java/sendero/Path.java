@@ -2,17 +2,21 @@ package sendero;
 
 import sendero.functions.Consumers;
 import sendero.interfaces.BooleanConsumer;
-import sendero.interfaces.Updater;
 import sendero.pairs.Pair;
 
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
-public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
+public class Path<T> extends PathDispatcherHolder<T> {
+
+    @Override
+    PathDispatcher<T> getPathDispatcher() {
+        return new ToManyPathsDispatcher<>(this);
+    }
 
     protected Path() {
+        super();
     }
 
     protected Path(boolean activationListener) {
@@ -39,54 +43,32 @@ public class Path<T> extends BasePath.ToMany<T> implements Forkable<T> {
         super(holderBuilder);
     }
 
-    @SuppressWarnings("unchecked")
-    @Override
-    public <O extends Gates.Out<T>> O out(Class<? super O> outputType) {
-        if (outputType == Gates.Out.Single.class) {
-            return (O) new Gates.Outs.SingleImpl<T>(injectiveFunctionBuilder());
-        } else if (outputType == Gates.Out.Many.class) {
-            return (O) new Gates.Outs.ManyImpl<T>(injectiveFunctionBuilder());
-        }
-        throw new IllegalStateException("invalid class: " + outputType);
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public <S, O extends Gates.Out<S>> O out(Class<? super O> outputType, Function<T, S> map) {
-        if (outputType == Gates.Out.Single.class) {
-            return (O) new Gates.Outs.SingleImpl<S>(mapFunctionBuilder(map));
-        } else if (outputType == Gates.Out.Many.class) {
-            return (O) new Gates.Outs.ManyImpl<S>(mapFunctionBuilder(map));
-        }
-        throw new IllegalStateException("invalid class: " + outputType);
-    }
-
     @Override
     public <S> Path<S> forkMap(Function<T, S> map) {
-        return new Path<S>(
+        return new Path<>(
                 mapFunctionBuilder(map)
-        ) {};
+        );
     }
 
     @Override
     public <S> Path<S> forkFun(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
-        return new Path<S>(
+        return new Path<>(
                 mutateFunctionBuilder(exit)
-        ) {};
+        );
     }
 
     @Override
     public <S> Path<S> forkSwitch(Function<T, BasePath<S>> switchMap) {
-        return new Path<S>(
+        return new Path<>(
                 switchFunctionBuilder(switchMap)
-        ) {};
+        );
     }
 
     @Override
     public <S> Path<S> forkSwitchFun(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
-        return new Path<S>(
+        return new Path<>(
                 switchMutateFunctionBuilder(mutate)
-        ) {};
+        );
     }
 }
 

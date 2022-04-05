@@ -6,8 +6,6 @@ import java.util.function.Predicate;
 
 abstract class Dispatcher<T> {
 
-    protected abstract void setExpectOutput(Predicate<T> expectOutput);
-
     /**coldDispatch is trigger by Sendero's inner communication*/
     void coldDispatch(Pair.Immutables.Int<T> t) {}
 

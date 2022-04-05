@@ -1,0 +1,258 @@
+package sendero;
+
+import sendero.functions.Consumers;
+import sendero.interfaces.Updater;
+import sendero.pairs.Pair;
+
+import java.util.function.*;
+
+public abstract class AbsLink<T, BPD extends BasePath.PathDispatcher<T>> extends BasePath<T> implements BaseLink{
+//public abstract class AbsLink<T, BP extends BasePath<T>> extends BasePath<T> implements BaseLink{
+
+//    final BasePath<T> basePath;
+
+    private final BPD pathDispatcher;
+
+
+    private AbsLink(boolean mutableActivationListener, BPD pathDispatcher) {
+        super(mutableActivationListener);
+        this.pathDispatcher = pathDispatcher;
+    }
+
+    public AbsLink(Builders.HolderBuilder<T> holderBuilder, boolean mutableManager, BPD pathDispatcher) {
+        super(holderBuilder, Builders.getManagerBuild().withMutable(mutableManager));
+        this.pathDispatcher = pathDispatcher;
+    }
+
+    private <S> AbsLink(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map, BPD pathDispatcher) {
+        super(holderBuilder, basePath, map);
+        this.pathDispatcher = pathDispatcher;
+    }
+
+    private <S> AbsLink(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> map, BPD pathDispatcher) {
+        super(holderBuilder, basePath, map);
+        this.pathDispatcher = pathDispatcher;
+    }
+
+    @Override
+    public boolean isBound() {
+        return activationListenerIsSet();
+    }
+
+    @Override
+    public boolean unbound() {
+        throw new IllegalStateException("Must be overridden by its children");
+    }
+
+    public static abstract class Unbound<T, BP extends PathDispatcher<T>> extends AbsLink<T, BP> implements UnboundLink<T> {
+//    public static abstract class Unbound<T, BP extends BasePath<T>> extends AbsLink<T, BP> implements UnboundLink<T> {
+
+        final BaseUnbound<T> baseUnbound = new BaseUnbound<>(this);
+
+
+        public Unbound(BP basePathExtension) {
+            super(true, basePathExtension);
+        }
+
+        public Unbound(BP basePathExtension, Builders.HolderBuilder<T> holderBuilder) {
+            super(holderBuilder, true, basePathExtension);
+        }
+
+        @Override
+        public <P extends BasePath<T>> void bind(P basePath) {
+            baseUnbound.bind(basePath);
+        }
+
+        @Override
+        public <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
+            baseUnbound.bindMap(basePath, map);
+        }
+
+        @Override
+        public boolean unbound() {
+            return baseUnbound.unbound();
+        }
+
+        public static abstract class Switch<T, BP extends PathDispatcher<T>> extends Unbound<T, BP> implements UnboundSwitch<T> {
+//        public static abstract class Switch<T, BP extends BasePath<T>> extends Unbound<T, BP> implements UnboundSwitch<T> {
+
+            private final BaseUnboundSwitch<T> baseUnboundSwitch = new BaseUnboundSwitch<T>(baseUnbound.activePathListener);
+
+            public Switch(BP basePathExtension) {
+                super(basePathExtension);
+            }
+
+            public Switch(BP basePathExtension, Builders.HolderBuilder<T> holderBuilder) {
+                super(basePathExtension, holderBuilder);
+            }
+
+            @Override
+            public <S> void bindFun(BasePath<S> path, Function<Consumer<? super T>, ? extends Consumers.BaseConsumer<S>> exit) {
+                baseUnboundSwitch.bindFun(path, exit);
+            }
+
+            @Override
+            public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
+                baseUnboundSwitch.switchMap(path, switchMap);
+            }
+
+            @Override
+            public <S> void switchFun(BasePath<S> path, Function<Consumer<? super BasePath<T>>, ? extends Consumers.BaseConsumer<S>> exit) {
+                baseUnboundSwitch.switchFun(path, exit);
+            }
+        }
+
+        public static abstract class In<T, BP extends PathDispatcher<T>> extends Unbound<T, BP> implements Updater<T> {
+//        public static abstract class In<T, BP extends BasePath<T>> extends Unbound<T, BP> implements Updater<T> {
+            public In(BP basePathExtension) {
+                super(basePathExtension);
+            }
+
+            public In(BP basePathExtension, Builders.HolderBuilder<T> holderBuilder) {
+                super(basePathExtension, holderBuilder);
+            }
+
+            @Override
+            public void update(UnaryOperator<T> update) {
+                super.update(update);
+//                super.update(update);
+            }
+
+            @Override
+            public void update(long delay, UnaryOperator<T> update) {
+                super.update(delay, update);
+//                super.update(delay, update);
+            }
+        }
+    }
+
+
+    public static abstract class Bound<T, BP extends PathDispatcher<T>> extends AbsLink<T, BP> {
+//    public static abstract class Bound<T, BP extends BasePath<T>> extends AbsLink<T, BP> {
+
+        @Override
+        public boolean isBound() {
+            return true;
+        }
+
+        @Override
+        public boolean unbound() {
+            throw new IllegalStateException("Not allowed!!");
+        }
+
+        public <S> Bound(
+                BP basePathExtension,
+                T initialValue,
+                BasePath<S> fixedPath,
+                BiFunction<T, S, T> update,
+                Predicate<T> expectOut
+        ) {
+            super(
+                    Builders.getHolderBuild(sBuilder -> sBuilder.withInitial(initialValue).expectOut(expectOut)),
+                    fixedPath,
+                    update,
+                    basePathExtension);
+        }
+
+        public <S> Bound(
+                BP basePathExtension,
+                BasePath<S> fixedPath,
+                Function<S, T> map
+        ) {
+            super(
+                    Builders.getHolderBuild(UnaryOperator.identity()),
+                    fixedPath,
+                    map,
+                    basePathExtension);
+        }
+
+        public static abstract class In<T, BP extends PathDispatcher<T>> extends Bound<T, BP> implements Updater<T> {
+//        public static abstract class In<T, BP extends BasePath<T>> extends Bound<T, BP> implements Updater<T> {
+
+            public  <S> In(BP basePathExtension, T initialValue, BasePath<S> fixedPath, BiFunction<T, S, T> update, Predicate<T> expectOut) {
+                super(basePathExtension, initialValue, fixedPath, update, expectOut);
+            }
+
+            public <S> In(BP basePathExtension, BasePath<S> fixedPath, Function<S, T> map) {
+                super(basePathExtension, fixedPath, map);
+            }
+
+            @Override
+            public void update(UnaryOperator<T> update) {
+                super.update(update);
+            }
+
+            @Override
+            public void update(long delay, UnaryOperator<T> update) {
+                super.update(delay, update);
+            }
+        }
+
+
+    }
+
+    private final BaseUnbound.LinkIllegalAccessException exception = new BaseUnbound.LinkIllegalAccessException(getClass());
+
+    @Override
+    protected <S, P extends BasePath<S>> void setPath(P basePath, Function<S, T> map) {
+        exception.throwE();
+    }
+
+    @Override
+    protected <S, P extends BasePath<S>> T setAndStart(P basePath, Function<S, T> map) {
+        exception.throwE();
+        return null;
+    }
+
+    @Override
+    protected <P extends BasePath<T>> T setAndStart(P basePath) {
+        exception.throwE();
+        return null;
+    }
+
+    @Override
+    protected void stopListeningPathAndUnregister() {
+        exception.throwE();
+    }
+
+    @Override
+    protected boolean startListeningPath() {
+        exception.throwE();
+        return false;
+    }
+
+    @Override
+    protected boolean stopListeningPath() {
+        exception.throwE();
+        return false;
+    }
+
+    @Override
+    protected boolean pathIsActive() {
+        exception.throwE();
+        return false;
+    }
+
+    @Override
+    protected boolean pathIsSet() {
+        exception.throwE();
+        return false;
+    }
+
+    @Override
+    protected void appoint(Consumer<Pair.Immutables.Int<T>> subscriber) {
+        pathDispatcher.appoint(subscriber);
+    }
+
+    @Override
+    void pathDispatch(boolean fullyParallel, Pair.Immutables.Int<T> t) {
+        pathDispatcher.pathDispatch(fullyParallel, t);
+    }
+
+    @Override
+    protected void demotionOverride(Consumer<Pair.Immutables.Int<T>> intConsumer) {
+        pathDispatcher.demotionOverride(intConsumer);
+    }
+
+}
+
