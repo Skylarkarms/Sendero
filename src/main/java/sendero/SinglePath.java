@@ -23,6 +23,10 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
         super(mutableActivationListener);
     }
 
+    protected SinglePath(Builders.HolderBuilder<T> holderBuilder) {
+        super(holderBuilder, Builders.getManagerBuild());
+    }
+
     protected SinglePath(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
         super(holderBuilder, actMgmtBuilder);
     }

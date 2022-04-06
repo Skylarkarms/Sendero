@@ -11,8 +11,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
-public final class Gates {
-    public static class IO<T> extends Outs.OutBasePath.Many<T> implements Holders.StatefulHolder<T> {
+public final class SingleGate {
+    public static class IO<T> extends Outs.OutBaseSinglePath.Single<T> implements Holders.StatefulHolder<T> {
 
         public IO() {
             super();
@@ -60,7 +60,7 @@ public final class Gates {
             super.update(delay, update);
         }
     }
-    public static class In<T> extends Path<T> implements Holders.StatefulHolder<T> {
+    public static class In<T> extends SinglePath<T> implements Holders.StatefulHolder<T> {
 
         public In() {
             super();
@@ -118,15 +118,16 @@ public final class Gates {
     }
     static final class Outs {
 
-        static class OutBasePath<T> extends Path<T> {
-            public OutBasePath() {
+        static class OutBaseSinglePath<T> extends SinglePath<T> {
+//        static class OutBasePath<T> extends Path<T> {
+            public OutBaseSinglePath() {
             }
 
-            OutBasePath(Builders.HolderBuilder<T> holderBuilder) {
+            OutBaseSinglePath(Builders.HolderBuilder<T> holderBuilder) {
                 super(holderBuilder);
             }
 
-            protected static class Many<T> extends OutBasePath<T> implements Out.Many<T> {
+            protected static class Many<T> extends OutBaseSinglePath<T> implements Out.Many<T> {
 
                 private final SimpleLists.SimpleList.LockFree.Snapshotting<Consumer<? super T>, Integer>
                         locale = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
@@ -206,10 +207,17 @@ public final class Gates {
                 }
             }
 
-            protected static class Single<T> extends OutBasePath<T> implements Out.Single<T> {
+            protected static class Single<T> extends OutBaseSinglePath<T> implements Out.Single<T> {
 
                 private final ConsumerRegister.IConsumerRegister.SnapshottingConsumerRegister<Integer, T>
                         locale = ConsumerRegister.IConsumerRegister.getInstance(this::getVersion);
+
+                public Single() {
+                }
+
+                Single(Builders.HolderBuilder<T> holderBuilder) {
+                    super(holderBuilder);
+                }
 
                 private Runnable dispatchCommandFunction(Pair.Immutables.Int<T> t) {
                     return () -> {
@@ -271,135 +279,6 @@ public final class Gates {
 
                 }
 
-            }
-
-        }
-
-        // Outs that do not belong to the basePath family do not need to perform any dispatching on new threads.
-        // Hence, should only extend ActivationHolder.class
-        static class ManyImpl<T> extends Holders.ActivationHolder<T> implements Out.Many<T> {
-
-            private final SimpleLists.SimpleList.LockFree.Snapshotting<Consumer<? super T>, Integer>
-                    locale = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
-
-            protected ManyImpl(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
-                super(selfMap);
-            }
-
-            @Override
-            void dispatch(long delay, Pair.Immutables.Int<T> t) {
-                //It may be the case that the JNI hangs the thread for whatever reason it may deem proper.
-                //One example would arise in the case that the processes between holder CAS and THIS dispatch() take too long to resolve.
-                //And this, could very well be the case if some heavy transformation is being performed (at the subscriber level (If extended by Subscriber))
-                // between subscriber.accept(t) AND subscriber's own version of dispatch().
-                // But not so much at the Holder level (since there is almost no computation between CAS and this dispatch), but one should never assume...
-                //In that case, a version of T that should have arrived earlier, could arrive as being the last one, overriding the potential true last response.
-                //If this happens the result would be < 0.
-                //To prevent this, Subscriber MUST TAKE NOTES OF ITS OWN VERSION, and grant access to it by overriding getVersion(), for this class to be able to use.
-
-                if (!locale.isEmpty()) {
-                    //If we are out of luck, lists may be empty at this point but it won't matter.
-                    for (Consumer<? super T> observer:locale
-                    ) {
-                        if (t.compareTo(getVersion()) != 0) return;
-                        //consecutive "losing" threads that got pass this check might get a boost so we should prevent the override of lesser versions on the other end.
-                        //And the safety measure will end with subscriber's own version of dispatch();
-                        observer.accept(t.getValue());
-                    }
-                }
-
-                if (delay > Holders.TestDispatcher.HOT) throw new IllegalArgumentException("This dispatcher cannot be delayed.");
-            }
-
-            @Override
-            void coldDispatch(Pair.Immutables.Int<T> t) {
-                Consumer<? super T>[] locals = locale.copy();
-                final int length = locals.length;
-                if (length == 0) return;
-                for (int i = 0; i < length; i++) {
-                    if (t.compareTo(getVersion()) != 0) return;
-                    Consumer<? super T> curr = locals[i];
-                    if (curr != null) curr.accept(t.getValue());
-                }
-
-            }
-
-            @Override
-            public boolean isIdle() {
-                return super.isIdle();
-            }
-
-            @Override
-            public void unregister(Consumer<T> consumer) {
-                if (locale.remove(consumer)) tryDeactivate();
-            }
-
-            @Override
-            public void register(Consumer<T> valueConsumer) {
-                onRegistered(
-                        valueConsumer,
-                        (Function<Consumer<? super T>, Pair.Immutables.Bool<Integer>>) locale::add,
-                        Pair.Immutables.Int::getValue,
-                        Runnable::run
-                );
-
-            }
-        }
-
-        static class SingleImpl<T> extends Holders.ActivationHolder<T> implements Out.Single<T> {
-
-            private final ConsumerRegister.IConsumerRegister.SnapshottingConsumerRegister<Integer, T>
-                    locale = ConsumerRegister.IConsumerRegister.getInstance(this::getVersion);
-
-            protected SingleImpl(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
-                super(selfMap);
-            }
-
-            @Override
-            void dispatch(long delay, Pair.Immutables.Int<T> t) {
-                //It may be the case that the JNI hangs the thread for whatever reason it may deem proper.
-                //One example would arise in the case that the processes between holder CAS and THIS dispatch() takes too long to resolve.
-                //And this, could very well be the case if some heavy transformation is being performed (at the subscriber level (If extended by Subscriber))
-                // between subscriber.accept(t) AND subscriber's own version of dispatch().
-                // But not so much at the Holder level (since there is almost no computation between CAS and this dispatch), but one should never assume...
-                //In that case, a version of T that should have arrived earlier, could arrive as being the last one, overriding the potential true last response.
-                //If this happens the result would be < 0.
-                //To prevent this, Subscriber MUST TAKE NOTES OF ITS OWN VERSION, and grant access to it by overriding getVersion(), for this class to be able to use.
-                if (locale.isRegistered()) {
-                    if (t.compareTo(getVersion()) != 0) {
-                        return;
-                    }
-                    locale.accept(t.getValue());
-                }
-
-                if (delay > Holders.TestDispatcher.HOT) throw new IllegalArgumentException("This dispatcher cannot be delayed.");
-            }
-
-            @Override
-            void coldDispatch(Pair.Immutables.Int<T> t) {
-                if (t.compareTo(getVersion()) != 0) return;
-                locale.accept(t.getValue());
-            }
-
-            @Override
-            boolean deactivationRequirements() {
-                return !locale.isRegistered() && super.deactivationRequirements();
-            }
-
-            @SuppressWarnings("unchecked")
-            @Override
-            public void register(Consumer<T> valueConsumer) {
-                onRegistered(
-                        valueConsumer,
-                        consumer -> locale.snapshotRegister((Consumer<T>) consumer),
-                        Pair.Immutables.Int::getValue,
-                        Runnable::run
-                );
-            }
-
-            @Override
-            public void unregister() {
-                if (locale.unregister() != null) tryDeactivate();
             }
 
         }
