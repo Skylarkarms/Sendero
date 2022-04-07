@@ -1,4 +1,4 @@
-import sendero.Gates;
+import sendero.Gate;
 import sendero.Link;
 import sendero.Path;
 
@@ -7,11 +7,11 @@ import java.util.HashMap;
 public class TestHard {
 
 
-    Gates.In<Integer> input = new Gates.In<>();
-    Gates.In<Integer> input2 = new Gates.In<>(3);
+    Gate.In<Integer> input = new Gate.In<>();
+    Gate.In<Integer> input2 = new Gate.In<>(3);
     Link.Unbound.Switch<String> ALink = new Link.Unbound.Switch<>();
 
-    Gates.In<String> hello = new Gates.In<>("Hello");
+    Gate.In<String> hello = new Gate.In<>("Hello");
     Path<String> hey = hello.forkMap(
             s -> s + " World!"
 
@@ -28,7 +28,7 @@ public class TestHard {
             integer -> firstMap.get(integer)
     );
 
-    Gates.Out.Single<String> BLinkOut = BLink.out(Gates.Out.Single.class);
+    Gate.Out.Single<String> BLinkOut = BLink.out(Gate.Out.Single.class);
 
     void commence() {
         BLinkOut.register(

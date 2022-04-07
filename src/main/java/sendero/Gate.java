@@ -11,7 +11,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
-public final class Gates {
+public final class Gate {
     public static class IO<T> extends Outs.OutBasePath.Many<T> implements Holders.StatefulHolder<T> {
 
         public IO() {
@@ -61,6 +61,10 @@ public final class Gates {
         }
     }
     public static class In<T> extends Path<T> implements Holders.StatefulHolder<T> {
+
+        public static<T> In<T> build(UnaryOperator<In<T>> operator) {
+            return operator.apply(new In<>());
+        }
 
         public In() {
             super();

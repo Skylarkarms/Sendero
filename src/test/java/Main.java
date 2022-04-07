@@ -1,4 +1,4 @@
-import sendero.Gates;
+import sendero.Gate;
 import sendero.Merge;
 
 import java.util.function.Consumer;
@@ -6,8 +6,8 @@ import java.util.function.Predicate;
 
 public class Main {
     public static void main(String[] args) {
-        Gates.In<String> hello = new Gates.In<>();
-        Gates.In<String> world = new Gates.In<>("World");
+        Gate.In<String> hello = new Gate.In<>();
+        Gate.In<String> world = new Gate.In<>("World");
         String[] og =  new String[2];
         System.err.println("Original is: " + og);
         Predicate<String[]> expectOut = strings -> {
@@ -44,12 +44,12 @@ public class Main {
             });
         });
 
-        Gates.Out.Single<String> result = helloWorld.forkMap(
+        Gate.Out.Single<String> result = helloWorld.forkMap(
                 strings -> {
                     System.err.println("FROM FORKED MAP IS: " + strings);
                     return strings[0] + " " + strings[1];
                 }
-        ).out(Gates.Out.Single.class);
+        ).out(Gate.Out.Single.class);
 
         result.register(
                 new Consumer<String>() {

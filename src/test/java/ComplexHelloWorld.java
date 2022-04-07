@@ -9,8 +9,8 @@ class ComplexHelloWorld {
         private final Map<Integer, String> cache = new HashMap<>(5);
         private final Map<Integer, Path<String>> domainCache = new HashMap<>(2);
 
-        private final Gates.In<String> holderCache1 = new Gates.In<>("Good Bye");
-        private final Gates.In<String> holderCache2 = new Gates.In<>("Pluto");
+        private final Gate.In<String> holderCache1 = new Gate.In<>("Good Bye");
+        private final Gate.In<String> holderCache2 = new Gate.In<>("Pluto");
 
         {
             domainCache.put(1, holderCache1);
@@ -23,8 +23,8 @@ class ComplexHelloWorld {
             cache.put(5, "Sun");
         }
 
-        private final Gates.IO<Integer> holder2 = new Gates.IO<>();
-        private final Gates.IO<Integer> holder3 = new Gates.IO<>(5);
+        private final Gate.IO<Integer> holder2 = new Gate.IO<>();
+        private final Gate.IO<Integer> holder3 = new Gate.IO<>(5);
 
         {
             holder2.accept(3);
@@ -47,7 +47,7 @@ class ComplexHelloWorld {
             }
             return true;
         });
-        private final Gates.Out.Single<String[]> finalRes = res.out(Gates.Out.Single.class);
+        private final Gate.Out.Single<String[]> finalRes = res.out(Gate.Out.Single.class);
 
         {
             res.from(

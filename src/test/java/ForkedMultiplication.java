@@ -1,13 +1,12 @@
-import sendero.Gates;
+import sendero.Gate;
 import sendero.Merge;
 import sendero.Path;
 
-import java.util.Arrays;
 import java.util.function.UnaryOperator;
 
 public class ForkedMultiplication {
-    private final Gates.In<Integer> in = new Gates.In<>(2);
-    private final Gates.Out.Single<Integer> resultOutput;
+    private final Gate.In<Integer> in = new Gate.In<>(2);
+    private final Gate.Out.Single<Integer> resultOutput;
     public ForkedMultiplication() {
         Path<Integer> firstFork = in.forkMap(
                 (UnaryOperator<Integer>) integer -> {
@@ -72,7 +71,7 @@ public class ForkedMultiplication {
                     );
                 }
         );
-        resultOutput = finalResult.out(Gates.Out.Single.class, ints -> ints[2]);
+        resultOutput = finalResult.out(Gate.Out.Single.class, ints -> ints[2]);
         resultOutput.register(
                 integer -> System.out.println("Final result is: " + integer)
         );
