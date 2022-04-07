@@ -1,6 +1,7 @@
 package sendero;
 
 import sendero.functions.Consumers;
+import sendero.interfaces.BooleanConsumer;
 import sendero.interfaces.Updater;
 
 import java.util.function.*;
@@ -33,10 +34,32 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
         throw new IllegalStateException("Must be overridden by its children");
     }
 
+    private void throwIllegalAccess(String method) {
+        try {
+            throw new IllegalAccessException(method + " access not allowed from " + this.getClass());
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    protected void setOnStateChangeListener(BooleanConsumer listener) {
+        throwIllegalAccess("setOnStateChangeListener");
+    }
+
+    @Override
+    protected boolean clearOnStateChangeListener(BooleanConsumer listener) {
+        throwIllegalAccess("clearOnStateChangeListener");
+        return false;
+    }
+
     public static class Unbound<T> extends SingleLink<T> implements UnboundLink<T> {
 
         final BaseUnbound<T> baseUnbound = new BaseUnbound<>(this);
 
+        public static<T> Unbound<T> build(UnaryOperator<Unbound<T>> operator) {
+            return operator.apply(new Unbound<>());
+        }
 
         public Unbound() {
             super(true);

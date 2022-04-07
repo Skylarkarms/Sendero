@@ -284,6 +284,15 @@ final class Holders {
 
         final ActivationManager manager;
 
+        protected void setOnStateChangeListener(BooleanConsumer listener) {
+            manager.setActivationListener(listener);
+        }
+
+        protected boolean clearOnStateChangeListener(BooleanConsumer listener) {
+            return manager.expectClearActivationListener(listener);
+        }
+
+
         /**For LinkHolder*/
         boolean activationListenerIsSet() {
             return manager.activationListenerIsSet();
@@ -398,9 +407,9 @@ final class Holders {
             holder.accept(t);
         }
 
-        void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
-            holder.acceptVersionValue(versionValue);
-        }
+//        void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
+//            holder.acceptVersionValue(versionValue);
+//        }
 
         protected ActivationHolder<T> setMap(UnaryOperator<T> map) {
             holder.setMap(map);
