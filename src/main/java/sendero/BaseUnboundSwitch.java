@@ -25,7 +25,7 @@ final class BaseUnboundSwitch<T> implements UnboundSwitch<T> {
             Consumer<Pair.Immutables.Int<S>> exit
     ) {
         activePathListener.forcedSet(
-                Appointer.fixedAppointer(observable, exit)
+                BinaryEventConsumers.fixedAppointer(observable, exit)
         );
     }
 
@@ -43,7 +43,7 @@ final class BaseUnboundSwitch<T> implements UnboundSwitch<T> {
     public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
         final Appointers.SimpleAppointer<T> appointer = new Appointers.SimpleAppointer<>(this::onResult,t -> true);
 
-        final AtomicBinaryEventConsumer booleanConsumerAppointer = Appointer.booleanConsumerAppointer(
+        final AtomicBinaryEventConsumer booleanConsumerAppointer = BinaryEventConsumers.producerHolderConnector(
                 path,
                 new Holders.DispatcherHolder<BasePath<T>>() {
                     @Override
@@ -74,7 +74,7 @@ final class BaseUnboundSwitch<T> implements UnboundSwitch<T> {
     public <S> void switchFun(BasePath<S> path, Function<Consumer<? super BasePath<T>>, ? extends Consumers.BaseConsumer<S>> exit) {
         final Appointers.SimpleAppointer<T> appointer = new Appointers.SimpleAppointer<>(this::onResult,t -> true);
 
-        final AtomicBinaryEventConsumer booleanConsumerAppointer = Appointer.fixedAppointer(
+        final AtomicBinaryEventConsumer booleanConsumerAppointer = BinaryEventConsumers.fixedAppointer(
                 path,
                 new Consumer<Pair.Immutables.Int<S>>() {
                     final Holders.DispatcherHolder<BasePath<T>> domainHolder = new Holders.DispatcherHolder<BasePath<T>>() {
