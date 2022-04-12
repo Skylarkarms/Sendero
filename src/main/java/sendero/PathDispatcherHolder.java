@@ -1,6 +1,6 @@
 package sendero;
 
-import sendero.interfaces.BooleanConsumer;
+import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.pairs.Pair;
 
 import java.util.function.BiFunction;
@@ -26,7 +26,7 @@ public abstract class PathDispatcherHolder<T> extends BasePath<T> {
         pathDispatcher = pathDispatcherBuild();
     }
 
-    PathDispatcherHolder(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+    PathDispatcherHolder(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
         super(selfMap);
         pathDispatcher = pathDispatcherBuild();
     }

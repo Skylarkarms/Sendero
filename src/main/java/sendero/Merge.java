@@ -1,6 +1,6 @@
 package sendero;
 
-import sendero.interfaces.BooleanConsumer;
+import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.interfaces.Updater;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;
@@ -11,8 +11,8 @@ import java.util.function.Predicate;
 
 public class Merge<T> extends Path<T> implements BaseMerge<T> {
 
-    private final SimpleLists.SimpleList.LockFree.Snapshotting<BooleanConsumer, Boolean> joints = SimpleLists.getSnapshotting(
-            BooleanConsumer.class,
+    private final SimpleLists.SimpleList.LockFree.Snapshotting<Appointer<?>, Boolean> joints = SimpleLists.getSnapshotting(
+            AtomicBinaryEventConsumer.class,
             () -> !isIdle()
     );
 
@@ -31,7 +31,7 @@ public class Merge<T> extends Path<T> implements BaseMerge<T> {
             throw new IllegalStateException("Observer is null");
         }
 
-        final BooleanConsumer jointAppointer = Appointers.Appointer.booleanConsumerAppointer(
+        final Appointer<?> jointAppointer = Appointer.fixedAppointer(
                 path,
                 new Consumer<Pair.Immutables.Int<S>>() {
                     final Consumer<S> sConsumer = observer.apply(holder);
@@ -49,7 +49,7 @@ public class Merge<T> extends Path<T> implements BaseMerge<T> {
         );
 
         final Pair.Immutables.Bool<Boolean> res = joints.add(jointAppointer);
-        if (res.value) jointAppointer.accept(true);
+        if (res.value) jointAppointer.start();
         return this;
     }
 
@@ -57,16 +57,24 @@ public class Merge<T> extends Path<T> implements BaseMerge<T> {
     public<S> boolean drop(
             BasePath<S> path
     ) {
-        return joints.removeIf(booleanConsumer -> booleanConsumer.equals(path));
+        return joints.removeIf(booleanConsumer -> booleanConsumer.equalTo(path));
     }
 
     @Override
     protected void onStateChange(boolean isActive) {
-        final BooleanConsumer[] toDispatch = joints.copy();
+        final AtomicBinaryEventConsumer[] toDispatch = joints.copy();
         final int length = toDispatch.length;
-        for (int i = 0; i < length; i++) {
-            final BooleanConsumer j = toDispatch[i];
-            j.accept(isActive);
+        if (isActive) {
+            for (int i = 0; i < length; i++) {
+                final AtomicBinaryEventConsumer j = toDispatch[i];
+                j.on();
+            }
+        } else {
+            for (int i = 0; i < length; i++) {
+                final AtomicBinaryEventConsumer j = toDispatch[i];
+                j.off();
+            }
+
         }
     }
 }

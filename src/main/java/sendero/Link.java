@@ -1,10 +1,9 @@
 package sendero;
 
 import sendero.functions.Consumers;
-import sendero.interfaces.BooleanConsumer;
+import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.interfaces.Updater;
 
-import java.lang.reflect.Method;
 import java.util.function.*;
 
 public class Link<T> extends Path<T> implements BaseLink {
@@ -44,12 +43,12 @@ public class Link<T> extends Path<T> implements BaseLink {
     }
 
     @Override
-    protected void setOnStateChangeListener(BooleanConsumer listener) {
+    protected void setOnStateChangeListener(AtomicBinaryEventConsumer listener) {
         throwIllegalAccess("setOnStateChangeListener");
     }
 
     @Override
-    protected boolean clearOnStateChangeListener(BooleanConsumer listener) {
+    protected boolean clearOnStateChangeListener() {
         throwIllegalAccess("clearOnStateChangeListener");
         return false;
     }
@@ -87,7 +86,7 @@ public class Link<T> extends Path<T> implements BaseLink {
 
         public static class Switch<T> extends Unbound<T> implements UnboundSwitch<T> {
 
-            private final BaseUnboundSwitch<T> baseSwitch = new BaseUnboundSwitch<T>(baseUnbound.activePathListener);
+            private final BaseUnboundSwitch<T> baseSwitch = new BaseUnboundSwitch<>(baseUnbound.activePathListener);
 
             public Switch() {
             }

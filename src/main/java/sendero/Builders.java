@@ -1,6 +1,6 @@
 package sendero;
 
-import sendero.interfaces.BooleanConsumer;
+import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.pairs.Pair;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -69,10 +69,12 @@ public final class Builders {
     }
 
     public static class ManagerBuilder {
-        private BooleanConsumer activationListener;
+        private AtomicBinaryEventConsumer activationListener;
+//        private BooleanConsumer activationListener;
         private boolean mutableActivationListener;
 
-        public ManagerBuilder withFixed(BooleanConsumer activationListener) {
+        public ManagerBuilder withFixed(AtomicBinaryEventConsumer activationListener) {
+//        public ManagerBuilder withFixed(BooleanConsumer activationListener) {
             if (mutableActivationListener) throwException();
             this.activationListener = activationListener;
             this.mutableActivationListener = false;

@@ -1,7 +1,7 @@
 package sendero;
 
 import sendero.functions.Consumers;
-import sendero.interfaces.BooleanConsumer;
+import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.pairs.Pair;
 
 import java.util.function.BiFunction;
@@ -31,7 +31,7 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
         super(holderBuilder, actMgmtBuilder);
     }
 
-    protected SinglePath(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+    protected SinglePath(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
         super(selfMap);
     }
 

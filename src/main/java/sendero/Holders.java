@@ -2,7 +2,7 @@ package sendero;
 
 import sendero.atomics.AtomicUtils;
 import sendero.functions.Functions;
-import sendero.interfaces.BooleanConsumer;
+import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.interfaces.Updater;
 import sendero.pairs.Pair;
 import sendero.threshold_listener.ThresholdListeners;
@@ -61,17 +61,13 @@ final class Holders {
         }
         private void versionValueCAS(int newVersion, T processed) {
             if (processed == INVALID) return;
-            Pair.Immutables.Int<T> prev = reference.get(), next = prev;
-            for (boolean lesser;;) {
-                lesser = prev.compareTo(newVersion) < 0;
-                if (lesser) {
-                    next = new Pair.Immutables.Int<>(newVersion, processed);
-                }
-                if (lesser && reference.compareAndSet(prev, next)) {
+            Pair.Immutables.Int<T> prev, next;
+            while ((prev = reference.get()).compareTo(newVersion) < 0) {
+                next = new Pair.Immutables.Int<>(newVersion, processed);
+                if (reference.compareAndSet(prev, next)) {
                     dispatcher.accept(next);
                     break;
                 }
-                if (prev.compareTo(prev = reference.get()) >= 0) break;
             }
         }
 
@@ -173,24 +169,17 @@ final class Holders {
         }
 
         private void lazyCASAccept(long delay, UnaryOperator<T> t) {
-            Pair.Immutables.Int<T> prev = reference.get();
-            T newValue = t.apply(prev.getValue());
-            Pair.Immutables.Int<T> next = new Pair.Immutables.Int<>(prev.getInt() + 1, newValue);
-            boolean wasValid = newValue != INVALID;
-            T prevValue = prev.getValue();
-            for (boolean changed = false;;) {
-                if (changed) {
-                    prevValue = prev.getValue();
-                    newValue = t.apply(prevValue);
-                    next = new Pair.Immutables.Int<>(prev.getInt() + 1, newValue);
-                    wasValid = newValue != INVALID;
-                }
-                if (wasValid && reference.compareAndSet(prev, next)) {
-                    inferDispatch(prevValue, next, delay);
-                    break;
-                }
-                if (!(changed = (prev != (prev = reference.get()))) && !wasValid) {
-                    break;
+            Pair.Immutables.Int<T> prev = null, next;
+            T prevVal, newVal;
+            while (prev != (prev = reference.get())) {
+                prevVal = prev.getValue();
+                newVal = t.apply(prevVal);
+                if (newVal != INVALID) {
+                    next = new Pair.Immutables.Int<>(prev.getInt() + 1, newVal);
+                    if (reference.compareAndSet(prev, next)) {
+                        inferDispatch(prevVal, next, delay);
+                        break;
+                    }
                 }
             }
         }
@@ -218,11 +207,11 @@ final class Holders {
 
         private void CASAccept(T t) {
             if (t == INVALID) return;
-            for (Pair.Immutables.Int<T> current;;) {
-                current = reference.get();
-                final Pair.Immutables.Int<T> newPair = new Pair.Immutables.Int<>(current.getInt() + 1, t);
-                if (reference.compareAndSet(current, newPair)) {
-                    inferDispatch(current.getValue(), newPair, TestDispatcher.HOT);
+            Pair.Immutables.Int<T> prev = null, next;
+            while (prev != (prev = reference.get())) {
+                next = new Pair.Immutables.Int<>(prev.getInt() + 1, t);
+                if (reference.compareAndSet(prev, next)) {
+                    inferDispatch(prev.getValue(), next, HOT);
                     break;
                 }
             }
@@ -240,17 +229,13 @@ final class Holders {
 
         private void versionValueCAS(int newVersion, T processed) {
             if (processed == INVALID) return;
-            Pair.Immutables.Int<T> prev = reference.get(), next = prev;
-            for (boolean lesser;;) {
-                lesser = prev.compareTo(newVersion) < 0;
-                if (lesser) {
-                    next = new Pair.Immutables.Int<>(newVersion, processed);
-                }
-                if (lesser && reference.compareAndSet(prev, next)) {
+            Pair.Immutables.Int<T> prev, next;
+            while ((prev = reference.get()).compareTo(newVersion) < 0) {
+                next = new Pair.Immutables.Int<>(newVersion, processed);
+                if (reference.compareAndSet(prev, next)) {
                     inferDispatch(prev.getValue(), next, TestDispatcher.COLD);
                     break;
                 }
-                if (prev.compareTo(prev = reference.get()) >= 0) break;
             }
         }
 
@@ -270,7 +255,7 @@ final class Holders {
             return reference.get().getInt();
         }
 
-        protected Pair.Immutables.Int<T> getSnapshot() {
+        Pair.Immutables.Int<T> getSnapshot() {
             final Pair.Immutables.Int<T> res = reference.get();
             return res != FIRST ? res : null;
         }
@@ -284,12 +269,12 @@ final class Holders {
 
         final ActivationManager manager;
 
-        protected void setOnStateChangeListener(BooleanConsumer listener) {
+        protected void setOnStateChangeListener(AtomicBinaryEventConsumer listener) {
             manager.setActivationListener(listener);
         }
 
-        protected boolean clearOnStateChangeListener(BooleanConsumer listener) {
-            return manager.expectClearActivationListener(listener);
+        protected boolean clearOnStateChangeListener() {
+            return manager.clearActivationListener();
         }
 
 
@@ -331,7 +316,7 @@ final class Holders {
             manager = buildManager();
         }
 
-        ActivationHolder(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+        ActivationHolder(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
             holder = buildHolder();
             manager = new ActivationManager(selfMap.apply(holder::acceptVersionValue)){
                 @Override
@@ -407,10 +392,6 @@ final class Holders {
             holder.accept(t);
         }
 
-//        void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
-//            holder.acceptVersionValue(versionValue);
-//        }
-
         protected ActivationHolder<T> setMap(UnaryOperator<T> map) {
             holder.setMap(map);
             return this;
@@ -437,7 +418,6 @@ final class Holders {
             return holder.getVersion();
         }
 
-//        @Override
         protected void setExpectOutput(Predicate<T> expectOutput) {
             holder.setExpectOutput(expectOutput);
         }
@@ -457,7 +437,7 @@ final class Holders {
         ExecutorHolder() {
         }
 
-        public ExecutorHolder(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+        public ExecutorHolder(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
             super(selfMap);
         }
 

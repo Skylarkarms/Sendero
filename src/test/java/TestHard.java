@@ -25,7 +25,11 @@ public class TestHard {
     }
 
     Path<String> BLink = input.forkSwitch(
-            integer -> firstMap.get(integer)
+            integer -> {
+                Path<String> res = firstMap.get(integer);
+                System.err.println("input fork: " + res + "\n, int: " + integer);
+                return res;
+            }
     );
 
     Gate.Out.Single<String> BLinkOut = BLink.out(Gate.Out.Single.class);
@@ -36,10 +40,13 @@ public class TestHard {
         );
 
         input.accept(1);
-
+        System.err.println("switchMap: " + ALink);
         ALink.switchMap(
                 input2,
-                integer -> firstMap.get(integer)
+                integer -> {
+                    System.err.println("switchMap: " + ALink + ",\n int: " + integer);
+                    return firstMap.get(integer);
+                }
         );
         try {
             Thread.sleep(2000);

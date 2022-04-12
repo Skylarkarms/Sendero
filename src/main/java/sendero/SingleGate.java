@@ -1,7 +1,6 @@
 package sendero;
 
-import sendero.event_registers.ConsumerRegister;
-import sendero.interfaces.BooleanConsumer;
+import sendero.event_registers.ConsumerRegisters;
 import sendero.interfaces.Register;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;
@@ -209,8 +208,8 @@ public final class SingleGate {
 
             protected static class Single<T> extends OutBaseSinglePath<T> implements Out.Single<T> {
 
-                private final ConsumerRegister.IConsumerRegister.SnapshottingConsumerRegister<Integer, T>
-                        locale = ConsumerRegister.IConsumerRegister.getInstance(this::getVersion);
+                private final ConsumerRegisters.IConsumerRegister.SnapshottingConsumerRegister<Integer, T>
+                        locale = ConsumerRegisters.IConsumerRegister.getInstance(this::getVersion);
 
                 public Single() {
                 }

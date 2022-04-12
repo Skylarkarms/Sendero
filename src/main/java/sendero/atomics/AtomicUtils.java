@@ -4,115 +4,87 @@ import sendero.pairs.Pair;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
+import java.util.function.*;
 
 public final class AtomicUtils {
-    public static final class WitnessAtomicReference<T> implements Supplier<T> {
-        private final AtomicReference<T> ref;
 
-        public WitnessAtomicReference(T value) {
-            this.ref = new AtomicReference<>(value);
+    public static class Witness<T> {
+        public final T prev, next;
+
+        Witness(T prev, T next) {
+            this.prev = prev;
+            this.next = next;
         }
 
-        public WitnessAtomicReference() {
-            this.ref = new AtomicReference<>();
-        }
+        public static class Int {
+            public final int prev, next;
 
-        @Override
-        public T get() {
-            return ref.get();
-        }
-
-        public T getAndSet(T newVal) {
-            return ref.getAndSet(newVal);
-        }
-
-        public T getAndUpdate(UnaryOperator<T> operator) {
-            return ref.getAndUpdate(operator);
-        }
-
-        public boolean expectAndSet(Predicate<T> expect, T next) {
-            T prev = ref.get();
-            for (;;) {
-                if (expect.test(prev) && ref.compareAndSet(prev, next)) return true;
-                if (prev == (prev = ref.get())) return false;
-            }
-        }
-
-        public boolean trySet(Predicate<T> setIf, T next, Predicate<T> retryIf) {
-            T prev = ref.get();
-            boolean first = true;
-            while (first || retryIf.test(prev = ref.get())) {
-                if (setIf.test(prev) && ref.compareAndSet(prev, next)) return true;
-                first = false;
-            }
-            return false;
-        }
-
-        /**Will retry if:
-         *  <li> Contention met && retryIf test == true
-         * <br>
-         * <br>
-         *@return next == null if:
-         * <li> A) updateIf == false && no contention met
-         * <li> B) Contention met && retryIf == false
-         * */
-        public Witness<T> compliantCAS(
-                Predicate<T> updateIf,
-                UnaryOperator<T> next,
-                Predicate<T> retryIf) {
-            T prev = ref.get(), nextT;
-            boolean update, retry = true;
-            for (;retry;retry = retryIf.test(prev)) {
-                update = updateIf.test(prev);
-                if (update) {
-                    nextT = next.apply(prev);
-                    if (ref.compareAndSet(prev, nextT)) return new Witness<>(prev, nextT);
-                }
-                if (prev == (prev = ref.get())) return new Witness<>(prev, null); // if true, update was false, should return
-            }
-            return new Witness<>(prev, null);
-        }
-
-        public T updateAndGet(UnaryOperator<T> next) {
-            return ref.updateAndGet(next);
-        }
-
-        public static class Witness<T> {
-            public final T prev, next;
-
-            Witness(T prev, T next) {
+            public Int(int prev, int next) {
                 this.prev = prev;
                 this.next = next;
             }
         }
+    }
 
-        /**
-         * Will retry until match.
-         * <br>
-         * @return next == null if:
-         * <li> A) update == false;
-         *
-         *
-         * */
-        public<S> Witness<T> contentiousCAS(
-              Predicate<T> updateIf,
-              UnaryOperator<T> nextMap
-        ) {
-            T prev = ref.get(), next;
-            for (boolean update;;) {
-                update = updateIf.test(prev);
-                if (update) {
-                    next = nextMap.apply(prev);
-                    if (ref.compareAndSet(prev, next)) return new Witness<>(prev, next);
-                }
-                if (prev == (prev = ref.get()) //If true, update was false
-                ) return new Witness<>(prev, null);
+    /**
+     * Will retry until match.
+     * <br>
+     * @return next == null if:
+     * <li> A) update == false;
+     *
+     *
+     * */
+    public static<T> Witness<T> contentiousCAS(
+            AtomicReference<T> ref,
+            Predicate<T> updateIf,
+            UnaryOperator<T> nextMap
+    ) {
+        T prev = null, next;
+        while (prev != (prev = ref.get())) {
+            if (updateIf.test(prev)) {
+                next = nextMap.apply(prev);
+                if (ref.compareAndSet(prev, next)) return new Witness<>(prev, next);
+                else return new Witness<>(null, null);
             }
         }
+        return new Witness<>(prev, null);
+    }
+
+    /**retryIf on miss*/
+    public static<T> Witness<T> complyWithCAS(
+            AtomicReference<T> ref,
+            Predicate<T> updateIf,
+            UnaryOperator<T> nextOperator,
+            Predicate<T> retryIf
+    ) {
+        T prev = ref.get(), next = null;
+        boolean update;
+        do {
+            update = updateIf.test(prev);
+            if (update) {
+                next = nextOperator.apply(prev);
+                if (ref.compareAndSet(prev, next)) return new Witness<>(prev, next);
+            }
+        } while (retryIf.test(prev = ref.get()));
+        return new Witness<>(prev, next);
+    }
+
+    public static Witness.Int complyWithCAS(
+            AtomicInteger ref,
+            IntPredicate updateIf,
+            IntUnaryOperator nextOperator,
+            IntPredicate retryIf
+    ) {
+        int prev = ref.get(), next = -1;
+        boolean update;
+        do {
+            update = updateIf.test(prev);
+            if (update) {
+                next = nextOperator.applyAsInt(prev);
+                if (ref.compareAndSet(prev, next)) return new Witness.Int(prev, next);
+            }
+        } while (retryIf.test(prev = ref.get()));
+        return new Witness.Int(prev, next);
     }
 
     /**Delays the first execution, and then blocks contention and reuses Thread.*/

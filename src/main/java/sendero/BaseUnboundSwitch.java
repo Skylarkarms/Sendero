@@ -1,7 +1,7 @@
 package sendero;
 
 import sendero.functions.Consumers;
-import sendero.interfaces.BooleanConsumer;
+import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.pairs.Pair;
 
 import java.util.function.Consumer;
@@ -18,14 +18,14 @@ final class BaseUnboundSwitch<T> implements UnboundSwitch<T> {
 
     private void onResult(Pair.Immutables.Int<T> tPair) {
         activePathListener.getColdHolder().acceptVersionValue(tPair);
-    };
+    }
 
     private <S> void baseConnect(
             BasePath<S> observable,
             Consumer<Pair.Immutables.Int<S>> exit
     ) {
         activePathListener.forcedSet(
-                Appointers.Appointer.booleanConsumerAppointer(observable, exit)
+                Appointer.fixedAppointer(observable, exit)
         );
     }
 
@@ -43,7 +43,7 @@ final class BaseUnboundSwitch<T> implements UnboundSwitch<T> {
     public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
         final Appointers.SimpleAppointer<T> appointer = new Appointers.SimpleAppointer<>(this::onResult,t -> true);
 
-        final BooleanConsumer booleanConsumerAppointer = Appointers.Appointer.booleanConsumerAppointer(
+        final AtomicBinaryEventConsumer booleanConsumerAppointer = Appointer.booleanConsumerAppointer(
                 path,
                 new Holders.DispatcherHolder<BasePath<T>>() {
                     @Override
@@ -54,10 +54,18 @@ final class BaseUnboundSwitch<T> implements UnboundSwitch<T> {
                 switchMap::apply
         );
 
-        final BooleanConsumer finalConsumer = isActive -> {
-            if (isActive) appointer.start();
-            else appointer.stop();
-            booleanConsumerAppointer.accept(isActive);
+        final AtomicBinaryEventConsumer finalConsumer = new AtomicBinaryEventConsumer() {
+            @Override
+            protected void onStateChange(boolean isActive) {
+                if (isActive) {
+                    appointer.start();
+                    booleanConsumerAppointer.on();
+                }
+                else {
+                    appointer.stop();
+                    booleanConsumerAppointer.off();
+                }
+            }
         };
         activePathListener.forcedSet(finalConsumer);
     }
@@ -66,7 +74,7 @@ final class BaseUnboundSwitch<T> implements UnboundSwitch<T> {
     public <S> void switchFun(BasePath<S> path, Function<Consumer<? super BasePath<T>>, ? extends Consumers.BaseConsumer<S>> exit) {
         final Appointers.SimpleAppointer<T> appointer = new Appointers.SimpleAppointer<>(this::onResult,t -> true);
 
-        final BooleanConsumer booleanConsumerAppointer = Appointers.Appointer.booleanConsumerAppointer(
+        final AtomicBinaryEventConsumer booleanConsumerAppointer = Appointer.fixedAppointer(
                 path,
                 new Consumer<Pair.Immutables.Int<S>>() {
                     final Holders.DispatcherHolder<BasePath<T>> domainHolder = new Holders.DispatcherHolder<BasePath<T>>() {
@@ -92,11 +100,19 @@ final class BaseUnboundSwitch<T> implements UnboundSwitch<T> {
                     }
                 }
         );
-        final BooleanConsumer finalActivationListener = isActive -> {
-            if (isActive) appointer.start();
-            else appointer.stop();
+        final AtomicBinaryEventConsumer finalActivationListener = new AtomicBinaryEventConsumer() {
+            @Override
+            protected void onStateChange(boolean isActive) {
+                if (isActive) {
+                    appointer.start();
+                    booleanConsumerAppointer.on();
+                }
+                else {
+                    appointer.stop();
+                    booleanConsumerAppointer.off();
+                }
 
-            booleanConsumerAppointer.accept(isActive);
+            }
         };
         activePathListener.forcedSet(finalActivationListener);
     }

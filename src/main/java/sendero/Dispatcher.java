@@ -2,8 +2,6 @@ package sendero;
 
 import sendero.pairs.Pair;
 
-import java.util.function.Predicate;
-
 abstract class Dispatcher<T> {
 
     /**coldDispatch is trigger by Sendero's inner communication*/

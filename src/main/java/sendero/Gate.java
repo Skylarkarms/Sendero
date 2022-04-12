@@ -1,7 +1,7 @@
 package sendero;
 
-import sendero.event_registers.ConsumerRegister;
-import sendero.interfaces.BooleanConsumer;
+import sendero.event_registers.ConsumerRegisters;
+import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.interfaces.Register;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;
@@ -212,8 +212,8 @@ public final class Gate {
 
             protected static class Single<T> extends OutBasePath<T> implements Out.Single<T> {
 
-                private final ConsumerRegister.IConsumerRegister.SnapshottingConsumerRegister<Integer, T>
-                        locale = ConsumerRegister.IConsumerRegister.getInstance(this::getVersion);
+                private final ConsumerRegisters.IConsumerRegister.SnapshottingConsumerRegister<Integer, T>
+                        locale = ConsumerRegisters.IConsumerRegister.getInstance(this::getVersion);
 
                 private Runnable dispatchCommandFunction(Pair.Immutables.Int<T> t) {
                     return () -> {
@@ -286,7 +286,8 @@ public final class Gate {
             private final SimpleLists.SimpleList.LockFree.Snapshotting<Consumer<? super T>, Integer>
                     locale = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
 
-            protected ManyImpl(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+            protected ManyImpl(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+//            protected ManyImpl(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
                 super(selfMap);
             }
 
@@ -352,10 +353,10 @@ public final class Gate {
 
         static class SingleImpl<T> extends Holders.ActivationHolder<T> implements Out.Single<T> {
 
-            private final ConsumerRegister.IConsumerRegister.SnapshottingConsumerRegister<Integer, T>
-                    locale = ConsumerRegister.IConsumerRegister.getInstance(this::getVersion);
+            private final ConsumerRegisters.IConsumerRegister.SnapshottingConsumerRegister<Integer, T>
+                    locale = ConsumerRegisters.IConsumerRegister.getInstance(this::getVersion);
 
-            protected SingleImpl(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
+            protected SingleImpl(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
                 super(selfMap);
             }
 

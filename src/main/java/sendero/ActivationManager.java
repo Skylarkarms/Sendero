@@ -2,10 +2,8 @@ package sendero;
 
 import sendero.event_registers.BinaryEventRegisters;
 import sendero.functions.Functions;
-import sendero.interfaces.BooleanConsumer;
+import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.switchers.Switchers;
-
-import java.util.function.BooleanSupplier;
 
 abstract class ActivationManager {
 
@@ -26,7 +24,7 @@ abstract class ActivationManager {
 
     private static final Runnable ON_MUTABLE = Functions.emptyRunnable();
 
-    ActivationManager(BooleanConsumer fixedActivationListener, boolean mutableActivationListener) {
+    ActivationManager(AtomicBinaryEventConsumer fixedActivationListener, boolean mutableActivationListener) {
         this.switchRegister = fixedActivationListener != null ?
                 BinaryEventRegisters.getAtomicWith(fixedActivationListener)
                 :
@@ -42,7 +40,7 @@ abstract class ActivationManager {
         thrower = withActivationListener ? Functions.emptyRunnable() : createThrower();
     }
 
-    protected ActivationManager(BooleanConsumer fixedActivationListener) {
+    protected ActivationManager(AtomicBinaryEventConsumer fixedActivationListener) {
         switchRegister = BinaryEventRegisters.getAtomicWith(fixedActivationListener);
         thrower = createThrower();
     }
@@ -60,17 +58,22 @@ abstract class ActivationManager {
         return false;
     }
 
-    protected void setActivationListener(BooleanConsumer listener) {
+    protected void setActivationListener(AtomicBinaryEventConsumer listener) {
         thrower.run();
         ((BinaryEventRegisters.BinaryEventRegister)switchRegister).register(listener);
+    }
+
+    protected boolean swapActivationListener(AtomicBinaryEventConsumer expect, AtomicBinaryEventConsumer set) {
+        thrower.run();
+        return ((BinaryEventRegisters.BinaryEventRegister.Atomic)switchRegister).swapRegister(expect, set) == expect;
     }
 
     protected boolean activationListenerIsSet() {
         return ((BinaryEventRegisters.BinaryEventRegister)switchRegister).isRegistered();
     }
 
-    protected boolean expectClearActivationListener(BooleanConsumer activationListener) {
-        return ((BinaryEventRegisters.BinaryEventRegister.Atomic)switchRegister).unregister(activationListener);
+    protected boolean clearActivationListener() {
+        return !((BinaryEventRegisters.BinaryEventRegister.Atomic)switchRegister).unregister().isCleared();
     }
 
     protected boolean isIdle() {
