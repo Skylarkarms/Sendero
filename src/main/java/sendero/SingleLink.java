@@ -5,6 +5,7 @@ import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.interfaces.Updater;
 
 import java.util.function.*;
+import java.util.logging.LoggingPermission;
 
 public class SingleLink<T> extends SinglePath<T> implements BaseLink{
 
@@ -65,8 +66,8 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             super(true);
         }
 
-        public Unbound(Builders.HolderBuilder<T> holderBuilder) {
-            super(holderBuilder, true);
+        public Unbound(UnaryOperator<Builders.HolderBuilder<T>> operator) {
+            super(Builders.getHolderBuild(operator), true);
         }
 
         @Override
@@ -96,8 +97,8 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             public Switch() {
             }
 
-            public Switch(Builders.HolderBuilder<T> holderBuilder) {
-                super(holderBuilder);
+            public Switch(UnaryOperator<Builders.HolderBuilder<T>> operator) {
+                super(operator);
             }
 
             @Override
@@ -120,8 +121,8 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             public In() {
             }
 
-            public In(Builders.HolderBuilder<T> holderBuilder) {
-                super(holderBuilder);
+            public In(UnaryOperator<Builders.HolderBuilder<T>> operator) {
+                super(operator);
             }
 
             @Override
@@ -173,6 +174,18 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             );
         }
 
+        public <S> Bound(
+                UnaryOperator<Builders.HolderBuilder<T>> operator,
+                BasePath<S> fixedPath,
+                Function<S, T> map
+        ) {
+            super(
+                    Builders.getHolderBuild(operator),
+                    fixedPath,
+                    map
+            );
+        }
+
         public static class In<T> extends Bound<T> implements Updater<T> {
 
             public  <S> In(T initialValue, BasePath<S> fixedPath, BiFunction<T, S, T> update, Predicate<T> expectOut) {
@@ -181,6 +194,10 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
 
             public <S> In(BasePath<S> fixedPath, Function<S, T> map) {
                 super(fixedPath, map);
+            }
+
+            public <S> In(UnaryOperator<Builders.HolderBuilder<T>> operator, BasePath<S> fixedPath, Function<S, T> map) {
+                super(operator, fixedPath, map);
             }
 
             @Override
