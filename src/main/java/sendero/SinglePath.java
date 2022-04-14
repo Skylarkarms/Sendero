@@ -7,6 +7,7 @@ import sendero.pairs.Pair;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public class SinglePath<T> extends PathDispatcherHolder<T> {
 
@@ -31,7 +32,11 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
         super(holderBuilder, actMgmtBuilder);
     }
 
-    protected SinglePath(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+    SinglePath(UnaryOperator<Builders.HolderBuilder<T>> operator, Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+        super(operator, selfMap);
+    }
+
+    SinglePath(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
         super(selfMap);
     }
 
@@ -46,6 +51,14 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
     @Override
     public <S> SinglePath<S> forkMap(Function<T, S> map) {
         return new SinglePath<>(
+                mapFunctionBuilder(map)
+        );
+    }
+
+    @Override
+    public <S> SinglePath<S> forkMap(UnaryOperator<Builders.HolderBuilder<S>> operator, Function<T, S> map) {
+        return new SinglePath<>(
+                operator,
                 mapFunctionBuilder(map)
         );
     }

@@ -301,7 +301,7 @@ public final class Gate {
 
             protected ManyImpl(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
 //            protected ManyImpl(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
-                super(selfMap);
+                super(UnaryOperator.identity(), selfMap);
             }
 
             @Override
@@ -370,7 +370,7 @@ public final class Gate {
                     locale = ConsumerRegisters.IConsumerRegister.getInstance(this::getVersion);
 
             protected SingleImpl(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
-                super(selfMap);
+                super(UnaryOperator.identity(), selfMap);
             }
 
             @Override

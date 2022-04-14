@@ -71,8 +71,12 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
     public BasePath() {
     }
 
+    BasePath(UnaryOperator<Builders.HolderBuilder<T>> operator, Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+        super(operator, selfMap);
+    }
+
     BasePath(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
-        super(selfMap);
+        super(UnaryOperator.identity(), selfMap);
     }
 
     BasePath(Builders.HolderBuilder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, Builders.ManagerBuilder> actMgmtBuilder) {

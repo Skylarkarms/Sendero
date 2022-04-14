@@ -6,6 +6,7 @@ import sendero.pairs.Pair;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public abstract class PathDispatcherHolder<T> extends BasePath<T> {
     private final PathDispatcher<T> pathDispatcher;
@@ -23,6 +24,11 @@ public abstract class PathDispatcherHolder<T> extends BasePath<T> {
 
     protected PathDispatcherHolder(boolean activationListener) {
         super(activationListener);
+        pathDispatcher = pathDispatcherBuild();
+    }
+
+    PathDispatcherHolder(UnaryOperator<Builders.HolderBuilder<T>> operator, Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+        super(operator, selfMap);
         pathDispatcher = pathDispatcherBuild();
     }
 

@@ -336,8 +336,9 @@ final class Holders {
             manager = buildManager();
         }
 
-        ActivationHolder(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
-            holder = buildHolder();
+        ActivationHolder(UnaryOperator<Builders.HolderBuilder<T>> operator, Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+//        ActivationHolder(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+            holder = Builders.getHolderBuild(operator).build(this);
             manager = new ActivationManager(selfMap.apply(holder::acceptVersionValue)){
                 @Override
                 protected boolean deactivationRequirements() {
@@ -462,8 +463,8 @@ final class Holders {
         ExecutorHolder() {
         }
 
-        public ExecutorHolder(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
-            super(selfMap);
+        public ExecutorHolder(UnaryOperator<Builders.HolderBuilder<T>> operator, Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+            super(operator, selfMap);
         }
 
         ExecutorHolder(

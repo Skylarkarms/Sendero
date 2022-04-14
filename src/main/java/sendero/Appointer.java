@@ -1,12 +1,5 @@
 package sendero;
 
-import sendero.interfaces.AtomicBinaryEventConsumer;
-import sendero.pairs.Pair;
-
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-
 //class Appointer<A> extends AtomicBinaryEventConsumer {
 //    public static final Appointer<?> CLEARED_APPOINTER = new Appointer<Object>(null, null) {
 //

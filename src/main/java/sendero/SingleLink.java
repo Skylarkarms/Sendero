@@ -5,7 +5,6 @@ import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.interfaces.Updater;
 
 import java.util.function.*;
-import java.util.logging.LoggingPermission;
 
 public class SingleLink<T> extends SinglePath<T> implements BaseLink{
 
