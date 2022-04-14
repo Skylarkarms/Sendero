@@ -2,6 +2,7 @@ package sendero;
 
 import sendero.functions.Consumers;
 import sendero.interfaces.AtomicBinaryEventConsumer;
+import sendero.interfaces.BinaryPredicate;
 import sendero.pairs.Pair;
 
 import java.util.function.BiFunction;
@@ -56,8 +57,11 @@ public class Path<T> extends PathDispatcherHolder<T> {
     }
 
     @Override
-    public <S> Path<S> forkMap(UnaryOperator<Builders.HolderBuilder<S>> operator, Function<T, S> map) {
-        return new Path<>(operator, mapFunctionBuilder(map));
+    public <S> Path<S> forkMap(BinaryPredicate<S> expectIn, Function<T, S> map) {
+        return new Path<>(
+                sHolderBuilder -> sHolderBuilder.expectIn(expectIn),
+                mapFunctionBuilder(map)
+        );
     }
 
     @Override
