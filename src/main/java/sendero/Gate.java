@@ -2,6 +2,7 @@ package sendero;
 
 import sendero.event_registers.ConsumerRegisters;
 import sendero.interfaces.AtomicBinaryEventConsumer;
+import sendero.interfaces.BinaryPredicate;
 import sendero.interfaces.Register;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;
@@ -35,6 +36,12 @@ public final class Gate {
         }
 
         @Override
+        public Holders.StatefulHolder<T> expectIn(BinaryPredicate<T> expect) {
+            super.setExpectInput(expect);
+            return this;
+        }
+
+        @Override
         public IO<T> expectOut(Predicate<T> expect) {
             setExpectOutput(expect);
             return this;
@@ -62,8 +69,8 @@ public final class Gate {
     }
     public static class In<T> extends Path<T> implements Holders.StatefulHolder<T> {
 
-        public static<T> In<T> build(UnaryOperator<In<T>> operator) {
-            return operator.apply(new In<>());
+        public In(UnaryOperator<Builders.HolderBuilder<T>> operator) {
+            super(Builders.getHolderBuild(operator));
         }
 
         public In() {
@@ -82,6 +89,12 @@ public final class Gate {
 
         @Override
         public In<T> expectIn(Predicate<T> expect) {
+            super.setExpectInput(expect);
+            return this;
+        }
+
+        @Override
+        public Holders.StatefulHolder<T> expectIn(BinaryPredicate<T> expect) {
             super.setExpectInput(expect);
             return this;
         }

@@ -3,6 +3,7 @@ package sendero;
 import sendero.atomics.AtomicUtils;
 import sendero.functions.Functions;
 import sendero.interfaces.AtomicBinaryEventConsumer;
+import sendero.interfaces.BinaryPredicate;
 import sendero.interfaces.Updater;
 import sendero.pairs.Pair;
 import sendero.threshold_listener.ThresholdListeners;
@@ -23,12 +24,13 @@ final class Holders {
         /**The map function happens BEFORE the "expect" predicate test*/
         StatefulHolder<T> setMap(UnaryOperator<T> map);
         StatefulHolder<T> expectIn(Predicate<T> expect);
+        StatefulHolder<T> expectIn(BinaryPredicate<T> expect);
         StatefulHolder<T> expectOut(Predicate<T> expect);
     }
 
 
 
-    interface ColdHolder<T> {
+    interface ColdHolder<T> extends Supplier<T> {
         void acceptVersionValue(Pair.Immutables.Int<T> versionValue);
 
         /**@return: the last value*/
@@ -76,6 +78,12 @@ final class Holders {
             Pair.Immutables.Int<T> pair = reference.getAndSet(FIRST);
             return pair == FIRST ? null : pair.getValue();
         }
+
+        @Override
+        public T get() {
+            Pair.Immutables.Int<T> pair = reference.get();
+            return pair == FIRST ? null : pair.getValue();
+        }
     }
 
     static class TestDispatcher<T> extends Dispatcher<T> {
@@ -121,7 +129,8 @@ final class Holders {
             reference = new AtomicReference<>(FIRST);
         }
 
-        DispatcherHolder(AtomicReference<Pair.Immutables.Int<T>> reference, UnaryOperator<T> map, Predicate<T> expectInput, Predicate<T> expectOut) {
+        DispatcherHolder(AtomicReference<Pair.Immutables.Int<T>> reference, UnaryOperator<T> map, BinaryPredicate<T> expectInput, Predicate<T> expectOut) {
+//        DispatcherHolder(AtomicReference<Pair.Immutables.Int<T>> reference, UnaryOperator<T> map, Predicate<T> expectInput, Predicate<T> expectOut) {
             super(expectOut);
             this.reference = reference == null ?  new AtomicReference<>(FIRST) : reference;
             this.map = map == null ? CLEARED_MAP : map;
@@ -136,10 +145,19 @@ final class Holders {
             return this;
         }
 
-        private final Predicate<T> CLEARED_PREDICATE = Functions.always(true);
-        private volatile Predicate<T> expectInput = CLEARED_PREDICATE;
+        private final BinaryPredicate<T> CLEARED_PREDICATE = Functions.binaryAlways(true);
+//        private final Predicate<T> CLEARED_PREDICATE = Functions.always(true);
+        private volatile BinaryPredicate<T> expectInput = CLEARED_PREDICATE;
+//        private volatile Predicate<T> expectInput = CLEARED_PREDICATE;
         @Override
         public DispatcherHolder<T> expectIn(Predicate<T> expect) {
+            this.expectInput = (next, prev) -> expect.test(next);
+//            this.expectInput = expect;
+            return this;
+        }
+
+        @Override
+        public StatefulHolder<T> expectIn(BinaryPredicate<T> expect) {
             this.expectInput = expect;
             return this;
         }
@@ -160,7 +178,8 @@ final class Holders {
                         return INVALID;
                     }
                     mapped = map.apply(updated);
-                    return expectInput.test(mapped) ? mapped : INVALID;
+                    return expectInput.test(mapped, currentValue) ? mapped : INVALID;
+//                    return expectInput.test(mapped) ? mapped : INVALID;
                 } catch (Exception e) {
                     e.printStackTrace();
                     throw new RuntimeException(e);
@@ -202,7 +221,8 @@ final class Holders {
 
         private T process(T t) {
             T mapped = map.apply(t);
-            return expectInput.test(mapped) ? mapped : INVALID;
+            return expectInput.test(mapped, t) ? mapped : INVALID;
+//            return expectInput.test(mapped) ? mapped : INVALID;
         }
 
         private void CASAccept(T t) {
@@ -398,6 +418,11 @@ final class Holders {
         }
 
         protected ActivationHolder<T> setExpectInput(Predicate<T> expect) {
+            holder.expectIn(expect);
+            return this;
+        }
+
+        protected ActivationHolder<T> setExpectInput(BinaryPredicate<T> expect) {
             holder.expectIn(expect);
             return this;
         }

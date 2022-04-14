@@ -1,6 +1,7 @@
 package sendero;
 
 import sendero.interfaces.AtomicBinaryEventConsumer;
+import sendero.interfaces.BinaryPredicate;
 import sendero.pairs.Pair;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -21,7 +22,8 @@ public final class Builders {
     }
     public static class HolderBuilder<T> {
         private AtomicReference<Pair.Immutables.Int<T>> reference;
-        private Predicate<T> expectInput, expectOut;
+        private Predicate<T> /*expectInput, */expectOut;
+        private BinaryPredicate<T> expectInput;
         private UnaryOperator<T> map;
 
         private HolderBuilder() {
@@ -33,6 +35,12 @@ public final class Builders {
         }
 
         public HolderBuilder<T> expectIn(Predicate<T> expectInput) {
+            this.expectInput = (next, prev) -> expectInput.test(next);
+//            this.expectInput = expectInput;
+            return this;
+        }
+
+        public HolderBuilder<T> expectIn(BinaryPredicate<T> expectInput) {
             this.expectInput = expectInput;
             return this;
         }

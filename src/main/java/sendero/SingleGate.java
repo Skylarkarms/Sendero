@@ -1,6 +1,7 @@
 package sendero;
 
 import sendero.event_registers.ConsumerRegisters;
+import sendero.interfaces.BinaryPredicate;
 import sendero.interfaces.Register;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;
@@ -21,6 +22,10 @@ public final class SingleGate {
             super(Builders.getHolderBuild(holderBuilder -> holderBuilder.withInitial(value)));
         }
 
+        public IO(UnaryOperator<Builders.HolderBuilder<T>> operator) {
+            super(Builders.getHolderBuild(operator));
+        }
+
         @Override
         public IO<T> setMap(UnaryOperator<T> map) {
             super.setMap(map);
@@ -29,6 +34,12 @@ public final class SingleGate {
 
         @Override
         public IO<T> expectIn(Predicate<T> expect) {
+            super.setExpectInput(expect);
+            return this;
+        }
+
+        @Override
+        public Holders.StatefulHolder<T> expectIn(BinaryPredicate<T> expect) {
             super.setExpectInput(expect);
             return this;
         }
@@ -69,6 +80,10 @@ public final class SingleGate {
             super(Builders.getHolderBuild(tHolderBuilder -> tHolderBuilder.withInitial(value)));
         }
 
+        public In(UnaryOperator<Builders.HolderBuilder<T>> operator) {
+            super(Builders.getHolderBuild(operator));
+        }
+
         @Override
         public In<T> setMap(UnaryOperator<T> map) {
             super.setMap(map);
@@ -77,6 +92,12 @@ public final class SingleGate {
 
         @Override
         public In<T> expectIn(Predicate<T> expect) {
+            super.setExpectInput(expect);
+            return this;
+        }
+
+        @Override
+        public In<T> expectIn(BinaryPredicate<T> expect) {
             super.setExpectInput(expect);
             return this;
         }

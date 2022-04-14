@@ -4,15 +4,13 @@ import sendero.atomics.AtomicUtils;
 import sendero.pairs.Pair;
 
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.UnaryOperator;
+import java.util.function.*;
 
 public class Appointers {
     interface PathListener<T> {
         /**@return previous Path OR null under contention*/
         <S, P extends BasePath<S>> BinaryEventConsumers.Appointer<?> setPathAndGet(P basePath, Function<S, T> map);
+        <S, P extends BasePath<S>> BinaryEventConsumers.Appointer<?> setPathUpdateAndGet(P basePath, BiFunction<T, S, T> update);
         /**@return last holder value*/
         <S, P extends BasePath<S>> T setAndStart(P basePath, Function<S, T> map);
         <P extends BasePath<T>> T setAndStart(P basePath);
@@ -40,6 +38,11 @@ public class Appointers {
         @Override
         public <S, P extends BasePath<S>> BinaryEventConsumers.Appointer<?> setPathAndGet(P basePath, Function<S, T> map) {
             return holderAppointer.setPathAndGet(basePath, map);
+        }
+
+        @Override
+        public <S, P extends BasePath<S>> BinaryEventConsumers.Appointer<?> setPathUpdateAndGet(P basePath, BiFunction<T, S, T> update) {
+            return holderAppointer.setPathUpdateAndGet(basePath, update);
         }
 
         @Override
@@ -108,6 +111,20 @@ public class Appointers {
                     prev -> !prev.equalTo(basePath),
                     prev -> {
                         final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt -> holder.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply(anInt.getValue())));
+                        return new BinaryEventConsumers.Appointer<>(basePath, intConsumer);
+                    }
+            ).next;
+        }
+
+        @Override
+        public <S, P extends BasePath<S>> BinaryEventConsumers.Appointer<?> setPathUpdateAndGet(P basePath, BiFunction<T, S, T> update) {
+            return AtomicUtils.contentiousCAS(
+                    witnessAtomicReference,
+                    prev -> !prev.equalTo(basePath),
+                    prev -> {
+                        final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt -> holder.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(),
+                                update.apply(getColdHolder().get(), anInt.getValue()))
+                        );
                         return new BinaryEventConsumers.Appointer<>(basePath, intConsumer);
                     }
             ).next;

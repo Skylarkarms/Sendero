@@ -57,16 +57,12 @@ public class Link<T> extends Path<T> implements BaseLink {
 
         final BaseUnbound<T> baseUnbound = new BaseUnbound<>(this);
 
-        public static<T> Unbound<T> build(UnaryOperator<Unbound<T>> operator) {
-            return operator.apply(new Unbound<>());
-        }
-
         public Unbound() {
             super(true);
         }
 
-        public Unbound(Builders.HolderBuilder<T> holderBuilder) {
-            super(holderBuilder, true);
+        public Unbound(UnaryOperator<Builders.HolderBuilder<T>> operator) {
+            super(Builders.getHolderBuild(operator), true);
         }
 
         @Override
@@ -77,6 +73,11 @@ public class Link<T> extends Path<T> implements BaseLink {
         @Override
         public <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
             baseUnbound.bindMap(basePath, map);
+        }
+
+        @Override
+        public <S, P extends BasePath<S>> void bindUpdate(P basePath, BiFunction<T, S, T> update) {
+            baseUnbound.bindUpdate(basePath, update);
         }
 
         @Override
@@ -91,8 +92,8 @@ public class Link<T> extends Path<T> implements BaseLink {
             public Switch() {
             }
 
-            public Switch(Builders.HolderBuilder<T> holderBuilder) {
-                super(holderBuilder);
+            public Switch(UnaryOperator<Builders.HolderBuilder<T>> operator) {
+                super(operator);
             }
 
             @Override
@@ -115,8 +116,8 @@ public class Link<T> extends Path<T> implements BaseLink {
             public In() {
             }
 
-            public In(Builders.HolderBuilder<T> holderBuilder) {
-                super(holderBuilder);
+            public In(UnaryOperator<Builders.HolderBuilder<T>> operator) {
+                super(operator);
             }
 
             @Override

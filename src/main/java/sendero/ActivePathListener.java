@@ -2,6 +2,7 @@ package sendero;
 
 import sendero.interfaces.AtomicBinaryEventConsumer;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
@@ -23,6 +24,12 @@ class ActivePathListener<T> {
     protected  <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
         manager.setActivationListener(
                 appointerCache.setPathAndGet(basePath, map)
+        );
+    }
+
+    protected  <S, P extends BasePath<S>> void bindUpdate(P basePath, BiFunction<T, S, T> update) {
+        manager.setActivationListener(
+                appointerCache.setPathUpdateAndGet(basePath, update)
         );
     }
 

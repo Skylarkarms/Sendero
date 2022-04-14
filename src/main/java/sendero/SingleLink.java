@@ -80,6 +80,11 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
         }
 
         @Override
+        public <S, P extends BasePath<S>> void bindUpdate(P basePath, BiFunction<T, S, T> update) {
+            baseUnbound.bindUpdate(basePath, update);
+        }
+
+        @Override
         public boolean unbound() {
             return baseUnbound.unbound();
         }

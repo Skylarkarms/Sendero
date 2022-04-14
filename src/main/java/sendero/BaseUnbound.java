@@ -1,5 +1,6 @@
 package sendero;
 
+import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -35,6 +36,11 @@ public class BaseUnbound<T> implements UnboundLink<T>, BaseLink {
     @Override
     public <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
         activePathListener.bindMap(basePath, map);
+    }
+
+    @Override
+    public <S, P extends BasePath<S>> void bindUpdate(P basePath, BiFunction<T, S, T> update) {
+        activePathListener.bindUpdate(basePath, update);
     }
 
     static final class LinkIllegalAccessException {

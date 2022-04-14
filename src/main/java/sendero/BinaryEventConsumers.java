@@ -6,6 +6,7 @@ import sendero.pairs.Pair;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public final class BinaryEventConsumers {
     private static<T, S> Consumer<Pair.Immutables.Int<S>> toAppointCreator(Consumer<Pair.Immutables.Int<T>> holder, Function<S, T> map) {
@@ -30,6 +31,10 @@ public final class BinaryEventConsumers {
 
     public static<S, T> AtomicBinaryEventConsumer producerConnector(BasePath<S> producer, Function<S, T> map, Consumer<T> consumer) {
         return new Appointer<>(producer, simpleAppointer(consumer, map));
+    }
+
+    public static<T> AtomicBinaryEventConsumer producerConnector(BasePath<T> producer, Consumer<T> consumer) {
+        return new Appointer<>(producer, simpleAppointer(consumer, UnaryOperator.identity()));
     }
 
     static<S, T> AtomicBinaryEventConsumer producerHolderConnector(BasePath<S> producer, Holders.DispatcherHolder<T> holder, BiFunction<T, S, T> map) {
