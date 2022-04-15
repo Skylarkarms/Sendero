@@ -214,7 +214,7 @@ public final class SingleGate {
                 }
 
                 @Override
-                public void register(Consumer<T> valueConsumer) {
+                public void register(Consumer<? super T> valueConsumer) {
                     onAdd(valueConsumer,
                             (Function<Consumer<? super T>, Pair.Immutables.Bool<Integer>>) locale::add,
                             Pair.Immutables.Int::getValue
@@ -285,7 +285,7 @@ public final class SingleGate {
 
                 @SuppressWarnings("unchecked")
                 @Override
-                public void register(Consumer<T> valueConsumer) {
+                public void register(Consumer<? super T> valueConsumer) {
                     onAdd(
                             valueConsumer,
                             consumer -> locale.snapshotRegister((Consumer<T>) consumer),

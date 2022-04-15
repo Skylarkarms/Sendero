@@ -210,7 +210,7 @@ public final class Gate {
                 }
 
                 @Override
-                public void register(Consumer<T> valueConsumer) {
+                public void register(Consumer<? super T> valueConsumer) {
                     onAdd(valueConsumer,
                             (Function<Consumer<? super T>, Pair.Immutables.Bool<Integer>>) locale::add,
                             Pair.Immutables.Int::getValue
@@ -274,7 +274,7 @@ public final class Gate {
 
                 @SuppressWarnings("unchecked")
                 @Override
-                public void register(Consumer<T> valueConsumer) {
+                public void register(Consumer<? super T> valueConsumer) {
                     onAdd(
                             valueConsumer,
                             consumer -> locale.snapshotRegister((Consumer<T>) consumer),
@@ -353,7 +353,7 @@ public final class Gate {
             }
 
             @Override
-            public void register(Consumer<T> valueConsumer) {
+            public void register(Consumer<? super T> valueConsumer) {
                 onRegistered(
                         valueConsumer,
                         (Function<Consumer<? super T>, Pair.Immutables.Bool<Integer>>) locale::add,
@@ -406,7 +406,7 @@ public final class Gate {
 
             @SuppressWarnings("unchecked")
             @Override
-            public void register(Consumer<T> valueConsumer) {
+            public void register(Consumer<? super T> valueConsumer) {
                 onRegistered(
                         valueConsumer,
                         consumer -> locale.snapshotRegister((Consumer<T>) consumer),

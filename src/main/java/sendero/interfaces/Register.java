@@ -4,5 +4,5 @@ import java.util.function.Consumer;
 
 @FunctionalInterface
 public interface Register<V> {
-    void register(Consumer<V> valueConsumer);
+    void register(Consumer<? super V> valueConsumer);
 }
