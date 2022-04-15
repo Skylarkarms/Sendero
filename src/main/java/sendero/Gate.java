@@ -127,7 +127,7 @@ public final class Gate {
     }
     public interface Out<T> extends Register<T> {
         interface Many<T> extends Out<T> {
-            void unregister(Consumer<T> consumer);
+            void unregister(Consumer<? super T> consumer);
         }
         interface Single<T> extends Out<T> {
             void unregister();
@@ -203,7 +203,7 @@ public final class Gate {
                 }
 
                 @Override
-                public void unregister(Consumer<T> consumer) {
+                public void unregister(Consumer<? super T> consumer) {
                     if (locale.remove(consumer)) {
                         tryDeactivate();
                     }
@@ -348,7 +348,7 @@ public final class Gate {
             }
 
             @Override
-            public void unregister(Consumer<T> consumer) {
+            public void unregister(Consumer<? super T> consumer) {
                 if (locale.remove(consumer)) tryDeactivate();
             }
 
