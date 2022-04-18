@@ -172,13 +172,14 @@ final class Holders {
             return currentValue -> {
                 //Not valid if same instance
                 try {
+                    T nulledInvalid = currentValue == INVALID ? null : currentValue;
                     T updated, mapped;
-                    updated = update.apply(currentValue);
-                    if (updated == currentValue) {
+                    updated = update.apply(nulledInvalid);
+                    if (updated == nulledInvalid) {
                         return INVALID;
                     }
                     mapped = map.apply(updated);
-                    return expectInput.test(mapped, currentValue) ? mapped : INVALID;
+                    return expectInput.test(mapped, nulledInvalid) ? mapped : INVALID;
 //                    return expectInput.test(mapped) ? mapped : INVALID;
                 } catch (Exception e) {
                     e.printStackTrace();
