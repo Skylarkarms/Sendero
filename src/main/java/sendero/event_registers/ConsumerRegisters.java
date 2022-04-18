@@ -209,7 +209,9 @@ public class ConsumerRegisters<T> {
                 if (snapshot2.set) {
                     AtomicBinaryEventConsumer prev = snapshot2.prev;
                     if (prev != null) prev.shutDown();
-                    if (binaryConsumerRegister.isEqualTo(newConsumer)) newConsumer.start();
+                    if (snapshot2.snapshotValue && binaryConsumerRegister.isEqualTo(newConsumer)) {
+                        newConsumer.start();
+                    }
                 }
             }
 

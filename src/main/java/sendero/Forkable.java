@@ -5,7 +5,6 @@ import sendero.interfaces.BinaryPredicate;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
 
 interface Forkable<T> {
     <O extends Gate.Out<T>> O out(Class<? super O> outputType);
