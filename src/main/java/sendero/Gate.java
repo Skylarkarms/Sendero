@@ -162,8 +162,9 @@ public final class Gate {
                         if (emptyLocale) pathDispatch(false, pair);
                         else {
                             pathDispatch(true, pair);
+                            Consumer<? super T>[] consumers = locale.copy();
                             //If we are out of luck, lists may be empty at this point but it won't matter.
-                            for (Consumer<? super T> observer:locale
+                            for (Consumer<? super T> observer:consumers
                             ) {
                                 if (pair.compareTo(getVersion()) != 0) return;
                                 //consecutive "losing" threads that got pass this check might get a boost so we should prevent the override of lesser versions on the other end.
@@ -204,9 +205,7 @@ public final class Gate {
 
                 @Override
                 public void unregister(Consumer<? super T> consumer) {
-                    if (locale.remove(consumer)) {
-                        tryDeactivate();
-                    }
+                    if (locale.remove(consumer)) deactivate();
                 }
 
                 @Override
@@ -284,7 +283,8 @@ public final class Gate {
 
                 @Override
                 public void unregister() {
-                    if (locale.unregister() != null) tryDeactivate();
+                    if (locale.unregister() != null) deactivate();
+//                    if (locale.unregister() != null) tryDeactivate();
 
                 }
 

@@ -490,11 +490,6 @@ final class Holders {
             super.tryActivate();
         }
 
-        private void onInactive() {
-            tryDeactivate();
-            eService.decrement();
-        }
-
         void fastExecute(Runnable action) {
             eService.fastExecute(action);
         }
@@ -510,8 +505,7 @@ final class Holders {
                         int length = subs.length;
                         for (int i = beginAt; i < length; i++) {
                             if (t.compareTo(getVersion()) != 0) return;
-                            Consumer<? super S> curr = subs[i];
-                            if (curr != null) curr.accept(map.apply(t));
+                            subs[i].accept(map.apply(t));
                         }
                     }
             );
@@ -526,8 +520,9 @@ final class Holders {
             );
         }
 
-        protected void deactivate() {
-            onInactive();
+        void deactivate() {
+            tryDeactivate();
+            eService.decrement();
         }
 
         private static abstract class LifeCycledThreshold {

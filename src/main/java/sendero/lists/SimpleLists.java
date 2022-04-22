@@ -11,7 +11,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public class SimpleLists {
-    private static final Object[] DEFAULTCAPACITY_EMPTY_ELEMENTDATA = {};
+    private static final Object[] DEFAULT_CAPACITY_EMPTY_ELEMENT_DATA = {};
     private static final int DEFAULT_CAPACITY = 10;
     private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
@@ -61,7 +61,7 @@ public class SimpleLists {
                 final int size;
 
                 private static<T> Snapshot<T> initialize(T[] EMPTY_ARRAY) {
-                    return new Snapshot<T>(Arrays.copyOf(EMPTY_ARRAY, 0), 0, 0);
+                    return new Snapshot<>(Arrays.copyOf(EMPTY_ARRAY, 0), 0, 0);
                 }
 
                 private Snapshot(E[] copy, int version, int size/*, boolean removed*/) {
@@ -122,29 +122,8 @@ public class SimpleLists {
                         if (same == (same = (prev == (prev = atomicReference.get()))) && !shouldRetry) return false;
                     }
 
-
-//                    do {
-//                        prev = atomicReference.get();
-//                        shouldRetry = prev.size <= 0;
-//                        if (i == retries && shouldRetry) return false;
-//                        i++;
-//                        if (!shouldRetry) {
-//                            next = remove(element, prev);
-//                            wasLast = prev.size == 1 && next != prev;
-//
-//                        }
-//                    } while (shouldRetry || !atomicReference.compareAndSet(prev, next));
-//                    return wasLast;
-//                    boolean wasLast;
-//                    Snapshot<E> prev, next;
-//                    do {
-//                        prev = atomicReference.get();
-//                        next = remove(element, prev);
-//                        wasLast = prev.size == 1 && next != prev;
-//                    } while (!atomicReference.compareAndSet(prev, next));
-//                    return wasLast;
                 }
-                protected static <E> boolean removeIf(AtomicReference<Snapshot<E>> atomicReference, Predicate<E> removeIf) {
+                private static <E> boolean removeIf(AtomicReference<Snapshot<E>> atomicReference, Predicate<E> removeIf) {
                     boolean wasLast;
                     Snapshot<E> prev, next;
                     do {
@@ -154,7 +133,7 @@ public class SimpleLists {
                     } while (!atomicReference.compareAndSet(prev, next));
                     return wasLast;
                 }
-                protected static <S, E> Pair.Immutables.Bool<S> remove(AtomicReference<Snapshot<E>> atomicReference, E element, Supplier<S> sSupplier) {
+                private static <S, E> Pair.Immutables.Bool<S> remove(AtomicReference<Snapshot<E>> atomicReference, E element, Supplier<S> sSupplier) {
                     boolean wasLast;
                     Snapshot<E> prev, next;
                     S snap;
@@ -166,22 +145,26 @@ public class SimpleLists {
                     } while (!atomicReference.compareAndSet(prev, next));
                     return new Pair.Immutables.Bool<>(wasLast, snap);
                 }
+                @SuppressWarnings("unchecked")
                 private static<E> Snapshot<E> remove(E element, Snapshot<E> prevSnap) {
                     E[] prevArray = prevSnap.copy;
                     int prevSize = prevSnap.size;
                     int index = find(element, prevArray, prevSize);
                     if (index != -1) {
                         int finalSize = prevSize - 1;
+                        if (finalSize == 0) return new Snapshot<>((E[]) DEFAULT_CAPACITY_EMPTY_ELEMENT_DATA, prevSnap.version + 1, 0);
                         return new Snapshot<>(fastRemove(prevArray, index, prevSize, finalSize), prevSnap.version + 1, finalSize/*, true*/);
                     }
                     return prevSnap;
                 }
+                @SuppressWarnings("unchecked")
                 private static<E> Snapshot<E> removeIf(Predicate<E> removeIf, Snapshot<E> prevSnap) {
                     E[] prevArray = prevSnap.copy;
                     int prevSize = prevSnap.size;
                     int index = findIf(removeIf, prevArray, prevSize);
                     if (index != -1) {
                         int finalSize = prevSize - 1;
+                        if (finalSize == 0) return new Snapshot<>((E[]) DEFAULT_CAPACITY_EMPTY_ELEMENT_DATA, prevSnap.version + 1, 0);
                         return new Snapshot<>(fastRemove(prevArray, index, prevSize, finalSize), prevSnap.version + 1, finalSize/*, true*/);
                     }
                     return prevSnap;
@@ -194,7 +177,7 @@ public class SimpleLists {
                     return dest_arr;
                 }
 
-                protected static<E> boolean add(AtomicReference<Snapshot<E>> atomicReference, E element) {
+                private static<E> boolean add(AtomicReference<Snapshot<E>> atomicReference, E element) {
                     boolean first;
                     Snapshot<E> prev, next;
                     do {
@@ -205,7 +188,7 @@ public class SimpleLists {
                     return first;
                 }
 
-                protected static<S, E> Pair.Immutables.Bool<S> add(AtomicReference<Snapshot<E>> atomicReference, E element, Supplier<S> sSupplier) {
+                private static<S, E> Pair.Immutables.Bool<S> add(AtomicReference<Snapshot<E>> atomicReference, E element, Supplier<S> sSupplier) {
                     boolean first;
                     Snapshot<E> prev, next;
                     S snap;
@@ -240,7 +223,7 @@ public class SimpleLists {
                     int oldCapacity = array.length;
                     int newCapacity = oldCapacity + (oldCapacity >> 1);
                     if (newCapacity - minCapacity <= 0) {
-                        if (array == DEFAULTCAPACITY_EMPTY_ELEMENTDATA)
+                        if (array == DEFAULT_CAPACITY_EMPTY_ELEMENT_DATA)
                             return Math.max(DEFAULT_CAPACITY, minCapacity);
                         if (minCapacity < 0) // overflow
                             throw new OutOfMemoryError();
@@ -298,10 +281,9 @@ public class SimpleLists {
         }
 
         @Override
-//        @SuppressWarnings("unchecked")
         public E[] copy() {
             E[] res = core.get().copy;
-            return res == null ? (E[]) EMPTY_ELEMENT_ARRAY : res;
+            return res == DEFAULT_CAPACITY_EMPTY_ELEMENT_DATA ? EMPTY_ELEMENT_ARRAY : res;
         }
 
         @Override
@@ -315,9 +297,8 @@ public class SimpleLists {
 
         @SuppressWarnings("unchecked")
         public LockFreeImpl(Class<? super E> componentType) {
-            /* = Snapshot.initialize()*/
             E[] empty = (E[]) Array.newInstance(componentType, 0);
-            Snapshot<E> FIRST = (Snapshot<E>) Snapshot.initialize(empty);
+            Snapshot<E> FIRST = Snapshot.initialize(empty);
             this.core = new AtomicReference<>(FIRST);
         }
 
@@ -352,15 +333,15 @@ public class SimpleLists {
         }
     }
     private static class SimpleListImpl<E> implements SimpleList<E> {
-        private final E[] EMPTY_ELEMENTDATA;
+        private final E[] EMPTY_ELEMENT_DATA;
 
         @SuppressWarnings("unchecked")
         private SimpleListImpl(Class<? super E> componentType) {
-            this.EMPTY_ELEMENTDATA = (E[]) Array.newInstance(componentType, 0);
+            this.EMPTY_ELEMENT_DATA = (E[]) Array.newInstance(componentType, 0);
         }
 
         @SuppressWarnings("unchecked")
-        private E[] array = (E[]) DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
+        private E[] array = (E[]) DEFAULT_CAPACITY_EMPTY_ELEMENT_DATA;
         private int size;
 
         @Override
@@ -407,7 +388,7 @@ public class SimpleLists {
             int oldCapacity = array.length;
             int newCapacity = oldCapacity + (oldCapacity >> 1);
             if (newCapacity - minCapacity <= 0) {
-                if (array == DEFAULTCAPACITY_EMPTY_ELEMENTDATA)
+                if (array == DEFAULT_CAPACITY_EMPTY_ELEMENT_DATA)
                     return Math.max(DEFAULT_CAPACITY, minCapacity);
                 if (minCapacity < 0) // overflow
                     throw new OutOfMemoryError();
@@ -500,12 +481,10 @@ public class SimpleLists {
             return size == 0;
         }
 
-        @SuppressWarnings("unchecked")
         public E[] trimmedCopyToSize(E[] target, int targetSize) {
-//        modCount++;
             return targetSize < target.length
                     && targetSize == 0 ?
-                    (E[]) EMPTY_ELEMENTDATA
+                    EMPTY_ELEMENT_DATA
                     :
                     Arrays.copyOf(target, targetSize);
         }
@@ -513,7 +492,6 @@ public class SimpleLists {
         public E[] getArray() {
             array =  trimmedCopyToSize(array, size);
             return array;
-//            return array;
         }
 
         @Override
