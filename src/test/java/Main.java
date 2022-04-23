@@ -11,9 +11,10 @@ import java.util.function.Predicate;
 public class Main {
     public static void main(String[] args) {
 
-//        Gate.IO<String> stringIO = new Gate.IO<>("Hello World");
+//        Gate.IO<String> stringIO = new Gate.IO<>("Hello");
+//        Gate.IO<String> stringWorld = new Gate.IO<>("World");
 //
-//        String[] INIT = new String[]{"", ""};
+//        String[] INIT = new String[]{"", "", "", ""};
 //        Merge<String[]> merge = new Merge<>(
 //                INIT,
 //                strings -> strings != INIT
@@ -24,39 +25,62 @@ public class Main {
 //                            strings -> {
 //                                String[] clone = strings.clone();
 //                                clone[0] = s;
-//                                clone[1] = "DONE";
+//                                clone[2] = "DONE GREETING";
+//                                return clone;
+//                            }
+//                    );
+//                }
+//        ).from(
+//                stringWorld,
+//                updater -> worldString -> {
+//                    updater.update(
+//                            strings -> {
+//                                String[] clone = strings.clone();
+//                                clone[1] = worldString;
+//                                clone[3] = "DONE WORLD";
 //                                return clone;
 //                            }
 //                    );
 //                }
 //        );
-//        Gate.Out.Single<String> resOut = merge.out(Gate.Out.Single.class, strings -> strings[0] + " " + strings[1]);
+//        Gate.Out.Many<String> resOut = merge.out(Gate.Out.Many.class, strings -> strings[0] + " " + strings[1] + ", " +strings[2] + ", " + strings[3]);
 //
 //
 //        Consumer<String> obs1 = s -> {
 //            System.err.println("From 1 : " + s);
 //        };
 //
-//        System.err.println("registering...");
+//        Consumer<String> obs2 = s -> {
+//            System.err.println("From 2 : " + s);
+//        };
+//
+//        System.err.println("registering...1");
 //        resOut.register(
 //                obs1
 //        );
+//        System.err.println("registering...2");
+//        resOut.register(obs2);
 //
 //        System.err.println("updating...");
 //        stringIO.update(
-//                s -> "Good bye World!"
+//                s -> "Good bye!"
 //        );
 //
 //        new Thread(
 //                () -> {
-//                    System.err.println("unregistering...: " + obs1);
-//                    resOut.unregister();
+//                    System.err.println("unregistering...1: " + obs1);
+//                    resOut.unregister(obs1);
+//                    System.err.println("unregistering...2: " + obs2);
+//                    resOut.unregister(obs2);
 //                    try {
 //                        Thread.sleep(500);
 //                        System.err.println("updating 2...");
 //                        stringIO.update(
-//                                s -> "Good bye World FOREVER!"
+//                                s -> "Good bye FOREVER!"
 //                        );
+//                        System.err.println("Registering again...");
+//                        resOut.register(obs1);
+//                        resOut.register(obs2);
 //                    } catch (InterruptedException e) {
 //                        e.printStackTrace();
 //                    }
