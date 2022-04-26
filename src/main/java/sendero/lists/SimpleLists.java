@@ -15,9 +15,6 @@ public class SimpleLists {
     private static final int DEFAULT_CAPACITY = 10;
     private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
-//    public static<E> SimpleList.LockFree<E> getLockFree(Class<? super E> componentType) {
-//        return new LockFreeImpl<>(componentType);
-//    }
     public static<E, Snapshot> SimpleList.LockFree.Snapshotting<E, Snapshot> getSnapshotting(Class<? super E> componentType, Supplier<Snapshot> snapshotSupplier) {
         return new SnapshottingImpl<>( componentType, snapshotSupplier);
     }
@@ -62,7 +59,6 @@ public class SimpleLists {
 
                 private static<T> Snapshot<T> initialize(T[] EMPTY_ARRAY) {
                     return new Snapshot<>(EMPTY_ARRAY, 0, 0);
-//                    return new Snapshot<>(Arrays.copyOf(EMPTY_ARRAY, 0), 0, 0);
                 }
 
                 private Snapshot(E[] copy, int version, int size/*, boolean removed*/) {
@@ -106,9 +102,6 @@ public class SimpleLists {
                     boolean wasLast = prev.size == 1 && next != prev,
                             zeroSize = prev.size <= 0, shouldRetry;
 
-//                    boolean wasLast, shouldRetry;
-//                    Snapshot<E> prev, next;
-//
                     for (boolean same = true;;i++) {
                         if (!same) {
                             zeroSize = prev.size <= 0;
@@ -203,20 +196,17 @@ public class SimpleLists {
                 }
 
                 private static<T> Snapshot<T> add(T e, Snapshot<T> snapshot, T[] componentArr) {
-//                private static<T> Snapshot<T> add(T e, Snapshot<T> snapshot) {
                     T[] nextArray, prevArray = snapshot.copy;
                     int nextSize, prevSize = snapshot.size, prevLength = prevArray.length, nextVersion = snapshot.version + 1;
 
                     nextArray = prevSize == 0 ?
-//                    nextArray = prevSize == 0 ?
                             Arrays.copyOf(componentArr, DEFAULT_CAPACITY)
                             :
 
-                    /*nextArray =*/ prevSize == prevLength ?
+                    prevSize == prevLength ?
                             grow(prevSize + 1, prevArray)
                             :
                             Arrays.copyOf(prevArray, prevLength);
-//                            Arrays.copyOf(prevArray, prevSize);
 
                     nextArray[prevSize] = e;
                     nextSize = prevSize + 1;
@@ -308,219 +298,6 @@ public class SimpleLists {
             return new ArrayIterator<>(copy());
         }
     }
-//    private static final class LockFreeImpl<E> implements SimpleList.LockFree<E> {
-//
-//        private final AtomicReference<Snapshot<E>> core/* = new AtomicReference<>(FIRST)*/;
-//
-//        @SuppressWarnings("unchecked")
-//        public LockFreeImpl(Class<? super E> componentType) {
-//            E[] empty = (E[]) Array.newInstance(componentType, 0);
-//            Snapshot<E> FIRST = Snapshot.initialize(empty);
-//            this.core = new AtomicReference<>(FIRST);
-//        }
-//
-//        @Override
-//        public boolean add(E element) {
-//            return Snapshot.add(core, element);
-//        }
-//
-//        @Override
-//        public boolean remove(E element) {
-//            return Snapshot.remove(core, element);
-//        }
-//
-//        @Override
-//        public boolean removeIf(Predicate<E> removeIf) {
-//            return Snapshot.removeIf(core, removeIf);
-//        }
-//
-//        @Override
-//        public boolean isEmpty() {
-//            return core.get().size == 0;
-//        }
-//
-//        @Override
-//        public E[] copy() {
-//            return core.get().copy;
-//        }
-//
-//        @Override
-//        public Iterator<E> iterator() {
-//            return new ArrayIterator<>(copy());
-//        }
-//    }
-//    private static class SimpleListImpl<E> implements SimpleList<E> {
-//        private final E[] EMPTY_ELEMENT_DATA;
-//
-//        @SuppressWarnings("unchecked")
-//        private SimpleListImpl(Class<? super E> componentType) {
-//            this.EMPTY_ELEMENT_DATA = (E[]) Array.newInstance(componentType, 0);
-//        }
-//
-//        @SuppressWarnings("unchecked")
-//        private E[] array = (E[]) DEFAULT_CAPACITY_EMPTY_ELEMENT_DATA;
-//        private int size;
-//
-//        @Override
-//        public boolean add(E element) {
-//            add(element, array, size);
-//            return true;
-//        }
-//
-//        @Override
-//        public void add(int index, E element) {
-//            rangeCheckForAdd(index);
-//            final int s;
-//            Object[] elementData;
-//            if ((s = size) == (elementData = this.array).length)
-//                elementData = grow();
-//            System.arraycopy(elementData, index,
-//                    elementData, index + 1,
-//                    s - index);
-//            elementData[index] = element;
-//            size = s + 1;
-//        }
-//        private void rangeCheckForAdd(int index) {
-//            if (index > size || index < 0)
-//                throw new IndexOutOfBoundsException(outOfBoundsMsg(index));
-//        }
-//        private String outOfBoundsMsg(int index) {
-//            return "Index: "+index+", Size: "+size;
-//        }
-//        private void add(E e, E[] elementData, int s) {
-//            if (s == elementData.length)
-//                elementData = grow();
-//            elementData[s] = e;
-//            size = s + 1;
-//        }
-//        private E[] grow() {
-//            return grow(size + 1);
-//        }
-//        private E[] grow(int minCapacity) {
-//            return array = Arrays.copyOf(array,
-//                    newCapacity(minCapacity));
-//        }
-//        private int newCapacity(int minCapacity) {
-//            // overflow-conscious code
-//            int oldCapacity = array.length;
-//            int newCapacity = oldCapacity + (oldCapacity >> 1);
-//            if (newCapacity - minCapacity <= 0) {
-//                if (array == DEFAULT_CAPACITY_EMPTY_ELEMENT_DATA)
-//                    return Math.max(DEFAULT_CAPACITY, minCapacity);
-//                if (minCapacity < 0) // overflow
-//                    throw new OutOfMemoryError();
-//                return minCapacity;
-//            }
-//            return (newCapacity - MAX_ARRAY_SIZE <= 0)
-//                    ? newCapacity
-//                    : hugeCapacity(minCapacity);
-//        }
-//        private static int hugeCapacity(int minCapacity) {
-//            if (minCapacity < 0) // overflow
-//                throw new OutOfMemoryError();
-//            return (minCapacity > MAX_ARRAY_SIZE)
-//                    ? Integer.MAX_VALUE
-//                    : MAX_ARRAY_SIZE;
-//        }
-//        public static <X extends RuntimeException>
-//        void checkIndex(
-//                int index,
-//                int length
-//        ) {
-//            if (index < 0 || index >= length)
-//                throw new IndexOutOfBoundsException("Index: " + index + " out of bounds: 0 - " + length);
-//        }
-//        @Override
-//        public E get(int index) {
-//            checkIndex(index, size);
-//            return elementData(index);
-//        }
-//
-//        private E elementData(int index) {
-//            return array[index];
-//        }
-//
-//        @Override
-//        public E set(int index, E element) {
-//            checkIndex(index, size);
-//            E oldValue = elementData(index);
-//            array[index] = element;
-//            return oldValue;
-//        }
-//
-//        @Override
-//        public E remove(int index) {
-//            checkIndex(index, size);
-//            final E[] es = array;
-//
-//            E oldValue = es[index];
-//            fastRemove(es, index);
-//
-//            return oldValue;
-//        }
-//
-//        @Override
-//        public boolean remove(E element) {
-//            final E[] es = array;
-//            final int size = this.size;
-//            int i = 0;
-//            found: {
-//                if (element == null) {
-//                    for (; i < size; i++)
-//                        if (es[i] == null)
-//                            break found;
-//                } else {
-//                    for (; i < size; i++)
-//                        if (element.equals(es[i]))
-//                            break found;
-//                }
-//                return false;
-//            }
-//            fastRemove(es, i);
-//            return true;
-//        }
-//
-//        private void fastRemove(E[] es, int i) {
-//            final int newSize;
-//            if ((newSize = size - 1) > i)
-//                System.arraycopy(es, i + 1, es, i, newSize - i);
-//            es[size = newSize] = null;
-//        }
-//
-//        @Override
-//        public void clear() {
-//            for (int to = size, i = size = 0; i < to; i++)
-//                array[i] = null;
-//        }
-//
-//        @Override
-//        public boolean isEmpty() {
-//            return size == 0;
-//        }
-//
-//        public E[] trimmedCopyToSize(E[] target, int targetSize) {
-//            return targetSize < target.length
-//                    && targetSize == 0 ?
-//                    EMPTY_ELEMENT_DATA
-//                    :
-//                    Arrays.copyOf(target, targetSize);
-//        }
-//        @Override
-//        public E[] getArray() {
-//            array =  trimmedCopyToSize(array, size);
-//            return array;
-//        }
-//
-//        @Override
-//        public Iterator<E> iterator() {
-//            return new ArrayIterator<>(copy());
-//        }
-//
-//        @Override
-//        public E[] copy() {
-//            return trimmedCopyToSize(array, size);
-//        }
-//    }
 
     private static final class ArrayIterator<T> implements Iterator<T> {
 

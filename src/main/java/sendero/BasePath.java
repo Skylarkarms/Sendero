@@ -23,10 +23,10 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
                 ));
     }
 
-    <S> BasePath(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> map) {
+    <S> BasePath(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
         super(holderBuilder,
                 dispatcher -> Builders.getManagerBuild().withFixed(
-                        BinaryEventConsumers.producerHolderConnector(basePath, dispatcher, map)
+                        BinaryEventConsumers.producerHolderConnector(basePath, dispatcher, updateFun)
 
                 ));
     }

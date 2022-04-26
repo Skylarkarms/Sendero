@@ -42,8 +42,8 @@ public abstract class PathDispatcherHolder<T> extends BasePath<T> {
         pathDispatcher = pathDispatcherBuild();
     }
 
-    protected <S> PathDispatcherHolder(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> map) {
-        super(holderBuilder, basePath, map);
+    protected <S> PathDispatcherHolder(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
+        super(holderBuilder, basePath, updateFun);
         pathDispatcher = pathDispatcherBuild();
     }
 

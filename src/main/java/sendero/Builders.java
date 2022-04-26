@@ -22,7 +22,7 @@ public final class Builders {
     }
     public static class HolderBuilder<T> {
         private AtomicReference<Pair.Immutables.Int<T>> reference;
-        private Predicate<T> /*expectInput, */expectOut;
+        private Predicate<T> expectOut;
         private BinaryPredicate<T> expectInput;
         private UnaryOperator<T> map;
 
@@ -78,11 +78,9 @@ public final class Builders {
 
     public static class ManagerBuilder {
         private AtomicBinaryEventConsumer activationListener;
-//        private BooleanConsumer activationListener;
         private boolean mutableActivationListener;
 
         public ManagerBuilder withFixed(AtomicBinaryEventConsumer activationListener) {
-//        public ManagerBuilder withFixed(BooleanConsumer activationListener) {
             if (mutableActivationListener) throwException();
             this.activationListener = activationListener;
             this.mutableActivationListener = false;

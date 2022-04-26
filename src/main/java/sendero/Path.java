@@ -37,8 +37,8 @@ public class Path<T> extends PathDispatcherHolder<T> {
         super(holderBuilder, basePath, map);
     }
 
-    protected <S> Path(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> map) {
-        super(holderBuilder, basePath, map);
+    protected <S> Path(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
+        super(holderBuilder, basePath, updateFun);
     }
 
     protected Path(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {

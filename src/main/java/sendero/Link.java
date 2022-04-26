@@ -16,8 +16,8 @@ public class Link<T> extends Path<T> implements BaseLink {
         super(holderBuilder, Builders.getManagerBuild().withMutable(mutableManager));
     }
 
-    private <S> Link(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> map) {
-        super(holderBuilder, basePath, map);
+    private <S> Link(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
+        super(holderBuilder, basePath, updateFun);
     }
 
     private Link(boolean activationListener) {
