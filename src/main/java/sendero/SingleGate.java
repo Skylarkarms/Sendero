@@ -149,7 +149,7 @@ public final class SingleGate {
 
             protected static class Many<T> extends OutBaseSinglePath<T> implements Out.Many<T> {
 
-                private final SimpleLists.SimpleList.LockFree.Snapshotting<Consumer<? super T>, Integer>
+                private final SimpleLists.LockFree<Consumer<? super T>, Integer>
                         locale = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
 
                 public Many() {
@@ -216,7 +216,7 @@ public final class SingleGate {
                 @Override
                 public void register(Consumer<? super T> valueConsumer) {
                     onAdd(valueConsumer,
-                            (Function<Consumer<? super T>, Pair.Immutables.Bool<Integer>>) locale::add,
+                            (Function<Consumer<? super T>, Pair.Immutables.Bool<Integer>>) locale::snapshotAdd,
                             Pair.Immutables.Int::getValue
                     );
                 }

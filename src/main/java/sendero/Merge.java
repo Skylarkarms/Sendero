@@ -11,7 +11,7 @@ import java.util.function.Predicate;
 
 public class Merge<T> extends Path<T> implements BaseMerge<T> {
 
-    private final SimpleLists.SimpleList.LockFree.Snapshotting<BinaryEventConsumers.Appointer<?>, Boolean> joints = SimpleLists.getSnapshotting(
+    private final SimpleLists.LockFree<BinaryEventConsumers.Appointer<?>, Boolean> joints = SimpleLists.getSnapshotting(
             AtomicBinaryEventConsumer.class,
             () -> !isIdle()
     );
@@ -48,7 +48,7 @@ public class Merge<T> extends Path<T> implements BaseMerge<T> {
                 }
         );
 
-        final Pair.Immutables.Bool<Boolean> res = joints.add(jointAppointer);
+        final Pair.Immutables.Bool<Boolean> res = joints.snapshotAdd(jointAppointer);
         if (res.value) jointAppointer.start();
         return this;
     }

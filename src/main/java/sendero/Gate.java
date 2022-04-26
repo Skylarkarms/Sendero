@@ -145,7 +145,7 @@ public final class Gate {
 
             protected static class Many<T> extends OutBasePath<T> implements Out.Many<T> {
 
-                private final SimpleLists.SimpleList.LockFree.Snapshotting<Consumer<? super T>, Integer>
+                private final SimpleLists.LockFree<Consumer<? super T>, Integer>
                         locale = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
 
                 public Many() {
@@ -211,7 +211,7 @@ public final class Gate {
                 @Override
                 public void register(Consumer<? super T> valueConsumer) {
                     onAdd(valueConsumer,
-                            (Function<Consumer<? super T>, Pair.Immutables.Bool<Integer>>) locale::add,
+                            (Function<Consumer<? super T>, Pair.Immutables.Bool<Integer>>) locale::snapshotAdd,
                             Pair.Immutables.Int::getValue
                     );
                 }
@@ -296,7 +296,7 @@ public final class Gate {
         // Hence, should only extend ActivationHolder.class
         static class ManyImpl<T> extends Holders.ActivationHolder<T> implements Out.Many<T> {
 
-            private final SimpleLists.SimpleList.LockFree.Snapshotting<Consumer<? super T>, Integer>
+            private final SimpleLists.LockFree<Consumer<? super T>, Integer>
                     locale = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
 
             protected ManyImpl(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
@@ -356,7 +356,7 @@ public final class Gate {
             public void register(Consumer<? super T> valueConsumer) {
                 onRegistered(
                         valueConsumer,
-                        (Function<Consumer<? super T>, Pair.Immutables.Bool<Integer>>) locale::add,
+                        (Function<Consumer<? super T>, Pair.Immutables.Bool<Integer>>) locale::snapshotAdd,
                         Pair.Immutables.Int::getValue,
                         Runnable::run
                 );

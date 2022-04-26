@@ -256,7 +256,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
     }
 
     static final class ToManyPathsDispatcher<T> extends PathDispatcher<T> {
-        private final SimpleLists.SimpleList.LockFree.Snapshotting<Consumer<Pair.Immutables.Int<T>>, Integer>
+        private final SimpleLists.LockFree<Consumer<Pair.Immutables.Int<T>>, Integer>
                 remote;
 
         ToManyPathsDispatcher(Holders.ExecutorHolder<T> executorHolder) {
@@ -281,7 +281,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
 
         @Override
         Pair.Immutables.Bool<Integer> onAddRegister(Consumer<Pair.Immutables.Int<T>> subscriber) {
-            return remote.add(subscriber);
+            return remote.snapshotAdd(subscriber);
         }
 
         @Override
