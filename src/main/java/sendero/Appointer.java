@@ -48,4 +48,13 @@ public class Appointer<A> extends AtomicBinaryEventConsumer {
     public<P> boolean equalTo(BasePath<P> basePath) {
         return basePath.equals(producer);
     }
+
+    @Override
+    public String toString() {
+        return "Appointer{" +
+                "producer=" + producer +
+                ", consumer=" + toAppoint +
+                "}\n" +
+                " this is: Appointer" + "@" + hashCode();
+    }
 }
