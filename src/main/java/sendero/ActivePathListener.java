@@ -45,7 +45,7 @@ class ActivePathListener<T> {
     }
 
     protected boolean unbound() {
-        final BinaryEventConsumers.Appointer<?> app = appointerCache.getAndClear();
+        final Appointer<?> app = appointerCache.getAndClear();
         if (app != null) return manager.swapActivationListener(app, AtomicBinaryEventConsumer.CLEARED);
         return false;
     }

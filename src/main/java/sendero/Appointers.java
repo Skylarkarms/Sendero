@@ -9,8 +9,8 @@ import java.util.function.*;
 public class Appointers {
     interface PathListener<T> {
         /**@return previous Path OR null under contention*/
-        <S, P extends BasePath<S>> BinaryEventConsumers.Appointer<?> setPathAndGet(P basePath, Function<S, T> map);
-        <S, P extends BasePath<S>> BinaryEventConsumers.Appointer<?> setPathUpdateAndGet(P basePath, BiFunction<T, S, T> update);
+        <S, P extends BasePath<S>> Appointer<?> setPathAndGet(P basePath, Function<S, T> map);
+        <S, P extends BasePath<S>> Appointer<?> setPathUpdateAndGet(P basePath, BiFunction<T, S, T> update);
         /**@return last holder value*/
         <S, P extends BasePath<S>> T setAndStart(P basePath, Function<S, T> map);
         <P extends BasePath<T>> T setAndStart(P basePath);
@@ -21,9 +21,9 @@ public class Appointers {
         boolean isActive();
         boolean isCleared();
 
-        BinaryEventConsumers.Appointer<?> getAppointer();
+        Appointer<?> getAppointer();
 
-        BinaryEventConsumers.Appointer<?> getAndClear();
+        Appointer<?> getAndClear();
     }
 
     final static class SimpleAppointer<T> extends Holders.SingleColdHolder<T> implements PathListener<T> {
@@ -36,12 +36,12 @@ public class Appointers {
 
 
         @Override
-        public <S, P extends BasePath<S>> BinaryEventConsumers.Appointer<?> setPathAndGet(P basePath, Function<S, T> map) {
+        public <S, P extends BasePath<S>> Appointer<?> setPathAndGet(P basePath, Function<S, T> map) {
             return holderAppointer.setPathAndGet(basePath, map);
         }
 
         @Override
-        public <S, P extends BasePath<S>> BinaryEventConsumers.Appointer<?> setPathUpdateAndGet(P basePath, BiFunction<T, S, T> update) {
+        public <S, P extends BasePath<S>> Appointer<?> setPathUpdateAndGet(P basePath, BiFunction<T, S, T> update) {
             return holderAppointer.setPathUpdateAndGet(basePath, update);
         }
 
@@ -81,18 +81,18 @@ public class Appointers {
         }
 
         @Override
-        public BinaryEventConsumers.Appointer<?> getAppointer() {
+        public Appointer<?> getAppointer() {
             return holderAppointer.getAppointer();
         }
 
         @Override
-        public BinaryEventConsumers.Appointer<?> getAndClear() {
+        public Appointer<?> getAndClear() {
             return holderAppointer.getAndClear();
         }
     }
 
     static class HolderAppointer<T> implements PathListener<T> {
-        private final AtomicReference<BinaryEventConsumers.Appointer<?>> witnessAtomicReference;
+        private final AtomicReference<Appointer<?>> witnessAtomicReference;
         private final Holders.ColdHolder<T> holder;
 
         Holders.ColdHolder<T> getColdHolder() {
@@ -101,23 +101,23 @@ public class Appointers {
 
         HolderAppointer(Holders.ColdHolder<T> holder) {
             this.holder = holder;
-            witnessAtomicReference = new AtomicReference<>(BinaryEventConsumers.Appointer.CLEARED_APPOINTER);
+            witnessAtomicReference = new AtomicReference<>(Appointer.CLEARED_APPOINTER);
         }
 
         @Override
-        public <S, P extends BasePath<S>> BinaryEventConsumers.Appointer<?> setPathAndGet(P basePath, Function<S, T> map) {
+        public <S, P extends BasePath<S>> Appointer<?> setPathAndGet(P basePath, Function<S, T> map) {
             return AtomicUtils.contentiousCAS(
                     witnessAtomicReference,
                     prev -> !prev.equalTo(basePath),
                     prev -> {
                         final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt -> holder.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply(anInt.getValue())));
-                        return new BinaryEventConsumers.Appointer<>(basePath, intConsumer);
+                        return new Appointer<>(basePath, intConsumer);
                     }
             ).next;
         }
 
         @Override
-        public <S, P extends BasePath<S>> BinaryEventConsumers.Appointer<?> setPathUpdateAndGet(P basePath, BiFunction<T, S, T> update) {
+        public <S, P extends BasePath<S>> Appointer<?> setPathUpdateAndGet(P basePath, BiFunction<T, S, T> update) {
             return AtomicUtils.contentiousCAS(
                     witnessAtomicReference,
                     prev -> !prev.equalTo(basePath),
@@ -125,7 +125,7 @@ public class Appointers {
                         final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt -> holder.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(),
                                 update.apply(getColdHolder().get(), anInt.getValue()))
                         );
-                        return new BinaryEventConsumers.Appointer<>(basePath, intConsumer);
+                        return new Appointer<>(basePath, intConsumer);
                     }
             ).next;
         }
@@ -134,16 +134,16 @@ public class Appointers {
         public <S, P extends BasePath<S>> T setAndStart(P basePath, Function<S, T> map) {
             assert basePath != null;
             T lastValue = null;
-            final AtomicUtils.Witness<BinaryEventConsumers.Appointer<?>> witness = AtomicUtils.contentiousCAS(
+            final AtomicUtils.Witness<Appointer<?>> witness = AtomicUtils.contentiousCAS(
                     witnessAtomicReference,
-                    prev -> prev == BinaryEventConsumers.Appointer.CLEARED_APPOINTER || !prev.equalTo(basePath) || map != identity, // always update if map is NOT identity
+                    prev -> prev == Appointer.CLEARED_APPOINTER || !prev.equalTo(basePath) || map != identity, // always update if map is NOT identity
                     prev -> {
                         final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt ->
                                 holder.acceptVersionValue(new Pair.Immutables.Int<>(anInt.getInt(), map.apply(anInt.getValue())));
-                        return new BinaryEventConsumers.Appointer<>(basePath, intConsumer);
+                        return new Appointer<>(basePath, intConsumer);
                     }
             );
-            final BinaryEventConsumers.Appointer<?> prev = witness.prev, next = witness.next;
+            final Appointer<?> prev = witness.prev, next = witness.next;
             if (next != null && prev != next) {
                 prev.shutDown();
                 //contention check
@@ -164,7 +164,7 @@ public class Appointers {
 
         @Override
         public void stopAndClearPath() {
-            BinaryEventConsumers.Appointer<?> appointer = witnessAtomicReference.getAndSet(BinaryEventConsumers.Appointer.CLEARED_APPOINTER);
+            Appointer<?> appointer = witnessAtomicReference.getAndSet(Appointer.CLEARED_APPOINTER);
             appointer.shutDown();
         }
 
@@ -189,14 +189,14 @@ public class Appointers {
         }
 
         @Override
-        public BinaryEventConsumers.Appointer<?> getAppointer() {
+        public Appointer<?> getAppointer() {
             return witnessAtomicReference.get();
         }
         /** If next == null, prev was already cleared
          * @return next appointer*/
         @Override
-        public BinaryEventConsumers.Appointer<?> getAndClear() {
-            return witnessAtomicReference.getAndSet(BinaryEventConsumers.Appointer.CLEARED_APPOINTER);
+        public Appointer<?> getAndClear() {
+            return witnessAtomicReference.getAndSet(Appointer.CLEARED_APPOINTER);
         }
     }
 }

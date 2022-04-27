@@ -11,7 +11,7 @@ import java.util.function.Predicate;
 
 public class Merge<T> extends Path<T> implements BaseMerge<T> {
 
-    private final SimpleLists.LockFree<BinaryEventConsumers.Appointer<?>, Boolean> joints = SimpleLists.getSnapshotting(
+    private final SimpleLists.LockFree<Appointer<?>, Boolean> joints = SimpleLists.getSnapshotting(
             AtomicBinaryEventConsumer.class,
             () -> !isIdle()
     );
@@ -31,7 +31,7 @@ public class Merge<T> extends Path<T> implements BaseMerge<T> {
             throw new IllegalStateException("Observer is null");
         }
 
-        final BinaryEventConsumers.Appointer<?> jointAppointer = BinaryEventConsumers.fixedAppointer(
+        final Appointer<?> jointAppointer = BinaryEventConsumers.fixedAppointer(
                 path,
                 new Consumer<Pair.Immutables.Int<S>>() {
                     final Consumer<S> sConsumer = observer.apply(holder);
