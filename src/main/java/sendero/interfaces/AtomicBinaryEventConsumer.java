@@ -16,7 +16,7 @@ public abstract class AtomicBinaryEventConsumer {
         return now == ON;
     }
 
-    public static AtomicBinaryEventConsumer CLEARED = new AtomicBinaryEventConsumer() {
+    public static final AtomicBinaryEventConsumer CLEARED = new AtomicBinaryEventConsumer() {
         @Override
         protected void onStateChange(boolean isActive) {
 

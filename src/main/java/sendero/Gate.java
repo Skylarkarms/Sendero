@@ -145,7 +145,7 @@ public final class Gate {
 
             protected static class Many<T> extends OutBasePath<T> implements Out.Many<T> {
 
-                private final SimpleLists.LockFree<Consumer<? super T>, Integer>
+                private final SimpleLists.LockFree.Snapshotter<Consumer<? super T>, Integer>
                         locale = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
 
                 public Many() {
@@ -296,7 +296,7 @@ public final class Gate {
         // Hence, should only extend ActivationHolder.class
         static class ManyImpl<T> extends Holders.ActivationHolder<T> implements Out.Many<T> {
 
-            private final SimpleLists.LockFree<Consumer<? super T>, Integer>
+            private final SimpleLists.LockFree.Snapshotter<Consumer<? super T>, Integer>
                     locale = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
 
             protected ManyImpl(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
@@ -339,7 +339,6 @@ public final class Gate {
                     Consumer<? super T> curr = locals[i];
                     if (curr != null) curr.accept(t.getValue());
                 }
-
             }
 
             @Override

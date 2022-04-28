@@ -8,8 +8,8 @@ import java.util.function.*;
 
 public class SingleLink<T> extends SinglePath<T> implements BaseLink{
 
-    private SingleLink(boolean mutableActivationListener) {
-        super(mutableActivationListener);
+    private SingleLink() {
+        super(true);
     }
 
     public SingleLink(Builders.HolderBuilder<T> holderBuilder, boolean mutableManager) {
@@ -62,7 +62,7 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
         }
 
         public Unbound() {
-            super(true);
+            super();
         }
 
         public Unbound(UnaryOperator<Builders.HolderBuilder<T>> operator) {

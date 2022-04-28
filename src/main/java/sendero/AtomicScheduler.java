@@ -11,7 +11,7 @@ public class AtomicScheduler {
     private static class AtomicSchedulerService {
         final Supplier<ScheduledExecutorService> service;
         final boolean set;
-        ScheduledFuture<?> future;
+        final ScheduledFuture<?> future;
 
         static AtomicSchedulerService init(Supplier<ScheduledExecutorService> service) {
             return new AtomicSchedulerService(service, false, null);

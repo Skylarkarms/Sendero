@@ -8,7 +8,7 @@ public final class Consumers {
     public static <O, R> Transform<R> transform(
             Function<R, O> function, Consumer<? super O> exit
     ) {
-        return new Transform<R>(function, exit);
+        return new Transform<>(function, exit);
     }
     public static <R> Predicative<R> expect(
             Predicate<R> expect, Consumer<? super R> exit

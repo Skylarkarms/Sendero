@@ -12,16 +12,16 @@ public class Link<T> extends Path<T> implements BaseLink {
         super(holderBuilder, basePath, map);
     }
 
-    private Link(Builders.HolderBuilder<T> holderBuilder, boolean mutableManager) {
-        super(holderBuilder, Builders.getManagerBuild().withMutable(mutableManager));
+    private Link(Builders.HolderBuilder<T> holderBuilder) {
+        super(holderBuilder, Builders.getManagerBuild().withMutable(true));
     }
 
     private <S> Link(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
         super(holderBuilder, basePath, updateFun);
     }
 
-    private Link(boolean activationListener) {
-        super(activationListener);
+    private Link() {
+        super(true);
     }
 
     @Override
@@ -58,11 +58,11 @@ public class Link<T> extends Path<T> implements BaseLink {
         final BaseUnbound<T> baseUnbound = new BaseUnbound<>(this);
 
         public Unbound() {
-            super(true);
+            super();
         }
 
         public Unbound(UnaryOperator<Builders.HolderBuilder<T>> operator) {
-            super(Builders.getHolderBuild(operator), true);
+            super(Builders.getHolderBuild(operator));
         }
 
         @Override

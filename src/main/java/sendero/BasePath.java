@@ -256,7 +256,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
     }
 
     static final class ToManyPathsDispatcher<T> extends PathDispatcher<T> {
-        private final SimpleLists.LockFree<Consumer<Pair.Immutables.Int<T>>, Integer>
+        private final SimpleLists.LockFree.Snapshotter<Consumer<Pair.Immutables.Int<T>>, Integer>
                 remote;
 
         ToManyPathsDispatcher(Holders.ExecutorHolder<T> executorHolder) {

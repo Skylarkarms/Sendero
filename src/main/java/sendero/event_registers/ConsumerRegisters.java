@@ -132,7 +132,7 @@ public class ConsumerRegisters<T> {
                 BooleanSnapshot swap(BooleanSupplier booleanValue, AtomicBinaryEventConsumer expect, AtomicBinaryEventConsumer set);
                 boolean isEqualTo(AtomicBinaryEventConsumer other);
                 final class ConsumerContainer implements Switchers.Switch {
-                    public static ConsumerContainer CLEARED = new ConsumerContainer(AtomicBinaryEventConsumer.CLEARED);
+                    public static final ConsumerContainer CLEARED = new ConsumerContainer(AtomicBinaryEventConsumer.CLEARED);
                     final AtomicBinaryEventConsumer consumer;
 
                     public ConsumerContainer(AtomicBinaryEventConsumer consumer) {

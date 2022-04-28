@@ -149,7 +149,7 @@ public final class SingleGate {
 
             protected static class Many<T> extends OutBaseSinglePath<T> implements Out.Many<T> {
 
-                private final SimpleLists.LockFree<Consumer<? super T>, Integer>
+                private final SimpleLists.LockFree.Snapshotter<Consumer<? super T>, Integer>
                         locale = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
 
                 public Many() {

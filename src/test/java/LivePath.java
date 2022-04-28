@@ -49,8 +49,8 @@ public class LivePath extends Path<Map<String, ?>> {
 
         private volatile Supplier<Map<String, ?>> mapSupplier;
 
-        public static HashMap<String, Object> test = new HashMap<>();
-        {
+        public static final HashMap<String, Object> test = new HashMap<>();
+        static {
             test.put("BUG", new Object());
         }
 
