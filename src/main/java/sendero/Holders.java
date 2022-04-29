@@ -42,34 +42,36 @@ final class Holders {
         protected final T INVALID = (T) new Object();
         private final Pair.Immutables.Int<T> FIRST = new Pair.Immutables.Int<>(0, INVALID);
         private final Consumer<Pair.Immutables.Int<T>> dispatcher;
-        private final Predicate<T> expect;
+        private final BinaryPredicate<T> expect;
         private final AtomicReference<Pair.Immutables.Int<T>> reference;
 
         SingleColdHolder(
                 Consumer<Pair.Immutables.Int<T>> dispatcher,
-                Predicate<T> expect
+                BinaryPredicate<T> expect
         ) {
             this.dispatcher = dispatcher;
             this.expect = expect;
             reference = new AtomicReference<>(FIRST);
         }
 
-        private T process(T t) {
-            return expect.test(t) ? t : INVALID;
+        private boolean test(T next, T prev) {
+            return expect.test(next, prev == INVALID ? null : prev);
         }
+
         @Override
         public void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
-            versionValueCAS(versionValue.getInt(), process(versionValue.getValue()));
+            versionValueCAS(versionValue.getInt(), versionValue.getValue());
         }
-        private void versionValueCAS(int newVersion, T processed) {
-            if (processed == INVALID) return;
+        private void versionValueCAS(int newVersion, T nextT) {
             Pair.Immutables.Int<T> prev, next;
             while ((prev = reference.get()).compareTo(newVersion) < 0) {
-                next = new Pair.Immutables.Int<>(newVersion, processed);
-                if (reference.compareAndSet(prev, next)) {
-                    dispatcher.accept(next);
-                    break;
-                }
+                if (test(nextT, prev.getValue())) {
+                    next = new Pair.Immutables.Int<>(newVersion, nextT);
+                    if (reference.compareAndSet(prev, next)) {
+                        dispatcher.accept(next);
+                        break;
+                    }
+                } else return;
             }
         }
 
@@ -87,11 +89,13 @@ final class Holders {
     }
 
     static class TestDispatcher<T> extends Dispatcher<T> {
-        private final Predicate<T> CLEARED_PREDICATE = Functions.always(true);
-        private volatile Predicate<T> expectOutput = CLEARED_PREDICATE;
+//        private final Predicate<T> CLEARED_PREDICATE = Functions.always(true);
+        private volatile Predicate<T> expectOutput = Functions.always(true);
+//        private volatile Predicate<T> expectOutput = CLEARED_PREDICATE;
 
         public TestDispatcher(Predicate<T> expectOutput) {
-            this.expectOutput = expectOutput == null ? CLEARED_PREDICATE : expectOutput;
+            this.expectOutput = expectOutput == null ? Functions.always(true) : expectOutput;
+//            this.expectOutput = expectOutput == null ? CLEARED_PREDICATE : expectOutput;
         }
 
         public TestDispatcher() {
@@ -130,11 +134,11 @@ final class Holders {
         }
 
         DispatcherHolder(AtomicReference<Pair.Immutables.Int<T>> reference, UnaryOperator<T> map, BinaryPredicate<T> expectInput, Predicate<T> expectOut) {
-//        DispatcherHolder(AtomicReference<Pair.Immutables.Int<T>> reference, UnaryOperator<T> map, Predicate<T> expectInput, Predicate<T> expectOut) {
             super(expectOut);
             this.reference = reference == null ?  new AtomicReference<>(FIRST) : reference;
             this.map = map == null ? CLEARED_MAP : map;
-            this.expectInput = expectInput == null ? CLEARED_PREDICATE : expectInput;
+            this.expectInput = expectInput == null ? Functions.binaryAlways(true) : expectInput;
+//            this.expectInput = expectInput == null ? CLEARED_PREDICATE : expectInput;
         }
 
         private final UnaryOperator<T> CLEARED_MAP = UnaryOperator.identity();
@@ -145,10 +149,9 @@ final class Holders {
             return this;
         }
 
-        private final BinaryPredicate<T> CLEARED_PREDICATE = Functions.binaryAlways(true);
-//        private final Predicate<T> CLEARED_PREDICATE = Functions.always(true);
-        private volatile BinaryPredicate<T> expectInput = CLEARED_PREDICATE;
-//        private volatile Predicate<T> expectInput = CLEARED_PREDICATE;
+//        private final BinaryPredicate<T> CLEARED_PREDICATE = Functions.binaryAlways(true);
+        private volatile BinaryPredicate<T> expectInput = Functions.binaryAlways(true);
+//        private volatile BinaryPredicate<T> expectInput = CLEARED_PREDICATE;
         @Override
         public DispatcherHolder<T> expectIn(Predicate<T> expect) {
             this.expectInput = (next, prev) -> expect.test(next);
@@ -220,43 +223,77 @@ final class Holders {
             lazyCASAccept(delay, lazyProcess(update));
         }
 
-        private T process(T t) {
-            T mapped = map.apply(t);
-            return expectInput.test(mapped, t) ? mapped : INVALID;
-//            return expectInput.test(mapped) ? mapped : INVALID;
+//        private T process(T t) {
+//            T mapped = map.apply(t);
+//            return expectInput.test(mapped, t) ? mapped : INVALID;
+////            return expectInput.test(mapped) ? mapped : INVALID;
+//        }
+        private T process(T next, T prev) {
+            T mapped = map.apply(next);
+            return expectInput.test(mapped, prev == INVALID ? null : prev) ? mapped : INVALID;
         }
 
-        private void CASAccept(T t) {
-            if (t == INVALID) return;
+//        private void CASAccept(T t) {
+//            if (t == INVALID) return;
+//            Pair.Immutables.Int<T> prev = null, next;
+//            while (prev != (prev = reference.get())) {
+//                next = new Pair.Immutables.Int<>(prev.getInt() + 1, t);
+//                if (reference.compareAndSet(prev, next)) {
+//                    inferDispatch(prev.getValue(), next, HOT);
+//                    break;
+//                }
+//            }
+//        }
+
+        private void CASAccept(T nextT) {
             Pair.Immutables.Int<T> prev = null, next;
             while (prev != (prev = reference.get())) {
-                next = new Pair.Immutables.Int<>(prev.getInt() + 1, t);
-                if (reference.compareAndSet(prev, next)) {
-                    inferDispatch(prev.getValue(), next, HOT);
-                    break;
-                }
+                T processed = process(nextT, prev.getValue());
+                if (processed != INVALID) {
+                    next = new Pair.Immutables.Int<>(prev.getInt() + 1, processed);
+                    if (reference.compareAndSet(prev, next)) {
+                        inferDispatch(prev.getValue(), next, HOT);
+                        break;
+                    }
+                } else return;
             }
         }
 
         @Override
         public void accept(T t) {
-            CASAccept(process(t));
+            CASAccept(t);
+//            CASAccept(process(t));
         }
 
         @Override
         public void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
-            versionValueCAS(versionValue.getInt(), process(versionValue.getValue()));
+            versionValueCAS(versionValue.getInt(), versionValue.getValue());
+//            versionValueCAS(versionValue.getInt(), process(versionValue.getValue()));
         }
 
-        private void versionValueCAS(int newVersion, T processed) {
-            if (processed == INVALID) return;
+//        private void versionValueCAS(int newVersion, T processed) {
+//            if (processed == INVALID) return;
+//            Pair.Immutables.Int<T> prev, next;
+//            while ((prev = reference.get()).compareTo(newVersion) < 0) {
+//                next = new Pair.Immutables.Int<>(newVersion, processed);
+//                if (reference.compareAndSet(prev, next)) {
+//                    inferDispatch(prev.getValue(), next, TestDispatcher.COLD);
+//                    break;
+//                }
+//            }
+//        }
+
+        private void versionValueCAS(int newVersion, T nextT) {
             Pair.Immutables.Int<T> prev, next;
             while ((prev = reference.get()).compareTo(newVersion) < 0) {
-                next = new Pair.Immutables.Int<>(newVersion, processed);
-                if (reference.compareAndSet(prev, next)) {
-                    inferDispatch(prev.getValue(), next, TestDispatcher.COLD);
-                    break;
-                }
+                T processed = process(nextT, prev.getValue());
+                if (processed != INVALID) {
+                    next = new Pair.Immutables.Int<>(newVersion, processed);
+                    if (reference.compareAndSet(prev, next)) {
+                        inferDispatch(prev.getValue(), next, TestDispatcher.COLD);
+                        break;
+                    }
+                } else return;
             }
         }
 

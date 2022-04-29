@@ -2,6 +2,7 @@ package sendero;
 
 import sendero.functions.Consumers;
 import sendero.interfaces.AtomicBinaryEventConsumer;
+import sendero.interfaces.BinaryPredicate;
 import sendero.pairs.Pair;
 
 import java.util.function.Consumer;
@@ -41,7 +42,8 @@ final class BaseUnboundSwitch<T> implements UnboundSwitch<T> {
 
     @Override
     public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
-        final Appointers.SimpleAppointer<T> appointer = new Appointers.SimpleAppointer<>(this::onResult,t -> true);
+        final Appointers.SimpleAppointer<T> appointer = new Appointers.SimpleAppointer<>(this::onResult, BinaryPredicate.always(true));
+//        final Appointers.SimpleAppointer<T> appointer = new Appointers.SimpleAppointer<>(this::onResult,t -> true);
 
         final AtomicBinaryEventConsumer booleanConsumerAppointer = BinaryEventConsumers.producerHolderConnector(
                 path,
@@ -72,7 +74,8 @@ final class BaseUnboundSwitch<T> implements UnboundSwitch<T> {
 
     @Override
     public <S> void switchFun(BasePath<S> path, Function<Consumer<? super BasePath<T>>, ? extends Consumers.BaseConsumer<S>> exit) {
-        final Appointers.SimpleAppointer<T> appointer = new Appointers.SimpleAppointer<>(this::onResult,t -> true);
+        final Appointers.SimpleAppointer<T> appointer = new Appointers.SimpleAppointer<>(this::onResult,BinaryPredicate.always(true));
+//        final Appointers.SimpleAppointer<T> appointer = new Appointers.SimpleAppointer<>(this::onResult,t -> true);
 
         final AtomicBinaryEventConsumer booleanConsumerAppointer = BinaryEventConsumers.fixedAppointer(
                 path,

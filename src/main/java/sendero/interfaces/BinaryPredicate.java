@@ -1,5 +1,7 @@
 package sendero.interfaces;
 
+import sendero.functions.Functions;
+
 import java.util.function.BiPredicate;
 
 public interface BinaryPredicate<T> extends BiPredicate<T, T> {
@@ -9,5 +11,9 @@ public interface BinaryPredicate<T> extends BiPredicate<T, T> {
     @Override
     default BinaryPredicate<T> negate() {
         return (next, prev) -> !test(next, prev);
+    }
+
+    static<T> BinaryPredicate<T> always(boolean value) {
+        return Functions.binaryAlways(value);
     }
 }

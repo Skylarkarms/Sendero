@@ -3,6 +3,7 @@ package sendero;
 import sendero.event_registers.ConsumerRegisters;
 import sendero.functions.Consumers;
 import sendero.interfaces.AtomicBinaryEventConsumer;
+import sendero.interfaces.BinaryPredicate;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;
 
@@ -136,7 +137,8 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
 
     <S> Function<Consumer<Pair.Immutables.Int<S>>, AtomicBinaryEventConsumer> switchFunctionBuilder(Function<T, BasePath<S>> switchMap) {
         return intConsumer -> {
-            final Appointers.SimpleAppointer<S> appointer = new Appointers.SimpleAppointer<>(intConsumer,t -> true);
+            final Appointers.SimpleAppointer<S> appointer = new Appointers.SimpleAppointer<>(intConsumer, BinaryPredicate.always(true));
+//            final Appointers.SimpleAppointer<S> appointer = new Appointers.SimpleAppointer<>(intConsumer,t -> true);
             final Consumer<Pair.Immutables.Int<T>> toAppoint = new Consumer<Pair.Immutables.Int<T>>() {
                 final Holders.DispatcherHolder<BasePath<S>> domainHolder = new Holders.DispatcherHolder<BasePath<S>>() {
                     @Override
@@ -174,7 +176,8 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
     <S> Function<Consumer<Pair.Immutables.Int<S>>, AtomicBinaryEventConsumer> switchMutateFunctionBuilder(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
         return intConsumer -> {
             //Controls domain subscription
-            final Appointers.SimpleAppointer<S> appointer = new Appointers.SimpleAppointer<>(intConsumer,t -> true);
+            final Appointers.SimpleAppointer<S> appointer = new Appointers.SimpleAppointer<>(intConsumer,BinaryPredicate.always(true));
+//            final Appointers.SimpleAppointer<S> appointer = new Appointers.SimpleAppointer<>(intConsumer,t -> true);
             // Recepts the value to be transformed into an observable
             final Consumer<Pair.Immutables.Int<T>> toAppoint = new Consumer<Pair.Immutables.Int<T>>() {
                 //Controls domain version

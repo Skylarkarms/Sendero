@@ -1,6 +1,7 @@
 package sendero;
 
 import sendero.atomics.AtomicUtils;
+import sendero.interfaces.BinaryPredicate;
 import sendero.pairs.Pair;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -30,7 +31,8 @@ public class Appointers {
 
         private final HolderAppointer<T> holderAppointer = new HolderAppointer<>(this);
 
-        SimpleAppointer(Consumer<Pair.Immutables.Int<T>> dispatcher, Predicate<T> expect) {
+        SimpleAppointer(Consumer<Pair.Immutables.Int<T>> dispatcher, BinaryPredicate<T> expect) {
+//        SimpleAppointer(Consumer<Pair.Immutables.Int<T>> dispatcher, Predicate<T> expect) {
             super(dispatcher, expect);
         }
 
