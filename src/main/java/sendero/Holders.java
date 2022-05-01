@@ -46,10 +46,10 @@ final class Holders {
         private final AtomicReference<Pair.Immutables.Int<T>> reference;
 
         SingleColdHolder(
-                Consumer<Pair.Immutables.Int<T>> dispatcher,
+                ColdHolder<T> target,
                 BinaryPredicate<T> expect
         ) {
-            this.dispatcher = dispatcher;
+            this.dispatcher = target::acceptVersionValue;
             this.expect = expect;
             reference = new AtomicReference<>(FIRST);
         }
@@ -89,13 +89,10 @@ final class Holders {
     }
 
     static class TestDispatcher<T> extends Dispatcher<T> {
-//        private final Predicate<T> CLEARED_PREDICATE = Functions.always(true);
         private volatile Predicate<T> expectOutput = Functions.always(true);
-//        private volatile Predicate<T> expectOutput = CLEARED_PREDICATE;
 
         public TestDispatcher(Predicate<T> expectOutput) {
             this.expectOutput = expectOutput == null ? Functions.always(true) : expectOutput;
-//            this.expectOutput = expectOutput == null ? CLEARED_PREDICATE : expectOutput;
         }
 
         public TestDispatcher() {
@@ -103,7 +100,6 @@ final class Holders {
 
         static final long COLD = -1, HOT = 0;
 
-//        @Override
         protected void setExpectOutput(Predicate<T> expectOutput) {
             this.expectOutput = expectOutput;
         }
@@ -138,7 +134,6 @@ final class Holders {
             this.reference = reference == null ?  new AtomicReference<>(FIRST) : reference;
             this.map = map == null ? CLEARED_MAP : map;
             this.expectInput = expectInput == null ? Functions.binaryAlways(true) : expectInput;
-//            this.expectInput = expectInput == null ? CLEARED_PREDICATE : expectInput;
         }
 
         private final UnaryOperator<T> CLEARED_MAP = UnaryOperator.identity();
@@ -149,13 +144,10 @@ final class Holders {
             return this;
         }
 
-//        private final BinaryPredicate<T> CLEARED_PREDICATE = Functions.binaryAlways(true);
         private volatile BinaryPredicate<T> expectInput = Functions.binaryAlways(true);
-//        private volatile BinaryPredicate<T> expectInput = CLEARED_PREDICATE;
         @Override
         public DispatcherHolder<T> expectIn(Predicate<T> expect) {
             this.expectInput = (next, prev) -> expect.test(next);
-//            this.expectInput = expect;
             return this;
         }
 
@@ -223,27 +215,10 @@ final class Holders {
             lazyCASAccept(delay, lazyProcess(update));
         }
 
-//        private T process(T t) {
-//            T mapped = map.apply(t);
-//            return expectInput.test(mapped, t) ? mapped : INVALID;
-////            return expectInput.test(mapped) ? mapped : INVALID;
-//        }
         private T process(T next, T prev) {
             T mapped = map.apply(next);
             return expectInput.test(mapped, prev == INVALID ? null : prev) ? mapped : INVALID;
         }
-
-//        private void CASAccept(T t) {
-//            if (t == INVALID) return;
-//            Pair.Immutables.Int<T> prev = null, next;
-//            while (prev != (prev = reference.get())) {
-//                next = new Pair.Immutables.Int<>(prev.getInt() + 1, t);
-//                if (reference.compareAndSet(prev, next)) {
-//                    inferDispatch(prev.getValue(), next, HOT);
-//                    break;
-//                }
-//            }
-//        }
 
         private void CASAccept(T nextT) {
             Pair.Immutables.Int<T> prev = null, next;
@@ -268,20 +243,7 @@ final class Holders {
         @Override
         public void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
             versionValueCAS(versionValue.getInt(), versionValue.getValue());
-//            versionValueCAS(versionValue.getInt(), process(versionValue.getValue()));
         }
-
-//        private void versionValueCAS(int newVersion, T processed) {
-//            if (processed == INVALID) return;
-//            Pair.Immutables.Int<T> prev, next;
-//            while ((prev = reference.get()).compareTo(newVersion) < 0) {
-//                next = new Pair.Immutables.Int<>(newVersion, processed);
-//                if (reference.compareAndSet(prev, next)) {
-//                    inferDispatch(prev.getValue(), next, TestDispatcher.COLD);
-//                    break;
-//                }
-//            }
-//        }
 
         private void versionValueCAS(int newVersion, T nextT) {
             Pair.Immutables.Int<T> prev, next;
@@ -374,10 +336,9 @@ final class Holders {
             manager = buildManager();
         }
 
-        ActivationHolder(UnaryOperator<Builders.HolderBuilder<T>> operator, Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
-//        ActivationHolder(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+        ActivationHolder(UnaryOperator<Builders.HolderBuilder<T>> operator, Function<ColdHolder<T>, AtomicBinaryEventConsumer> selfMap) {
             holder = Builders.getHolderBuild(operator).build(this);
-            manager = new ActivationManager(selfMap.apply(holder::acceptVersionValue)){
+            manager = new ActivationManager(selfMap.apply(holder)){
                 @Override
                 protected boolean deactivationRequirements() {
                     return ActivationHolder.this.deactivationRequirements();
@@ -501,7 +462,9 @@ final class Holders {
         ExecutorHolder() {
         }
 
-        public ExecutorHolder(UnaryOperator<Builders.HolderBuilder<T>> operator, Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+        public ExecutorHolder(UnaryOperator<Builders.HolderBuilder<T>> operator,
+                              Function<ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
+        ) {
             super(operator, selfMap);
         }
 

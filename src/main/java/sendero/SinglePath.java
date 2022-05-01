@@ -3,7 +3,6 @@ package sendero;
 import sendero.functions.Consumers;
 import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.interfaces.BinaryPredicate;
-import sendero.pairs.Pair;
 
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -33,11 +32,16 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
         super(holderBuilder, actMgmtBuilder);
     }
 
-    SinglePath(UnaryOperator<Builders.HolderBuilder<T>> operator, Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+    SinglePath(
+            UnaryOperator<Builders.HolderBuilder<T>> operator,
+            Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
+    ) {
         super(operator, selfMap);
     }
 
-    SinglePath(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+    SinglePath(
+            Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
+    ) {
         super(selfMap);
     }
 
@@ -53,6 +57,20 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
     public <S> SinglePath<S> forkMap(Function<T, S> map) {
         return new SinglePath<>(
                 mapFunctionBuilder(map)
+        );
+    }
+
+    @Override
+    public <S> Forkable<S> forkUpdate(BiFunction<S, T, S> update) {
+        return forkUpdate(UnaryOperator.identity(), update);
+    }
+
+    @Override
+    public <S> Forkable<S> forkUpdate(UnaryOperator<Builders.HolderBuilder<S>> operator, BiFunction<S, T, S> update) {
+        return new SinglePath<>(
+                Builders.getHolderBuild(operator),
+                this,
+                update
         );
     }
 

@@ -14,8 +14,8 @@ public class SimpleLists {
     private static final int DEFAULT_CAPACITY = 10;
     private static final int MAX_ARRAY_SIZE = Integer.MAX_VALUE - 8;
 
-    public static<E, Snapshot> LockFree.Snapshotter<E, Snapshot> getSnapshotting(Class<? super E> componentType, Supplier<Snapshot> snapshotSupplier) {
-        return new SnapshotterImpl<>( componentType, snapshotSupplier);
+    public static<E, Snapshot> LockFree.Snapshooter<E, Snapshot> getSnapshotting(Class<? super E> componentType, Supplier<Snapshot> snapshotSupplier) {
+        return new SnapshooterImpl<>( componentType, snapshotSupplier);
     }
 
     public static<E, Snapshot> LockFree<E> get(Class<? super E> componentType) {
@@ -30,7 +30,7 @@ public class SimpleLists {
         boolean removeIf(Predicate<E> removeIf);
         boolean isEmpty();
         E[] copy();
-        interface Snapshotter<E, Snapshot> extends LockFree<E> {
+        interface Snapshooter<E, Snapshot> extends LockFree<E> {
             /**returns true if this is the first item to be added*/
             Pair.Immutables.Bool<Snapshot> snapshotAdd(E element);
 
@@ -276,10 +276,10 @@ public class SimpleLists {
         }
     }
 
-    private static final class SnapshotterImpl<E, S> extends LockFreeImpl<E> implements LockFree.Snapshotter<E, S> {
+    private static final class SnapshooterImpl<E, S> extends LockFreeImpl<E> implements LockFree.Snapshooter<E, S> {
         private final Supplier<S> sSupplier;
 
-        private SnapshotterImpl(Class<? super E> componentType, Supplier<S> sSupplier) {
+        private SnapshooterImpl(Class<? super E> componentType, Supplier<S> sSupplier) {
             super(componentType);
             this.sSupplier = sSupplier;
         }

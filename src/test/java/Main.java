@@ -98,7 +98,7 @@ public class Main {
         Gate.Out.Single<Map<String, ?>> lpOut = lp.out(Gate.Out.Single.class);
         lpOut.register(
                 stringMap -> {
-                    System.err.println(stringMap);
+                    System.out.println(stringMap);
                 }
         );
         try {

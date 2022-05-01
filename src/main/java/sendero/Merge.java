@@ -11,7 +11,7 @@ import java.util.function.Predicate;
 
 public class Merge<T> extends Path<T> implements BaseMerge<T> {
 
-    private final SimpleLists.LockFree.Snapshotter<Appointer<?>, Boolean> joints = SimpleLists.getSnapshotting(
+    private final SimpleLists.LockFree.Snapshooter<Appointer<?>, Boolean> joints = SimpleLists.getSnapshotting(
             AtomicBinaryEventConsumer.class,
             () -> !isIdle()
     );

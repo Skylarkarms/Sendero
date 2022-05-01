@@ -27,12 +27,17 @@ public abstract class PathDispatcherHolder<T> extends BasePath<T> {
         pathDispatcher = pathDispatcherBuild();
     }
 
-    PathDispatcherHolder(UnaryOperator<Builders.HolderBuilder<T>> operator, Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+    PathDispatcherHolder(
+            UnaryOperator<Builders.HolderBuilder<T>> operator,
+            Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
+    ) {
         super(operator, selfMap);
         pathDispatcher = pathDispatcherBuild();
     }
 
-    PathDispatcherHolder(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+    PathDispatcherHolder(
+            Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
+    ) {
         super(selfMap);
         pathDispatcher = pathDispatcherBuild();
     }

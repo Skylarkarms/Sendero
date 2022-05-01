@@ -145,7 +145,7 @@ public final class Gate {
 
             protected static class Many<T> extends OutBasePath<T> implements Out.Many<T> {
 
-                private final SimpleLists.LockFree.Snapshotter<Consumer<? super T>, Integer>
+                private final SimpleLists.LockFree.Snapshooter<Consumer<? super T>, Integer>
                         locale = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
 
                 public Many() {
@@ -163,11 +163,11 @@ public final class Gate {
                         else {
                             pathDispatch(true, pair);
                             Consumer<? super T>[] consumers = locale.copy();
-                            //If we are out of luck, lists may be empty at this point but it won't matter.
+                            //If we are out of luck, lists may be empty at this point, but it won't matter.
                             for (Consumer<? super T> observer:consumers
                             ) {
                                 if (pair.compareTo(getVersion()) != 0) return;
-                                //consecutive "losing" threads that got pass this check might get a boost so we should prevent the override of lesser versions on the other end.
+                                //consecutive "losing" threads that got pass this check might get a boost, so we should prevent the override of lesser versions on the other end.
                                 //And the safety measure will end with subscriber's own version of dispatch();
                                 observer.accept(pair.getValue());
                             }
@@ -296,10 +296,13 @@ public final class Gate {
         // Hence, should only extend ActivationHolder.class
         static class ManyImpl<T> extends Holders.ActivationHolder<T> implements Out.Many<T> {
 
-            private final SimpleLists.LockFree.Snapshotter<Consumer<? super T>, Integer>
+            private final SimpleLists.LockFree.Snapshooter<Consumer<? super T>, Integer>
                     locale = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
 
-            protected ManyImpl(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+            protected ManyImpl(
+                    Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
+//                    Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap
+            ) {
 //            protected ManyImpl(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
                 super(UnaryOperator.identity(), selfMap);
             }
@@ -316,11 +319,11 @@ public final class Gate {
                 //To prevent this, Subscriber MUST TAKE NOTES OF ITS OWN VERSION, and grant access to it by overriding getVersion(), for this class to be able to use.
 
                 if (!locale.isEmpty()) {
-                    //If we are out of luck, lists may be empty at this point but it won't matter.
+                    //If we are out of luck, lists may be empty at this point, but it won't matter.
                     for (Consumer<? super T> observer:locale
                     ) {
                         if (t.compareTo(getVersion()) != 0) return;
-                        //consecutive "losing" threads that got pass this check might get a boost so we should prevent the override of lesser versions on the other end.
+                        //consecutive "losing" threads that got pass this check might get a boost, so we should prevent the override of lesser versions on the other end.
                         //And the safety measure will end with subscriber's own version of dispatch();
                         observer.accept(t.getValue());
                     }
@@ -368,7 +371,10 @@ public final class Gate {
             private final ConsumerRegisters.IConsumerRegister.SnapshottingConsumerRegister<Integer, T>
                     locale = ConsumerRegisters.IConsumerRegister.getInstance(this::getVersion);
 
-            protected SingleImpl(Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap) {
+            protected SingleImpl(
+                    Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
+//                    Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap
+            ) {
                 super(UnaryOperator.identity(), selfMap);
             }
 

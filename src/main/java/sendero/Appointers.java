@@ -5,7 +5,10 @@ import sendero.interfaces.BinaryPredicate;
 import sendero.pairs.Pair;
 
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.*;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public class Appointers {
     interface PathListener<T> {
@@ -31,8 +34,10 @@ public class Appointers {
 
         private final HolderAppointer<T> holderAppointer = new HolderAppointer<>(this);
 
-        SimpleAppointer(Consumer<Pair.Immutables.Int<T>> dispatcher, BinaryPredicate<T> expect) {
-//        SimpleAppointer(Consumer<Pair.Immutables.Int<T>> dispatcher, Predicate<T> expect) {
+        SimpleAppointer(
+                Holders.ColdHolder<T> dispatcher,
+                BinaryPredicate<T> expect
+        ) {
             super(dispatcher, expect);
         }
 

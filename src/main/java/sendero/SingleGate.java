@@ -149,7 +149,7 @@ public final class SingleGate {
 
             protected static class Many<T> extends OutBaseSinglePath<T> implements Out.Many<T> {
 
-                private final SimpleLists.LockFree.Snapshotter<Consumer<? super T>, Integer>
+                private final SimpleLists.LockFree.Snapshooter<Consumer<? super T>, Integer>
                         locale = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
 
                 public Many() {
@@ -166,11 +166,11 @@ public final class SingleGate {
                         if (emptyLocale) pathDispatch(false, pair);
                         else {
                             pathDispatch(true, pair);
-                            //If we are out of luck, lists may be empty at this point but it won't matter.
+                            //If we are out of luck, lists may be empty at this point, but it won't matter.
                             for (Consumer<? super T> observer:locale
                             ) {
                                 if (pair.compareTo(getVersion()) != 0) return;
-                                //consecutive "losing" threads that got pass this check might get a boost so we should prevent the override of lesser versions on the other end.
+                                //consecutive "losing" threads that got pass this check might get a boost, so we should prevent the override of lesser versions on the other end.
                                 //And the safety measure will end with subscriber's own version of dispatch();
                                 observer.accept(pair.getValue());
                             }

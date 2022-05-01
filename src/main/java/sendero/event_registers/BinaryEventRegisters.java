@@ -22,7 +22,7 @@ public final class BinaryEventRegisters {
     }
 
     /**The link between Consumer and boolean state is loosely related.
-     * Why arent both states not strictly related and under the umbrella of a single Atomic value?
+     * Why aren't both states not strictly related and under the umbrella of a single Atomic value?
      * By having a loose relation we allow that:
      *      Boolean values can receive changes even without a Consumer attached.
      *      Boolean values can change while the Consumer is in a heavy contention process of change.

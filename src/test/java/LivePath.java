@@ -13,9 +13,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 public class LivePath extends Path<Map<String, ?>> {
-        private static final String TAG = "LivePreferences";
 
-//        @SuppressWarnings("unchecked")
         public LivePath() {
             super(
                     Builders.getHolderBuild(
@@ -51,7 +49,7 @@ public class LivePath extends Path<Map<String, ?>> {
 
         public static final HashMap<String, Object> test = new HashMap<>();
         static {
-            test.put("BUG", new Object());
+            test.put("BUG TEST", new Object());
         }
 
         public void setup(
@@ -74,8 +72,6 @@ public class LivePath extends Path<Map<String, ?>> {
                                 @Override
                                 protected void onStateChange(boolean isActive) {
                                     if (isActive) {
-//                                        pref.register(prefListener);
-//                                        pref.registerOnSharedPreferenceChangeListener(prefListener);
                                         prefListener.accept(test);
                                     }
                                     else {
