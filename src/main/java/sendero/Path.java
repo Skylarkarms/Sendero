@@ -94,7 +94,16 @@ public class Path<T> extends PathDispatcherHolder<T> {
 
     @Override
     public <S> Path<S> forkSwitch(Function<T, BasePath<S>> switchMap) {
+        return forkSwitch(
+                UnaryOperator.identity(),
+                switchMap
+        );
+    }
+
+    @Override
+    public <S> Path<S> forkSwitch(UnaryOperator<Builders.HolderBuilder<S>> operator, Function<T, BasePath<S>> switchMap) {
         return new Path<>(
+                operator,
                 switchFunctionBuilder(switchMap)
         );
     }

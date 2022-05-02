@@ -91,7 +91,16 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
 
     @Override
     public <S> SinglePath<S> forkSwitch(Function<T, BasePath<S>> switchMap) {
+        return forkSwitch(
+                UnaryOperator.identity(),
+                switchMap
+        );
+    }
+
+    @Override
+    public <S> SinglePath<S> forkSwitch(UnaryOperator<Builders.HolderBuilder<S>> operator, Function<T, BasePath<S>> switchMap) {
         return new SinglePath<>(
+                operator,
                 switchFunctionBuilder(switchMap)
         );
     }

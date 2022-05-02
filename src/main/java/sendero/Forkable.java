@@ -23,5 +23,6 @@ interface Forkable<T> {
     <S> Forkable<S> forkMap(BinaryPredicate<S> expectIn, Function<T, S> map);
     <S> Forkable<S> forkFun(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit);
     <S> Forkable<S> forkSwitch(Function<T, BasePath<S>> switchMap);
+    <S> Forkable<S> forkSwitch(UnaryOperator<Builders.HolderBuilder<S>> operator, Function<T, BasePath<S>> switchMap);
     <S> Forkable<S> forkSwitchFun(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate);
 }
