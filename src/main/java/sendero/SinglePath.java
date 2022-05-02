@@ -61,12 +61,12 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
     }
 
     @Override
-    public <S> Forkable<S> forkUpdate(BiFunction<S, T, S> update) {
+    public <S> SinglePath<S> forkUpdate(BiFunction<S, T, S> update) {
         return forkUpdate(UnaryOperator.identity(), update);
     }
 
     @Override
-    public <S> Forkable<S> forkUpdate(UnaryOperator<Builders.HolderBuilder<S>> operator, BiFunction<S, T, S> update) {
+    public <S> SinglePath<S> forkUpdate(UnaryOperator<Builders.HolderBuilder<S>> operator, BiFunction<S, T, S> update) {
         return new SinglePath<>(
                 Builders.getHolderBuild(operator),
                 this,
