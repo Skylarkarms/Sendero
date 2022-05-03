@@ -56,6 +56,7 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
     @Override
     public <S> SinglePath<S> forkMap(Function<T, S> map) {
         return new SinglePath<>(
+                UnaryOperator.identity(),
                 mapFunctionBuilder(map)
         );
     }
@@ -75,9 +76,9 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
     }
 
     @Override
-    public <S> SinglePath<S> forkMap(BinaryPredicate<S> expectIn, Function<T, S> map) {
+    public <S> SinglePath<S> forkMap(UnaryOperator<Builders.HolderBuilder<S>> operator, Function<T, S> map) {
         return new SinglePath<>(
-                sHolderBuilder -> sHolderBuilder.expectIn(expectIn),
+                operator,
                 mapFunctionBuilder(map)
         );
     }
