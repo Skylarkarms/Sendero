@@ -55,9 +55,9 @@ public class Path<T> extends PathDispatcherHolder<T> {
 
     @Override
     public <S> Path<S> forkMap(Function<T, S> map) {
-        return new Path<>(
+        return forkMap(
                 UnaryOperator.identity(),
-                mapFunctionBuilder(map)
+                map
         );
     }
 

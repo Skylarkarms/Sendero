@@ -55,9 +55,9 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
 
     @Override
     public <S> SinglePath<S> forkMap(Function<T, S> map) {
-        return new SinglePath<>(
+        return forkMap(
                 UnaryOperator.identity(),
-                mapFunctionBuilder(map)
+                map
         );
     }
 
