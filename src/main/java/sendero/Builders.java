@@ -71,6 +71,11 @@ public final class Builders {
                 protected void onSwapped(T prev, T next) {
                     dispatcher.onSwapped(prev, next);
                 }
+
+                @Override
+                protected T toDispatch(T toBeDispatched) {
+                    return dispatcher.toDispatch(toBeDispatched);
+                }
             };
         }
 

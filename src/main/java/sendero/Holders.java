@@ -105,12 +105,25 @@ final class Holders {
         }
 
         protected void inferDispatch(T prev, Pair.Immutables.Int<T> t, long delay) {
-            onSwapped(prev, t.getValue());
-            if (expectOutput.test(t.getValue())) {
-                if (delay >= HOT) dispatch(delay, t);
-                else coldDispatch(t);
+            T next = t.getValue();
+            onSwapped(prev, next);
+            if (expectOutput.test(next)) {
+                T mapped = toDispatch(next);
+                if (mapped == next) {
+                    delayDispatch(t, delay);
+//                    if (delay >= HOT) dispatch(delay, t);
+//                    else coldDispatch(t);
+                } else {
+                    Pair.Immutables.Int<T> toDispatch = new Pair.Immutables.Int<>(t.getInt(), mapped);
+                    delayDispatch(toDispatch, delay);
+                }
             }
             if (delay < COLD) throw new IllegalStateException("Illegal delay value");
+        }
+
+        private void delayDispatch(Pair.Immutables.Int<T> toDispatch, long delay) {
+            if (delay >= HOT) dispatch(delay, toDispatch);
+            else coldDispatch(toDispatch);
         }
 
         protected boolean outPutTest(T value) {
@@ -318,6 +331,11 @@ final class Holders {
                 @Override
                 protected void onSwapped(T prev, T next) {
                     ActivationHolder.this.onSwapped(prev, next);
+                }
+
+                @Override
+                protected T toDispatch(T toBeDispatched) {
+                    return ActivationHolder.this.toDispatch(toBeDispatched);
                 }
             };
         }
