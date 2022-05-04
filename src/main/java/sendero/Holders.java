@@ -108,15 +108,7 @@ final class Holders {
             T next = t.getValue();
             onSwapped(prev, next);
             if (expectOutput.test(next)) {
-                T mapped = toDispatch(next);
-                if (mapped == next) {
-                    delayDispatch(t, delay);
-//                    if (delay >= HOT) dispatch(delay, t);
-//                    else coldDispatch(t);
-                } else {
-                    Pair.Immutables.Int<T> toDispatch = new Pair.Immutables.Int<>(t.getInt(), mapped);
-                    delayDispatch(toDispatch, delay);
-                }
+                delayDispatch(t, delay);
             }
             if (delay < COLD) throw new IllegalStateException("Illegal delay value");
         }
@@ -331,11 +323,6 @@ final class Holders {
                 @Override
                 protected void onSwapped(T prev, T next) {
                     ActivationHolder.this.onSwapped(prev, next);
-                }
-
-                @Override
-                protected T toDispatch(T toBeDispatched) {
-                    return ActivationHolder.this.toDispatch(toBeDispatched);
                 }
             };
         }

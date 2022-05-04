@@ -146,13 +146,12 @@ public class Link<T> extends Path<T> implements BaseLink {
         }
 
         public <S> Bound(
-                T initialValue,
+                UnaryOperator<Builders.HolderBuilder<T>> operator,
                 BasePath<S> fixedPath,
-                BiFunction<T, S, T> update,
-                Predicate<T> expectOut
+                BiFunction<T, S, T> update
         ) {
             super(
-                    Builders.getHolderBuild(sBuilder -> sBuilder.withInitial(initialValue).expectOut(expectOut)),
+                    Builders.getHolderBuild(operator),
                     fixedPath,
                     update
             );
@@ -182,8 +181,11 @@ public class Link<T> extends Path<T> implements BaseLink {
         }
 
         public static class In<T> extends Bound<T> implements Updater<T> {
-            public<S> In(T initialValue, BasePath<S> fixedPath, BiFunction<T, S, T> update, Predicate<T> expectOut) {
-                super(initialValue, fixedPath, update, expectOut);
+            public<S> In(
+                    UnaryOperator<Builders.HolderBuilder<T>> operator,
+                    BasePath<S> fixedPath, BiFunction<T, S, T> update
+            ) {
+                super(operator, fixedPath, update);
             }
 
             @Override

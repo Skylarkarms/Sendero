@@ -12,8 +12,8 @@ abstract class Dispatcher<T> {
 
     protected void onSwapped(T prev, T next) {}
 
-    /**Method called before dispatching to Consumers*/
-    protected T toDispatch(T toBeDispatched) {
-        return toBeDispatched;
-    }
+//    /**Method called before dispatching to Consumers*/
+//    protected T toDispatch(T toBeDispatched) {
+//        return toBeDispatched;
+//    }
 }

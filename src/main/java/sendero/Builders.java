@@ -36,7 +36,6 @@ public final class Builders {
 
         public HolderBuilder<T> expectIn(Predicate<T> expectInput) {
             this.expectInput = (next, prev) -> expectInput.test(next);
-//            this.expectInput = expectInput;
             return this;
         }
 
@@ -70,11 +69,6 @@ public final class Builders {
                 @Override
                 protected void onSwapped(T prev, T next) {
                     dispatcher.onSwapped(prev, next);
-                }
-
-                @Override
-                protected T toDispatch(T toBeDispatched) {
-                    return dispatcher.toDispatch(toBeDispatched);
                 }
             };
         }
