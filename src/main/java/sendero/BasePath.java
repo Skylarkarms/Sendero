@@ -79,12 +79,6 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         super(operator, selfMap);
     }
 
-    BasePath(
-            Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
-    ) {
-        super(UnaryOperator.identity(), selfMap);
-    }
-
     BasePath(Builders.HolderBuilder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, Builders.ManagerBuilder> actMgmtBuilder) {
         super(holderBuilder, actMgmtBuilder);
     }

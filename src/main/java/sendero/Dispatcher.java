@@ -11,9 +11,4 @@ abstract class Dispatcher<T> {
     void dispatch(long delay,Pair.Immutables.Int<T> t) {}
 
     protected void onSwapped(T prev, T next) {}
-
-//    /**Method called before dispatching to Consumers*/
-//    protected T toDispatch(T toBeDispatched) {
-//        return toBeDispatched;
-//    }
 }

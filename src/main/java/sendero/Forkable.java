@@ -22,7 +22,9 @@ interface Forkable<T> {
     /**For when additional rules are required, including an INITIAL value for S*/
     <S> Forkable<S> forkUpdate(UnaryOperator<Builders.HolderBuilder<S>> operator, BiFunction<S, T, S> update);
     <S> Forkable<S> forkFun(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit);
+    <S> Forkable<S> forkFun(UnaryOperator<Builders.HolderBuilder<S>> operator, Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit);
     <S> Forkable<S> forkSwitch(Function<T, BasePath<S>> switchMap);
     <S> Forkable<S> forkSwitch(UnaryOperator<Builders.HolderBuilder<S>> operator, Function<T, BasePath<S>> switchMap);
     <S> Forkable<S> forkSwitchFun(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate);
+    <S> Forkable<S> forkSwitchFun(UnaryOperator<Builders.HolderBuilder<S>> operator, Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate);
 }

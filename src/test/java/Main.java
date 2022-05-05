@@ -122,7 +122,10 @@ public class Main {
             return true;
         };
         System.err.println("Expect out is: " + expectOut);
-        Merge<String[]> helloWorld = new Merge<>(og, expectOut);
+        Merge<String[]> helloWorld = new Merge<>(
+                holderBuilder -> holderBuilder.withInitial(og).expectOut(expectOut)
+//                og, expectOut
+        );
         System.err.println("Hello is: " + hello);
         System.err.println("World is: " + world);
         System.err.println("HelloWorld is: " + helloWorld);

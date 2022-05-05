@@ -4,6 +4,8 @@ import sendero.functions.Consumers;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 
 class ComplexHelloWorld {
         private final Map<Integer, String> cache = new HashMap<>(5);
@@ -40,13 +42,26 @@ class ComplexHelloWorld {
                 cache::get
         );
 
-        private final Merge<String[]> res = new Merge<>(new String[2], strings -> {
-            for (String s:strings
-            ) {
-                if (s == null) return false;
-            }
-            return true;
-        });
+        private final Merge<String[]> res = new Merge<>(
+                builder -> builder.expectOut(
+                                strings -> {
+                                    for (String s:strings
+                                    ) {
+                                        if (s == null) return false;
+                                    }
+                                    return true;                                    }
+                        )
+                        .withInitial(
+                                new String[2]
+                        )
+//                new String[2], strings -> {
+//            for (String s:strings
+//            ) {
+//                if (s == null) return false;
+//            }
+//            return true;
+//        }
+        );
         private final Gate.Out.Single<String[]> finalRes = res.out(Gate.Out.Single.class);
 
         {

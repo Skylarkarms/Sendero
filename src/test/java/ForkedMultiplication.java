@@ -1,7 +1,9 @@
+import sendero.Builders;
 import sendero.Gate;
 import sendero.Merge;
 import sendero.Path;
 
+import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 public class ForkedMultiplication {
@@ -22,19 +24,38 @@ public class ForkedMultiplication {
                     return secondForkResult;
                 }
         );
-        Merge<int[]> finalResult = new Merge<>(new int[3], ints -> {
-            System.err.println("Expect out size is: " + ints.length);
-            for (int i:ints
-                 ) {
-                System.err.println("integers are: " + i);
-                if (i == 0) {
-                    System.err.println("HAS A ZERO!!!>>>");
-                    return false;
-                }
-            }
-            System.err.println("should pass???: " + true);
-            return true;
-        }).from(
+        Merge<int[]> finalResult = new Merge<>(
+                (UnaryOperator<Builders.HolderBuilder<int[]>>) builder -> builder.expectOut(
+                        ints -> {
+                            System.err.println("Expect out size is: " + ints.length);
+                            for (int i:ints
+                            ) {
+                                System.err.println("integers are: " + i);
+                                if (i == 0) {
+                                    System.err.println("HAS A ZERO!!!>>>");
+                                    return false;
+                                }
+                            }
+                            System.err.println("should pass???: " + true);
+                            return true;
+                        }
+                ).withInitial(
+                        new int[3]
+                )
+//                new int[3], ints -> {
+//            System.err.println("Expect out size is: " + ints.length);
+//            for (int i:ints
+//                 ) {
+//                System.err.println("integers are: " + i);
+//                if (i == 0) {
+//                    System.err.println("HAS A ZERO!!!>>>");
+//                    return false;
+//                }
+//            }
+//            System.err.println("should pass???: " + true);
+//            return true;
+//        }
+        ).from(
                 firstFork,
                 integerUpdater -> integer -> {
                     System.err.println("<<<<From first fork is: " + integer + ", to updater: " + integerUpdater);

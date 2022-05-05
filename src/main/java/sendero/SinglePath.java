@@ -39,12 +39,6 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
         super(operator, selfMap);
     }
 
-    SinglePath(
-            Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
-    ) {
-        super(selfMap);
-    }
-
     protected <S> SinglePath(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
         super(holderBuilder, basePath, map);
     }
@@ -85,7 +79,16 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
 
     @Override
     public <S> SinglePath<S> forkFun(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
+        return forkFun(
+                UnaryOperator.identity(),
+                exit
+        );
+    }
+
+    @Override
+    public <S> SinglePath<S> forkFun(UnaryOperator<Builders.HolderBuilder<S>> operator, Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
         return new SinglePath<>(
+                operator,
                 mutateFunctionBuilder(exit)
         );
     }
@@ -108,7 +111,16 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
 
     @Override
     public <S> SinglePath<S> forkSwitchFun(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
+        return forkSwitchFun(
+                UnaryOperator.identity(),
+                mutate
+        );
+    }
+
+    @Override
+    public <S> SinglePath<S> forkSwitchFun(UnaryOperator<Builders.HolderBuilder<S>> operator, Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
         return new SinglePath<>(
+                operator,
                 switchMutateFunctionBuilder(mutate)
         );
     }

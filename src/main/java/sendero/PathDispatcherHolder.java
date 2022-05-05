@@ -35,13 +35,6 @@ public abstract class PathDispatcherHolder<T> extends BasePath<T> {
         pathDispatcher = pathDispatcherBuild();
     }
 
-    PathDispatcherHolder(
-            Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
-    ) {
-        super(selfMap);
-        pathDispatcher = pathDispatcherBuild();
-    }
-
     protected <S> PathDispatcherHolder(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
         super(holderBuilder, basePath, map);
         pathDispatcher = pathDispatcherBuild();
