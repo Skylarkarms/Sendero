@@ -4,24 +4,35 @@ import sendero.functions.Consumers;
 import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.interfaces.Updater;
 
-import java.util.function.*;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.UnaryOperator;
+
+import static sendero.functions.Functions.myIdentity;
 
 public class SingleLink<T> extends SinglePath<T> implements BaseLink{
 
     private SingleLink() {
-        super(true);
+        this(myIdentity(), true);
     }
 
-    public SingleLink(Builders.HolderBuilder<T> holderBuilder, boolean mutableManager) {
-        super(holderBuilder, Builders.getManagerBuild().withMutable(mutableManager));
+    public SingleLink(UnaryOperator<Builders.HolderBuilder<T>> builderOperator, boolean mutableManager) {
+        super(builderOperator,
+                (UnaryOperator<Builders.ManagerBuilder>)  builder -> builder.withMutable(mutableManager)
+        );
     }
 
-    private <S> SingleLink(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
-        super(holderBuilder, basePath, map);
+    private <S> SingleLink(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            BasePath<S> basePath, Function<S, T> map) {
+        super(builderOperator, basePath, map);
     }
 
-    private <S> SingleLink(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> update) {
-        super(holderBuilder, basePath, update);
+    private <S> SingleLink(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            BasePath<S> basePath, BiFunction<T, S, T> update) {
+        super(builderOperator, basePath, update);
     }
 
     @Override
@@ -57,16 +68,12 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
 
         final BaseUnbound<T> baseUnbound = new BaseUnbound<>(this);
 
-        public static<T> Unbound<T> build(UnaryOperator<Unbound<T>> operator) {
-            return operator.apply(new Unbound<>());
-        }
-
         public Unbound() {
             super();
         }
 
         public Unbound(UnaryOperator<Builders.HolderBuilder<T>> operator) {
-            super(Builders.getHolderBuild(operator), true);
+            super(operator, true);
         }
 
         @Override
@@ -94,6 +101,7 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             private final BaseUnboundSwitch<T> baseUnboundSwitch = new BaseUnboundSwitch<>(baseUnbound.activePathListener);
 
             public Switch() {
+                super();
             }
 
             public Switch(UnaryOperator<Builders.HolderBuilder<T>> operator) {
@@ -118,6 +126,7 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
 
         public static class In<T> extends Unbound<T> implements Updater<T> {
             public In() {
+                super();
             }
 
             public In(UnaryOperator<Builders.HolderBuilder<T>> operator) {
@@ -154,19 +163,19 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
                 BiFunction<T, S, T> update
         ) {
             this(
-                    UnaryOperator.identity(),
+                    myIdentity(),
                     fixedPath,
                     update
             );
         }
 
         public <S> Bound(
-                UnaryOperator<Builders.HolderBuilder<T>> operator,
+                UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
                 BasePath<S> fixedPath,
                 BiFunction<T, S, T> update
         ) {
             super(
-                    Builders.getHolderBuild(operator),
+                    builderOperator,
                     fixedPath,
                     update
             );
@@ -177,19 +186,19 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
                 Function<S, T> map
         ) {
             this(
-                    UnaryOperator.identity(),
+                    myIdentity(),
                     fixedPath,
                     map
             );
         }
 
         public <S> Bound(
-                UnaryOperator<Builders.HolderBuilder<T>> operator,
+                UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
                 BasePath<S> fixedPath,
                 Function<S, T> map
         ) {
             super(
-                    Builders.getHolderBuild(operator),
+                    builderOperator,
                     fixedPath,
                     map
             );
@@ -201,7 +210,11 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
                     BasePath<S> fixedPath,
                     BiFunction<T, S, T> update
             ) {
-                this(UnaryOperator.identity(), fixedPath, update);
+                this(
+                        myIdentity(),
+                        fixedPath,
+                        update
+                );
             }
 
             public  <S> In(
@@ -213,7 +226,7 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             }
 
             public <S> In(BasePath<S> fixedPath, Function<S, T> map) {
-                super(fixedPath, map);
+                this(myIdentity(), fixedPath, map);
             }
 
             public <S> In(UnaryOperator<Builders.HolderBuilder<T>> operator, BasePath<S> fixedPath, Function<S, T> map) {

@@ -7,8 +7,9 @@ import sendero.pairs.Pair;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
+
+import static sendero.functions.Functions.myIdentity;
 
 public class Merge<T> extends Path<T> implements BaseMerge<T> {
 
@@ -18,13 +19,11 @@ public class Merge<T> extends Path<T> implements BaseMerge<T> {
     );
 
     public Merge() {
-        this(UnaryOperator.identity());
+        this(myIdentity());
     }
 
     public Merge(UnaryOperator<Builders.HolderBuilder<T>> operator) {
-        super(
-                Builders.getHolderBuild(operator)
-        );
+        super(operator);
     }
 
     @Override

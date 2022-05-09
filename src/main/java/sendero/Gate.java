@@ -12,6 +12,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
+import static sendero.functions.Functions.myIdentity;
+
 public final class Gate {
     public static class IO<T> extends Outs.OutBasePath.Many<T> implements Holders.StatefulHolder<T> {
 
@@ -20,7 +22,7 @@ public final class Gate {
         }
 
         public IO(T value) {
-            super(Builders.getHolderBuild(holderBuilder -> holderBuilder.withInitial(value)));
+            super(holderBuilder -> holderBuilder.withInitial(value));
         }
 
         @Override
@@ -70,7 +72,7 @@ public final class Gate {
     public static class In<T> extends Path<T> implements Holders.StatefulHolder<T> {
 
         public In(UnaryOperator<Builders.HolderBuilder<T>> operator) {
-            super(Builders.getHolderBuild(operator));
+            super(operator);
         }
 
         public In() {
@@ -78,7 +80,7 @@ public final class Gate {
         }
 
         public In(T value) {
-            super(Builders.getHolderBuild(tHolderBuilder -> tHolderBuilder.withInitial(value)));
+            super(tHolderBuilder -> tHolderBuilder.withInitial(value));
         }
 
         @Override
@@ -139,8 +141,8 @@ public final class Gate {
             public OutBasePath() {
             }
 
-            OutBasePath(Builders.HolderBuilder<T> holderBuilder) {
-                super(holderBuilder);
+            OutBasePath(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+                super(builderOperator);
             }
 
             protected static class Many<T> extends OutBasePath<T> implements Out.Many<T> {
@@ -152,8 +154,8 @@ public final class Gate {
                     super();
                 }
 
-                Many(Builders.HolderBuilder<T> holderBuilder) {
-                    super(holderBuilder);
+                Many(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+                    super(builderOperator);
                 }
 
                 private Runnable dispatchCommandFun(Pair.Immutables.Int<T> pair)/* = pair -> (Runnable) () ->*/ {
@@ -304,7 +306,12 @@ public final class Gate {
 //                    Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap
             ) {
 //            protected ManyImpl(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
-                super(UnaryOperator.identity(), selfMap);
+                super(
+                        myIdentity(),
+                        builder -> builder.withFixedFun(selfMap)
+//                        Builders.getManagerBuild().withFixedFun(selfMap)
+//                        selfMap
+                );
             }
 
             @Override
@@ -375,7 +382,11 @@ public final class Gate {
                     Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
 //                    Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap
             ) {
-                super(UnaryOperator.identity(), selfMap);
+                super(
+                        myIdentity(),
+                        builder -> builder.withFixedFun(selfMap)
+//                        Builders.getManagerBuild().withFixedFun(selfMap)
+                );
             }
 
             @Override

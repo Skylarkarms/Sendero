@@ -12,24 +12,32 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
+import static sendero.functions.Functions.IDENTITY;
+import static sendero.functions.Functions.myIdentity;
+
 public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements Forkable<T> {
 
     final Appointers.HolderAppointer<T> holderAppointer = new Appointers.HolderAppointer<>(holder);
 
-    <S> BasePath(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
-        super(holderBuilder,
-                dispatcher -> Builders.getManagerBuild().withFixed(
-                        BinaryEventConsumers.producerHolderConnector(basePath, dispatcher::acceptVersionValue, map)
+    <S> BasePath(UnaryOperator<Builders.HolderBuilder<T>> builderOperator, BasePath<S> basePath, Function<S, T> map) {
+        super(builderOperator,
+                builder -> builder.withFixedFun(
+                        (Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer>) coldHolder ->
+                                BinaryEventConsumers.producerHolderConnector(basePath, coldHolder::acceptVersionValue, map)
 
                 ));
     }
 
-    <S> BasePath(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
-        super(holderBuilder,
-                dispatcher -> Builders.getManagerBuild().withFixed(
-                        BinaryEventConsumers.producerHolderConnector(basePath, dispatcher, updateFun)
+    <S> BasePath(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
+        super(builderOperator,
+                builder -> builder.withFixedFun(
+                        (Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer>) coldHolder ->
+                                BinaryEventConsumers.producerHolderConnector(basePath, coldHolder, updateFun)
 
-                ));
+                )
+        );
     }
 
 
@@ -73,22 +81,14 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
     }
 
     BasePath(
-            UnaryOperator<Builders.HolderBuilder<T>> operator,
-            Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            UnaryOperator<Builders.ManagerBuilder> mngrBuilderOperator
     ) {
-        super(operator, selfMap);
+        super(builderOperator, mngrBuilderOperator);
     }
 
-    BasePath(Builders.HolderBuilder<T> holderBuilder, Function<Holders.DispatcherHolder<T>, Builders.ManagerBuilder> actMgmtBuilder) {
-        super(holderBuilder, actMgmtBuilder);
-    }
-
-    BasePath(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
-        super(holderBuilder, actMgmtBuilder);
-    }
-
-    BasePath(Builders.HolderBuilder<T> holderBuilder) {
-        super(holderBuilder);
+    BasePath(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+        super(builderOperator);
     }
 
     protected abstract void appoint(Consumer<Pair.Immutables.Int<T>> subscriber);
@@ -112,16 +112,15 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         };
     }
 
-    Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> injectiveFunctionBuilder() {
-        return mainForkingFunctionBuilder(
-                tColdHolder -> tColdHolder::acceptVersionValue
-        );
-    }
-
     <S> Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> mapFunctionBuilder(Function<T, S> map) {
+        @SuppressWarnings("unchecked")
+        final Function<Holders.ColdHolder<S>, Consumer<Pair.Immutables.Int<T>>> finalFunction = map == IDENTITY ?
+                holder ->
+                        tInt -> holder.acceptVersionValue((Pair.Immutables.Int<S>) tInt) :
+                tColdHolder ->
+                        tInt -> tColdHolder.acceptVersionValue(new Pair.Immutables.Int<>(tInt.getInt(), map.apply(tInt.getValue())));
         return mainForkingFunctionBuilder(
-                intConsumer ->
-                        tInt -> intConsumer.acceptVersionValue(new Pair.Immutables.Int<>(tInt.getInt(), map.apply(tInt.getValue())))
+                finalFunction
         );
     }
 
@@ -238,7 +237,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
             executorHolder.onAdd(
                     subscriber,
                     consumer -> onAddRegister((Consumer<Pair.Immutables.Int<T>>) consumer),
-                    UnaryOperator.identity()
+                    myIdentity()
             );
         }
 

@@ -6,6 +6,7 @@ import sendero.pairs.Pair;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
@@ -13,11 +14,11 @@ public final class Builders {
     static <T>HolderBuilder<T> getHolderBuild() {
         return new HolderBuilder<>();
     }
-    public static <T>HolderBuilder<T> getHolderBuild(UnaryOperator<Builders.HolderBuilder<T>> op) {
+    static <T>HolderBuilder<T> getHolderBuild(UnaryOperator<Builders.HolderBuilder<T>> op) {
         return op.apply(getHolderBuild());
     }
 
-    public static ManagerBuilder getManagerBuild() {
+    static ManagerBuilder getManagerBuild() {
         return new ManagerBuilder();
     }
     public static class HolderBuilder<T> {
@@ -72,16 +73,24 @@ public final class Builders {
                 }
             };
         }
-
     }
 
     public static class ManagerBuilder {
         private AtomicBinaryEventConsumer activationListener;
+        private Function<Holders.ColdHolder<?>, AtomicBinaryEventConsumer> activationListenerFun;
         private boolean mutableActivationListener;
 
-        public ManagerBuilder withFixed(AtomicBinaryEventConsumer activationListener) {
+//        public ManagerBuilder withFixed(AtomicBinaryEventConsumer activationListener) {
+//            if (mutableActivationListener) throwException();
+//            this.activationListener = activationListener;
+//            this.mutableActivationListener = false;
+//            return this;
+//        }
+
+        @SuppressWarnings("unchecked")
+        public<S> ManagerBuilder withFixedFun(Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> activationListenerFun) {
             if (mutableActivationListener) throwException();
-            this.activationListener = activationListener;
+            this.activationListenerFun = coldHolder -> activationListenerFun.apply((Holders.ColdHolder<S>) coldHolder);
             this.mutableActivationListener = false;
             return this;
         }
@@ -103,6 +112,15 @@ public final class Builders {
                     return deactivation.getAsBoolean();
                 }
             };
+        }
+
+        protected ActivationManager build(Holders.ColdHolder<?> coldHolder, BooleanSupplier deactivation) {
+            return activationListenerFun != null ? new ActivationManager(activationListenerFun.apply(coldHolder), mutableActivationListener) {
+                @Override
+                protected boolean deactivationRequirements() {
+                    return deactivation.getAsBoolean();
+                }
+            } : build(deactivation);
         }
     }
 

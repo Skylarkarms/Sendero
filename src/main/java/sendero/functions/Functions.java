@@ -4,9 +4,18 @@ import sendero.interfaces.BinaryPredicate;
 
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 
 public final class Functions {
     private static final String CLEARED_STRING = ": [EMPTY FUNCTION]";
+
+    public static final UnaryOperator<?> IDENTITY = UnaryOperator.identity();
+
+    @SuppressWarnings("unchecked")
+    public static<T> UnaryOperator<T> myIdentity() {
+        return (UnaryOperator<T>) IDENTITY;
+    }
+
     private static final Consumer<?> emptyConsumer = new Consumer<Object>() {
         @Override
         public void accept(Object o) {

@@ -40,11 +40,6 @@ abstract class ActivationManager {
         thrower = withActivationListener ? Functions.emptyRunnable() : createThrower();
     }
 
-    protected ActivationManager(AtomicBinaryEventConsumer fixedActivationListener) {
-        switchRegister = BinaryEventRegisters.getAtomicWith(fixedActivationListener);
-        thrower = createThrower();
-    }
-
     abstract boolean deactivationRequirements();
 
     boolean tryActivate() {

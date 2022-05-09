@@ -4,20 +4,29 @@ import sendero.functions.Consumers;
 import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.interfaces.Updater;
 
-import java.util.function.*;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public class Link<T> extends Path<T> implements BaseLink {
 
-    private <S> Link(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
-        super(holderBuilder, basePath, map);
+    private <S> Link(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            BasePath<S> basePath, Function<S, T> map) {
+        super(builderOperator, basePath, map);
     }
 
-    private Link(Builders.HolderBuilder<T> holderBuilder) {
-        super(holderBuilder, Builders.getManagerBuild().withMutable(true));
+    private Link(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+        super(builderOperator,
+                (UnaryOperator<Builders.ManagerBuilder>) builder -> builder.withMutable(true)
+        );
     }
 
-    private <S> Link(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
-        super(holderBuilder, basePath, updateFun);
+    private <S> Link(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
+        super(builderOperator, basePath, updateFun);
     }
 
     private Link() {
@@ -61,8 +70,8 @@ public class Link<T> extends Path<T> implements BaseLink {
             super();
         }
 
-        public Unbound(UnaryOperator<Builders.HolderBuilder<T>> operator) {
-            super(Builders.getHolderBuild(operator));
+        public Unbound(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+            super(builderOperator);
         }
 
         @Override
@@ -90,6 +99,7 @@ public class Link<T> extends Path<T> implements BaseLink {
             private final BaseUnboundSwitch<T> baseSwitch = new BaseUnboundSwitch<>(baseUnbound.activePathListener);
 
             public Switch() {
+                super();
             }
 
             public Switch(UnaryOperator<Builders.HolderBuilder<T>> operator) {
@@ -114,6 +124,7 @@ public class Link<T> extends Path<T> implements BaseLink {
 
         public static class In<T> extends Unbound<T> implements Updater<T> {
             public In() {
+                super();
             }
 
             public In(UnaryOperator<Builders.HolderBuilder<T>> operator) {
@@ -157,24 +168,24 @@ public class Link<T> extends Path<T> implements BaseLink {
         }
 
         public <S> Bound(
-                UnaryOperator<Builders.HolderBuilder<T>> operator,
+                UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
                 BasePath<S> fixedPath,
                 BiFunction<T, S, T> update
         ) {
             super(
-                    Builders.getHolderBuild(operator),
+                    builderOperator,
                     fixedPath,
                     update
             );
         }
 
         public<S> Bound(
-                UnaryOperator<Builders.HolderBuilder<T>> dispatcherBuilder,
+                UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
                 BasePath<S> fixedPath,
                 Function<S, T> map
         ) {
             super(
-                    Builders.getHolderBuild(dispatcherBuilder),
+                    builderOperator,
                     fixedPath,
                     map
             );

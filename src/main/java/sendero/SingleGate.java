@@ -11,19 +11,21 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
+import static sendero.functions.Functions.myIdentity;
+
 public final class SingleGate {
     public static class IO<T> extends Outs.OutBaseSinglePath.Single<T> implements Holders.StatefulHolder<T> {
 
         public IO() {
-            super();
+            this(myIdentity());
         }
 
         public IO(T value) {
-            super(Builders.getHolderBuild(holderBuilder -> holderBuilder.withInitial(value)));
+            super(holderBuilder -> holderBuilder.withInitial(value));
         }
 
         public IO(UnaryOperator<Builders.HolderBuilder<T>> operator) {
-            super(Builders.getHolderBuild(operator));
+            super(operator);
         }
 
         @Override
@@ -73,15 +75,15 @@ public final class SingleGate {
     public static class In<T> extends SinglePath<T> implements Holders.StatefulHolder<T> {
 
         public In() {
-            super();
+            this(myIdentity());
         }
 
         public In(T value) {
-            super(Builders.getHolderBuild(tHolderBuilder -> tHolderBuilder.withInitial(value)));
+            super(tHolderBuilder -> tHolderBuilder.withInitial(value));
         }
 
         public In(UnaryOperator<Builders.HolderBuilder<T>> operator) {
-            super(Builders.getHolderBuild(operator));
+            super(operator);
         }
 
         @Override
@@ -139,12 +141,11 @@ public final class SingleGate {
     static final class Outs {
 
         static class OutBaseSinglePath<T> extends SinglePath<T> {
-//        static class OutBasePath<T> extends Path<T> {
             public OutBaseSinglePath() {
             }
 
-            OutBaseSinglePath(Builders.HolderBuilder<T> holderBuilder) {
-                super(holderBuilder);
+            OutBaseSinglePath(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+                super(builderOperator);
             }
 
             protected static class Many<T> extends OutBaseSinglePath<T> implements Out.Many<T> {
@@ -156,11 +157,11 @@ public final class SingleGate {
                     super();
                 }
 
-                Many(Builders.HolderBuilder<T> holderBuilder) {
-                    super(holderBuilder);
+                Many(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+                    super(builderOperator);
                 }
 
-                private Runnable dispatchCommandFun(Pair.Immutables.Int<T> pair)/* = pair -> (Runnable) () ->*/ {
+                private Runnable dispatchCommandFun(Pair.Immutables.Int<T> pair) {
                     return () -> {
                         boolean emptyLocale = locale.isEmpty();
                         if (emptyLocale) pathDispatch(false, pair);
@@ -235,8 +236,9 @@ public final class SingleGate {
                 public Single() {
                 }
 
-                Single(Builders.HolderBuilder<T> holderBuilder) {
-                    super(holderBuilder);
+                Single(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+//                Single(Builders.HolderBuilder<T> holderBuilder) {
+                    super(builderOperator);
                 }
 
                 private Runnable dispatchCommandFunction(Pair.Immutables.Int<T> t) {

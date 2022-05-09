@@ -15,6 +15,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
+import static sendero.functions.Functions.IDENTITY;
+
 final class Holders {
 
     interface HolderIO<T> extends Updater<T>, Consumer<T>, Supplier<T> {
@@ -180,7 +182,6 @@ final class Holders {
                     }
                     mapped = map.apply(updated);
                     return expectInput.test(mapped, nulledInvalid) ? mapped : INVALID;
-//                    return expectInput.test(mapped) ? mapped : INVALID;
                 } catch (Exception e) {
                     e.printStackTrace();
                     throw new RuntimeException(e);
@@ -242,7 +243,6 @@ final class Holders {
         @Override
         public void accept(T t) {
             CASAccept(t);
-//            CASAccept(process(t));
         }
 
         @Override
@@ -308,7 +308,8 @@ final class Holders {
             return manager.activationListenerIsSet();
         }
 
-        private DispatcherHolder<T> buildHolder() {
+
+        private DispatcherHolder<T> buildIdentityHolder() {
             return new DispatcherHolder<T>() {
                 @Override
                 void dispatch(long delay, Pair.Immutables.Int<T> t) {
@@ -327,6 +328,14 @@ final class Holders {
             };
         }
 
+        private DispatcherHolder<T> buildHolder(UnaryOperator<Builders.HolderBuilder<T>> operator) {
+            return operator == IDENTITY ? buildIdentityHolder() : Builders.getHolderBuild(operator).build(this);
+        }
+
+        private ActivationManager buildManager(UnaryOperator<Builders.ManagerBuilder> operator) {
+            return operator == IDENTITY ? buildManager() : operator.apply(Builders.getManagerBuild()).build(holder, this::deactivationRequirements);
+        }
+
         private ActivationManager buildManager() {
             return new ActivationManager(){
                 @Override
@@ -337,37 +346,25 @@ final class Holders {
         }
 
         ActivationHolder() {
-            holder = buildHolder();
+            holder = buildIdentityHolder();
             manager = buildManager();
         }
 
-        ActivationHolder(UnaryOperator<Builders.HolderBuilder<T>> operator, Function<ColdHolder<T>, AtomicBinaryEventConsumer> selfMap) {
-            holder = Builders.getHolderBuild(operator).build(this);
-            manager = new ActivationManager(selfMap.apply(holder)){
-                @Override
-                protected boolean deactivationRequirements() {
-                    return ActivationHolder.this.deactivationRequirements();
-                }
-            };
+        ActivationHolder(
+                UnaryOperator<Builders.HolderBuilder<T>> holderBuilder,
+                UnaryOperator<Builders.ManagerBuilder> mngrBuilderOperator
+        ) {
+            this.holder = buildHolder(holderBuilder);
+            this.manager = buildManager(mngrBuilderOperator);
         }
 
-        ActivationHolder(Builders.HolderBuilder<T> holderBuilder, Function<DispatcherHolder<T>, Builders.ManagerBuilder> actMgmtBuilder) {
-            this.holder = holderBuilder.build(this);
-            this.manager = actMgmtBuilder.apply(holder).build(this::deactivationRequirements);
-        }
-
-        ActivationHolder(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
-            this.holder = holderBuilder.build(this);
-            this.manager = actMgmtBuilder.build(this::deactivationRequirements);
-        }
-
-        ActivationHolder(Builders.HolderBuilder<T> holderBuilder) {
-            this.holder = holderBuilder.build(this);
+        ActivationHolder(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+            this.holder = buildHolder(builderOperator);
             this.manager = buildManager();
         }
 
         ActivationHolder(boolean activationListener) {
-            holder = buildHolder();
+            holder = buildIdentityHolder();
             manager = new ActivationManager(activationListener){
                 @Override
                 protected boolean deactivationRequirements() {
@@ -467,26 +464,15 @@ final class Holders {
         ExecutorHolder() {
         }
 
-        public ExecutorHolder(UnaryOperator<Builders.HolderBuilder<T>> operator,
-                              Function<ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
-        ) {
-            super(operator, selfMap);
-        }
-
         ExecutorHolder(
-                Builders.HolderBuilder<T> holderBuilder,
-                Function<DispatcherHolder<T>,
-                        Builders.ManagerBuilder> actMgmtBuilder
+                UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+                UnaryOperator<Builders.ManagerBuilder> mngrBuilderOperator
         ) {
-            super(holderBuilder, actMgmtBuilder);
+            super(builderOperator, mngrBuilderOperator);
         }
 
-        ExecutorHolder(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
-            super(holderBuilder, actMgmtBuilder);
-        }
-
-        ExecutorHolder(Builders.HolderBuilder<T> holderBuilder) {
-            super(holderBuilder);
+        ExecutorHolder(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+            super(builderOperator);
         }
 
         @Override

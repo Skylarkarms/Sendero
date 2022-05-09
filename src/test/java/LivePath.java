@@ -16,13 +16,12 @@ public class LivePath extends Path<Map<String, ?>> {
 
         public LivePath() {
             super(
-                    Builders.getHolderBuild(
-                            mapHolderBuilder -> mapHolderBuilder.expectIn(((BinaryPredicate<Map<String, ?>>)
-                                    Map::equals).negate()
-                            )
+                    mapHolderBuilder -> mapHolderBuilder.expectIn(((BinaryPredicate<Map<String, ?>>)
+                            Map::equals).negate()
                     )
                     ,
-                    Builders.getManagerBuild().withMutable(true)
+                    builder -> builder.withMutable(true)
+//                    Builders.getManagerBuild().withMutable(true)
             );
         }
 

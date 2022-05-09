@@ -1,6 +1,5 @@
 package sendero;
 
-import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.pairs.Pair;
 
 import java.util.function.BiFunction;
@@ -27,31 +26,30 @@ public abstract class PathDispatcherHolder<T> extends BasePath<T> {
         pathDispatcher = pathDispatcherBuild();
     }
 
-    PathDispatcherHolder(
-            UnaryOperator<Builders.HolderBuilder<T>> operator,
-            Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
+    protected <S> PathDispatcherHolder(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            BasePath<S> basePath, Function<S, T> map) {
+        super(builderOperator, basePath, map);
+        pathDispatcher = pathDispatcherBuild();
+    }
+
+    protected <S> PathDispatcherHolder(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
+        super(builderOperator, basePath, updateFun);
+        pathDispatcher = pathDispatcherBuild();
+    }
+
+    protected PathDispatcherHolder(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            UnaryOperator<Builders.ManagerBuilder> mngrBuilderOperator
     ) {
-        super(operator, selfMap);
+        super(builderOperator, mngrBuilderOperator);
         pathDispatcher = pathDispatcherBuild();
     }
 
-    protected <S> PathDispatcherHolder(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, Function<S, T> map) {
-        super(holderBuilder, basePath, map);
-        pathDispatcher = pathDispatcherBuild();
-    }
-
-    protected <S> PathDispatcherHolder(Builders.HolderBuilder<T> holderBuilder, BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
-        super(holderBuilder, basePath, updateFun);
-        pathDispatcher = pathDispatcherBuild();
-    }
-
-    protected PathDispatcherHolder(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
-        super(holderBuilder, actMgmtBuilder);
-        pathDispatcher = pathDispatcherBuild();
-    }
-
-    PathDispatcherHolder(Builders.HolderBuilder<T> holderBuilder) {
-        super(holderBuilder);
+    PathDispatcherHolder(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+        super(builderOperator);
         pathDispatcher = pathDispatcherBuild();
     }
 
@@ -83,17 +81,6 @@ public abstract class PathDispatcherHolder<T> extends BasePath<T> {
     @Override
     boolean deactivationRequirements() {
         return pathDispatcher.isInactive();
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public <O extends Gate.Out<T>> O out(Class<? super O> outputType) {
-        if (outputType == Gate.Out.Single.class) {
-            return (O) new Gate.Outs.SingleImpl<>(injectiveFunctionBuilder());
-        } else if (outputType == Gate.Out.Many.class) {
-            return (O) new Gate.Outs.ManyImpl<>(injectiveFunctionBuilder());
-        }
-        throw new IllegalStateException("invalid class: " + outputType);
     }
 
     @SuppressWarnings("unchecked")
