@@ -2,6 +2,7 @@ package sendero;
 
 import sendero.functions.Consumers;
 import sendero.interfaces.AtomicBinaryEventConsumer;
+import sendero.interfaces.BinaryPredicate;
 
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -59,8 +60,21 @@ public class Path<T> extends PathDispatcherHolder<T> {
     }
 
     @Override
-    public <S> Path<S> forkUpdate(BiFunction<S, T, S> update) {
-        return (Path<S>) super.forkUpdate(update);
+    public <S> Path<S> forkMap(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, S> map) {
+        return new Path<>(
+                builderOperator,
+                mapFunctionBuilder(map)
+        );
+    }
+
+    @Override
+    public <S> Path<S> forkMap(BinaryPredicate<S> constraintIn, Function<T, S> map) {
+        return (Path<S>) super.forkMap(constraintIn, map);
+    }
+
+    @Override
+    public <S> Path<S> forkMap(Function<T, S> map) {
+        return (Path<S>) super.forkMap(map);
     }
 
     @Override
@@ -73,16 +87,13 @@ public class Path<T> extends PathDispatcherHolder<T> {
     }
 
     @Override
-    public <S> Path<S> forkMap(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, S> map) {
-        return new Path<>(
-                builderOperator,
-                mapFunctionBuilder(map)
-        );
+    public <S> Path<S> forkUpdate(BinaryPredicate<S> constraintIn, BiFunction<S, T, S> update) {
+        return (Path<S>) super.forkUpdate(constraintIn, update);
     }
 
     @Override
-    public <S> Path<S> forkMap(Function<T, S> map) {
-        return (Path<S>) super.forkMap(map);
+    public <S> Path<S> forkUpdate(BiFunction<S, T, S> update) {
+        return (Path<S>) super.forkUpdate(update);
     }
 
     @Override
@@ -107,6 +118,11 @@ public class Path<T> extends PathDispatcherHolder<T> {
     }
 
     @Override
+    public <S> Path<S> forkSwitch(BinaryPredicate<S> constraintIn, Function<T, BasePath<S>> switchMap) {
+        return (Path<S>) super.forkSwitch(constraintIn, switchMap);
+    }
+
+    @Override
     public <S> Path<S> forkSwitch(Function<T, BasePath<S>> switchMap) {
         return (Path<S>) super.forkSwitch(switchMap);
     }
@@ -117,6 +133,11 @@ public class Path<T> extends PathDispatcherHolder<T> {
                 builderOperator,
                 switchMutateFunctionBuilder(mutate)
         );
+    }
+
+    @Override
+    public <S> Path<S> forkSwitchFun(BinaryPredicate<S> constraintIn, Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
+        return (Path<S>) super.forkSwitchFun(constraintIn, mutate);
     }
 
     @Override

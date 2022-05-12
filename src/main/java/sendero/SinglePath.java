@@ -2,6 +2,7 @@ package sendero;
 
 import sendero.functions.Consumers;
 import sendero.interfaces.AtomicBinaryEventConsumer;
+import sendero.interfaces.BinaryPredicate;
 
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -30,8 +31,6 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
     }
 
     protected SinglePath(UnaryOperator<Builders.HolderBuilder<T>> builderOperator, UnaryOperator<Builders.ManagerBuilder> actMgmtBuilder) {
-//    protected SinglePath(UnaryOperator<Builders.HolderBuilder<T>> builderOperator, Builders.ManagerBuilder actMgmtBuilder) {
-//    protected SinglePath(Builders.HolderBuilder<T> holderBuilder, Builders.ManagerBuilder actMgmtBuilder) {
         super(builderOperator, actMgmtBuilder);
     }
 
@@ -42,13 +41,11 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
         super(
                 operator,
                 builder -> builder.withFixedFun(selfMap)
-//                Builders.getManagerBuild().withFixedFun(selfMap)
         );
     }
 
     protected <S> SinglePath(
             UnaryOperator<Builders.HolderBuilder<T>> holderBuilder,
-//            Builders.HolderBuilder<T> holderBuilder,
             BasePath<S> basePath, Function<S, T> map) {
         super(holderBuilder, basePath, map);
     }
@@ -68,10 +65,14 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
     }
 
     @Override
+    public <S> SinglePath<S> forkMap(BinaryPredicate<S> constraintIn, Function<T, S> map) {
+        return (SinglePath<S>) super.forkMap(constraintIn, map);
+    }
+
+    @Override
     public <S> SinglePath<S> forkMap(Function<T, S> map) {
         return (SinglePath<S>) super.forkMap(map);
     }
-
 
     @Override
     public <S> SinglePath<S> forkUpdate(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, BiFunction<S, T, S> update) {
@@ -80,6 +81,11 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
                 this,
                 update
         );
+    }
+
+    @Override
+    public <S> SinglePath<S> forkUpdate(BinaryPredicate<S> constraintIn, BiFunction<S, T, S> update) {
+        return (SinglePath<S>) super.forkUpdate(constraintIn, update);
     }
 
     @Override
@@ -109,6 +115,11 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
     }
 
     @Override
+    public <S> SinglePath<S> forkSwitch(BinaryPredicate<S> constraintIn, Function<T, BasePath<S>> switchMap) {
+        return (SinglePath<S>) super.forkSwitch(constraintIn, switchMap);
+    }
+
+    @Override
     public <S> SinglePath<S> forkSwitch(Function<T, BasePath<S>> switchMap) {
         return (SinglePath<S>) super.forkSwitch(switchMap);
     }
@@ -119,6 +130,11 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
                 builderOperator,
                 switchMutateFunctionBuilder(mutate)
         );
+    }
+
+    @Override
+    public <S> SinglePath<S> forkSwitchFun(BinaryPredicate<S> constraintIn, Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
+        return (SinglePath<S>) super.forkSwitchFun(constraintIn, mutate);
     }
 
     @Override

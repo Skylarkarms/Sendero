@@ -11,6 +11,9 @@ import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 public final class Builders {
+    static<S> UnaryOperator<HolderBuilder<S>> constraintIn(BinaryPredicate<S> constraintIn) {
+        return sHolderBuilder -> sHolderBuilder.constraintIn(constraintIn);
+    }
     static <T>HolderBuilder<T> getHolderBuild() {
         return new HolderBuilder<>();
     }
@@ -35,6 +38,16 @@ public final class Builders {
             return this;
         }
 
+        public HolderBuilder<T> constraintIn(Predicate<T> constraintInput) {
+            this.expectInput = (next, prev) -> !constraintInput.test(next);
+            return this;
+        }
+
+        public HolderBuilder<T> constraintOut(Predicate<T> constraintOutput) {
+            this.expectOut = next -> !constraintOutput.test(next);
+            return this;
+        }
+
         public HolderBuilder<T> expectIn(Predicate<T> expectInput) {
             this.expectInput = (next, prev) -> expectInput.test(next);
             return this;
@@ -42,6 +55,11 @@ public final class Builders {
 
         public HolderBuilder<T> expectIn(BinaryPredicate<T> expectInput) {
             this.expectInput = expectInput;
+            return this;
+        }
+
+        public HolderBuilder<T> constraintIn(BinaryPredicate<T> constraintInput) {
+            this.expectInput = constraintInput.negate();
             return this;
         }
 
