@@ -45,10 +45,10 @@ interface Forkable<T> {
     default <S> Forkable<S> forkUpdate(BiFunction<S, T, S> update) {
         return forkUpdate(myIdentity(), update);
     }
-    <S> Forkable<S> forkFun(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit);
-    default  <S> Forkable<S> forkFun(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
-        return forkFun(myIdentity(), exit);
-    }
+//    <S> Forkable<S> forkFun(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit);
+//    default  <S> Forkable<S> forkFun(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
+//        return forkFun(myIdentity(), exit);
+//    }
     <S> Forkable<S> forkSwitch(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, BasePath<S>> switchMap);
     default <S> Forkable<S> forkSwitch(BinaryPredicate<S> constraintIn, Function<T, BasePath<S>> switchMap) {
         return forkSwitch(
@@ -59,14 +59,14 @@ interface Forkable<T> {
     default <S> Forkable<S> forkSwitch(Function<T, BasePath<S>> switchMap) {
         return forkSwitch(myIdentity(), switchMap);
     }
-    <S> Forkable<S> forkSwitchFun(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate);
-    default <S> Forkable<S> forkSwitchFun(BinaryPredicate<S> constraintIn, Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
-        return forkSwitchFun(
-                Builders.constraintIn(constraintIn),
-                mutate
-        );
-    }
-    default <S> Forkable<S> forkSwitchFun(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
-        return forkSwitchFun(myIdentity(), mutate);
-    }
+//    <S> Forkable<S> forkSwitchFun(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate);
+//    default <S> Forkable<S> forkSwitchFun(BinaryPredicate<S> constraintIn, Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
+//        return forkSwitchFun(
+//                Builders.constraintIn(constraintIn),
+//                mutate
+//        );
+//    }
+//    default <S> Forkable<S> forkSwitchFun(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
+//        return forkSwitchFun(myIdentity(), mutate);
+//    }
 }

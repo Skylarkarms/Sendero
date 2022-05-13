@@ -93,18 +93,18 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
         return (SinglePath<S>) super.forkUpdate(update);
     }
 
-    @Override
-    public <S> SinglePath<S> forkFun(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
-        return new SinglePath<>(
-                builderOperator,
-                mutateFunctionBuilder(exit)
-        );
-    }
-
-    @Override
-    public <S> SinglePath<S> forkFun(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
-        return (SinglePath<S>) super.forkFun(exit);
-    }
+//    @Override
+//    public <S> SinglePath<S> forkFun(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
+//        return new SinglePath<>(
+//                builderOperator,
+//                mutateFunctionBuilder(exit)
+//        );
+//    }
+//
+//    @Override
+//    public <S> SinglePath<S> forkFun(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
+//        return (SinglePath<S>) super.forkFun(exit);
+//    }
 
     @Override
     public <S> SinglePath<S> forkSwitch(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, BasePath<S>> switchMap) {
@@ -124,22 +124,22 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
         return (SinglePath<S>) super.forkSwitch(switchMap);
     }
 
-    @Override
-    public <S> SinglePath<S> forkSwitchFun(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
-        return new SinglePath<>(
-                builderOperator,
-                switchMutateFunctionBuilder(mutate)
-        );
-    }
-
-    @Override
-    public <S> SinglePath<S> forkSwitchFun(BinaryPredicate<S> constraintIn, Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
-        return (SinglePath<S>) super.forkSwitchFun(constraintIn, mutate);
-    }
-
-    @Override
-    public <S> SinglePath<S> forkSwitchFun(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
-        return (SinglePath<S>) super.forkSwitchFun(mutate);
-    }
+//    @Override
+//    public <S> SinglePath<S> forkSwitchFun(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
+//        return new SinglePath<>(
+//                builderOperator,
+//                switchMutateFunctionBuilder(mutate)
+//        );
+//    }
+//
+//    @Override
+//    public <S> SinglePath<S> forkSwitchFun(BinaryPredicate<S> constraintIn, Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
+//        return (SinglePath<S>) super.forkSwitchFun(constraintIn, mutate);
+//    }
+//
+//    @Override
+//    public <S> SinglePath<S> forkSwitchFun(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
+//        return (SinglePath<S>) super.forkSwitchFun(mutate);
+//    }
 }
 

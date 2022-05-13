@@ -11,7 +11,7 @@ import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 public final class Builders {
-    static<S> UnaryOperator<HolderBuilder<S>> constraintIn(BinaryPredicate<S> constraintIn) {
+    public static<S> UnaryOperator<HolderBuilder<S>> constraintIn(BinaryPredicate<S> constraintIn) {
         return sHolderBuilder -> sHolderBuilder.constraintIn(constraintIn);
     }
     static <T>HolderBuilder<T> getHolderBuild() {
@@ -73,7 +73,8 @@ public final class Builders {
             return this;
         }
 
-        Holders.DispatcherHolder<T> build(Dispatcher<T> dispatcher) {
+        Holders.DispatcherHolder<T>
+        build(Dispatcher<T> dispatcher) {
             return new Holders.DispatcherHolder<T>(reference, map, expectInput, expectOut){
                 @Override
                 void coldDispatch(Pair.Immutables.Int<T> t) {
@@ -97,13 +98,6 @@ public final class Builders {
         private AtomicBinaryEventConsumer activationListener;
         private Function<Holders.ColdHolder<?>, AtomicBinaryEventConsumer> activationListenerFun;
         private boolean mutableActivationListener;
-
-//        public ManagerBuilder withFixed(AtomicBinaryEventConsumer activationListener) {
-//            if (mutableActivationListener) throwException();
-//            this.activationListener = activationListener;
-//            this.mutableActivationListener = false;
-//            return this;
-//        }
 
         @SuppressWarnings("unchecked")
         public<S> ManagerBuilder withFixedFun(Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> activationListenerFun) {
@@ -141,6 +135,4 @@ public final class Builders {
             } : build(deactivation);
         }
     }
-
-
 }

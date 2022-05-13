@@ -124,17 +124,17 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         );
     }
 
-    <S> Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> mutateFunctionBuilder(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
-        return mainForkingFunctionBuilder(
-                intConsumer ->
-                        tInt -> {
-                            T t = tInt.getValue();
-                            int intT = tInt.getInt();
-                            final Consumers.BaseConsumer<T> exitC = exit.apply(s -> intConsumer.acceptVersionValue(new Pair.Immutables.Int<>(intT, s)));
-                            exitC.accept(t);
-                        }
-        );
-    }
+//    <S> Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> mutateFunctionBuilder(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
+//        return mainForkingFunctionBuilder(
+//                intConsumer ->
+//                        tInt -> {
+//                            T t = tInt.getValue();
+//                            int intT = tInt.getInt();
+//                            final Consumers.BaseConsumer<T> exitC = exit.apply(s -> intConsumer.acceptVersionValue(new Pair.Immutables.Int<>(intT, s)));
+//                            exitC.accept(t);
+//                        }
+//        );
+//    }
 
     <S> Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> switchFunctionBuilder(Function<T, BasePath<S>> switchMap) {
         return intConsumer -> {
@@ -173,49 +173,49 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         };
     }
 
-    <S> Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> switchMutateFunctionBuilder(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
-        return coldHolder -> {
-            //Controls domain subscription
-            final Appointers.SimpleAppointer<S> appointer = new Appointers.SimpleAppointer<>(coldHolder,BinaryPredicate.always(true));
-            // Captures the value to be transformed into an observable
-            final Consumer<Pair.Immutables.Int<T>> toAppoint = new Consumer<Pair.Immutables.Int<T>>() {
-                //Controls domain version
-                final Holders.DispatcherHolder<BasePath<S>> domainHolder = new Holders.DispatcherHolder<BasePath<S>>() {
-                    @Override
-                    void coldDispatch(Pair.Immutables.Int<BasePath<S>> t) {
-                        appointer.setAndStart(t.getValue());
-                    }
-                };
-                {
-                    domainHolder.expectIn(
-                            sDomain -> sDomain != null && sDomain != domainHolder.get()
-                    );
-                }
-                @Override
-                public void accept(Pair.Immutables.Int<T> tInt) {
-                    int intS = tInt.getInt();
-                    T s = tInt.getValue();
-                    final Consumer<T> transformed = mutate.apply(
-                            tDomain -> domainHolder.acceptVersionValue(new Pair.Immutables.Int<>(intS, tDomain))
-                    );
-                    transformed.accept(s);
-                }
-            };
-            return new AtomicBinaryEventConsumer() {
-                @Override
-                protected void onStateChange(boolean isActive) {
-                    if (isActive) {
-                        appointer.start();
-                        appoint(toAppoint);
-                    }
-                    else {
-                        appointer.stop();
-                        demotionOverride(toAppoint);
-                    }
-                }
-            };
-        };
-    }
+//    <S> Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> switchMutateFunctionBuilder(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
+//        return coldHolder -> {
+//            //Controls domain subscription
+//            final Appointers.SimpleAppointer<S> appointer = new Appointers.SimpleAppointer<>(coldHolder,BinaryPredicate.always(true));
+//            // Captures the value to be transformed into an observable
+//            final Consumer<Pair.Immutables.Int<T>> toAppoint = new Consumer<Pair.Immutables.Int<T>>() {
+//                //Controls domain version
+//                final Holders.DispatcherHolder<BasePath<S>> domainHolder = new Holders.DispatcherHolder<BasePath<S>>() {
+//                    @Override
+//                    void coldDispatch(Pair.Immutables.Int<BasePath<S>> t) {
+//                        appointer.setAndStart(t.getValue());
+//                    }
+//                };
+//                {
+//                    domainHolder.expectIn(
+//                            sDomain -> sDomain != null && sDomain != domainHolder.get()
+//                    );
+//                }
+//                @Override
+//                public void accept(Pair.Immutables.Int<T> tInt) {
+//                    int intS = tInt.getInt();
+//                    T s = tInt.getValue();
+//                    final Consumer<T> transformed = mutate.apply(
+//                            tDomain -> domainHolder.acceptVersionValue(new Pair.Immutables.Int<>(intS, tDomain))
+//                    );
+//                    transformed.accept(s);
+//                }
+//            };
+//            return new AtomicBinaryEventConsumer() {
+//                @Override
+//                protected void onStateChange(boolean isActive) {
+//                    if (isActive) {
+//                        appointer.start();
+//                        appoint(toAppoint);
+//                    }
+//                    else {
+//                        appointer.stop();
+//                        demotionOverride(toAppoint);
+//                    }
+//                }
+//            };
+//        };
+//    }
 
     static abstract class PathDispatcher<T> extends Dispatcher<T> implements IBasePath<T> {
         private final Holders.ExecutorHolder<T> executorHolder;
