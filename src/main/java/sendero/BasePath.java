@@ -357,5 +357,11 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
 
     }
 
+    /**The state should avoid outside side effect manipulation
+     * If manipulation is required, a copy or deep copy must be used*/
+    @Override
+    public T get() {
+        return super.get();
+    }
 }
 
