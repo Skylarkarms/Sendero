@@ -1,8 +1,10 @@
 package sendero;
 
 import sendero.interfaces.AtomicBinaryEventConsumer;
+import sendero.pairs.Pair;
 
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
@@ -11,8 +13,8 @@ class ActivePathListener<T> {
     private final ActivationManager manager;
     private final Appointers.HolderAppointer<T> appointerCache;
 
-    Holders.ColdHolder<T> getColdHolder() {
-        return appointerCache.getColdHolder();
+    Consumer<Pair.Immutables.Int<T>> getColdHolder() {
+        return appointerCache.getColdHolder()::acceptVersionValue;
     }
 
     protected ActivePathListener(ActivationManager manager, Appointers.HolderAppointer<T> appointerCache) {
@@ -39,10 +41,10 @@ class ActivePathListener<T> {
         );
     }
 
-    /**should be protected*/
-    protected  <S, P extends BasePath<T>> void bind(P basePath) {
-        bindMap(basePath, UnaryOperator.identity());
-    }
+//    /**should be protected*/
+//    protected  <S, P extends BasePath<T>> void bind(P basePath) {
+//        bindMap(basePath, UnaryOperator.identity());
+//    }
 
     protected boolean unbound() {
         final Appointer<?> app = appointerCache.getAndClear();

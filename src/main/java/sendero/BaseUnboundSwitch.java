@@ -17,7 +17,7 @@ final class BaseUnboundSwitch<T> implements UnboundSwitch<T> {
     }
 
 
-    private Holders.ColdHolder<T> getColdHolder() {
+    private Consumer<Pair.Immutables.Int<T>> getColdHolder() {
         return activePathListener.getColdHolder();
     }
 
@@ -36,8 +36,7 @@ final class BaseUnboundSwitch<T> implements UnboundSwitch<T> {
             final int sInt1 = sInt.getInt();
             final S s = sInt.getValue();
             exit.apply(t ->
-                    getColdHolder().acceptVersionValue(new Pair.Immutables.Int<>(sInt1, t)
-//                    onResult(new Pair.Immutables.Int<>(sInt1, t)
+                    getColdHolder().accept(new Pair.Immutables.Int<>(sInt1, t)
                     )
             ).accept(s);
         });
@@ -45,7 +44,9 @@ final class BaseUnboundSwitch<T> implements UnboundSwitch<T> {
 
     @Override
     public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
-        final Appointers.SimpleAppointer<T> appointer = new Appointers.SimpleAppointer<>(getColdHolder(), BinaryPredicate.always(true));
+        final Appointers.SysPathListener<T> appointer = new Appointers.SimpleAppointer<>(getColdHolder());
+//        final Appointers.SysPathListener<T> appointer = new Appointers.SimpleAppointer<>(getColdHolder(), BinaryPredicate.always(true));
+//        final Appointers.SimpleAppointer<T> appointer = new Appointers.SimpleAppointer<>(getColdHolder(), BinaryPredicate.always(true));
 
         final AtomicBinaryEventConsumer booleanConsumerAppointer = BinaryEventConsumers.producerHolderConnector(
                 path,
@@ -76,7 +77,9 @@ final class BaseUnboundSwitch<T> implements UnboundSwitch<T> {
 
     @Override
     public <S> void switchFun(BasePath<S> path, Function<Consumer<? super BasePath<T>>, ? extends Consumers.BaseConsumer<S>> exit) {
-        final Appointers.SimpleAppointer<T> appointer = new Appointers.SimpleAppointer<>(getColdHolder(),BinaryPredicate.always(true));
+        final Appointers.SysPathListener<T> appointer = new Appointers.SimpleAppointer<>(getColdHolder());
+//        final Appointers.SysPathListener<T> appointer = new Appointers.SimpleAppointer<>(getColdHolder(),BinaryPredicate.always(true));
+//        final Appointers.SimpleAppointer<T> appointer = new Appointers.SimpleAppointer<>(getColdHolder(),BinaryPredicate.always(true));
 
         final AtomicBinaryEventConsumer booleanConsumerAppointer = BinaryEventConsumers.fixedAppointer(
                 path,

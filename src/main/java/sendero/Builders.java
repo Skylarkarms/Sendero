@@ -11,8 +11,8 @@ import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 public final class Builders {
-    public static<S> UnaryOperator<HolderBuilder<S>> constraintIn(BinaryPredicate<S> constraintIn) {
-        return sHolderBuilder -> sHolderBuilder.constraintIn(constraintIn);
+    public static<S> UnaryOperator<HolderBuilder<S>> excludeIn(BinaryPredicate<S> excludeInput) {
+        return sHolderBuilder -> sHolderBuilder.excludeIn(excludeInput);
     }
     static <T>HolderBuilder<T> getHolderBuild() {
         return new HolderBuilder<>();
@@ -38,13 +38,13 @@ public final class Builders {
             return this;
         }
 
-        public HolderBuilder<T> constraintIn(Predicate<T> constraintInput) {
-            this.expectInput = (next, prev) -> !constraintInput.test(next);
+        public HolderBuilder<T> excludeIn(Predicate<T> excludeInput) {
+            this.expectInput = (next, prev) -> !excludeInput.test(next);
             return this;
         }
 
-        public HolderBuilder<T> constraintOut(Predicate<T> constraintOutput) {
-            this.expectOut = next -> !constraintOutput.test(next);
+        public HolderBuilder<T> excludeOut(Predicate<T> excludeOutput) {
+            this.expectOut = next -> !excludeOutput.test(next);
             return this;
         }
 
@@ -58,8 +58,8 @@ public final class Builders {
             return this;
         }
 
-        public HolderBuilder<T> constraintIn(BinaryPredicate<T> constraintInput) {
-            this.expectInput = constraintInput.negate();
+        public HolderBuilder<T> excludeIn(BinaryPredicate<T> excludeInput) {
+            this.expectInput = excludeInput.negate();
             return this;
         }
 
@@ -95,7 +95,6 @@ public final class Builders {
     }
 
     public static class ManagerBuilder {
-        private AtomicBinaryEventConsumer activationListener;
         private Function<Holders.ColdHolder<?>, AtomicBinaryEventConsumer> activationListenerFun;
         private boolean mutableActivationListener;
 
@@ -112,27 +111,19 @@ public final class Builders {
         }
 
         public ManagerBuilder withMutable(boolean activationListener) {
-            if (this.activationListener != null) throwException();
+            if (this.activationListenerFun != null) throwException();
             this.mutableActivationListener = activationListener;
             return this;
         }
 
-        protected ActivationManager build(BooleanSupplier deactivation) {
-            return new ActivationManager(activationListener, mutableActivationListener) {
+        protected ActivationManager build(Holders.ColdHolder<?> coldHolder, BooleanSupplier deactivation) {
+            final AtomicBinaryEventConsumer finalConsumer = activationListenerFun != null ? activationListenerFun.apply(coldHolder) : null;
+            return new ActivationManager(finalConsumer, mutableActivationListener) {
                 @Override
                 protected boolean deactivationRequirements() {
                     return deactivation.getAsBoolean();
                 }
             };
-        }
-
-        protected ActivationManager build(Holders.ColdHolder<?> coldHolder, BooleanSupplier deactivation) {
-            return activationListenerFun != null ? new ActivationManager(activationListenerFun.apply(coldHolder), mutableActivationListener) {
-                @Override
-                protected boolean deactivationRequirements() {
-                    return deactivation.getAsBoolean();
-                }
-            } : build(deactivation);
         }
     }
 }

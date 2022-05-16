@@ -16,6 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
 import static sendero.functions.Functions.IDENTITY;
+import static sendero.functions.Functions.myIdentity;
 
 final class Holders {
 
@@ -44,21 +45,23 @@ final class Holders {
         protected final T INVALID = (T) new Object();
         private final Pair.Immutables.Int<T> FIRST = new Pair.Immutables.Int<>(0, INVALID);
         private final Consumer<Pair.Immutables.Int<T>> dispatcher;
-        private final BinaryPredicate<T> expect;
+//        private final BinaryPredicate<T> expectIn;
         private final AtomicReference<Pair.Immutables.Int<T>> reference;
 
         SingleColdHolder(
-                ColdHolder<T> target,
-                BinaryPredicate<T> expect
+                Consumer<Pair.Immutables.Int<T>> target
+//                Consumer<Pair.Immutables.Int<T>> target,
+//                BinaryPredicate<T> expectIn
         ) {
-            this.dispatcher = target::acceptVersionValue;
-            this.expect = expect;
+            this.dispatcher = target;
+//            this.expectIn = BinaryPredicate.always(true);
+//            this.expectIn = expectIn;
             reference = new AtomicReference<>(FIRST);
         }
 
-        private boolean test(T next, T prev) {
-            return expect.test(next, prev == INVALID ? null : prev);
-        }
+//        private boolean test(T next, T prev) {
+//            return expectIn.test(next, prev == INVALID ? null : prev);
+//        }
 
         @Override
         public void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
@@ -67,13 +70,13 @@ final class Holders {
         private void versionValueCAS(int newVersion, T nextT) {
             Pair.Immutables.Int<T> prev, next;
             while ((prev = reference.get()).compareTo(newVersion) < 0) {
-                if (test(nextT, prev.getValue())) {
+//                if (test(nextT, prev.getValue())) {
                     next = new Pair.Immutables.Int<>(newVersion, nextT);
                     if (reference.compareAndSet(prev, next)) {
                         dispatcher.accept(next);
                         break;
                     }
-                } else return;
+//                } else return;
             }
         }
 
@@ -345,32 +348,12 @@ final class Holders {
             };
         }
 
-        ActivationHolder() {
-            holder = buildIdentityHolder();
-            manager = buildManager();
-        }
-
         ActivationHolder(
                 UnaryOperator<Builders.HolderBuilder<T>> holderBuilder,
                 UnaryOperator<Builders.ManagerBuilder> mngrBuilderOperator
         ) {
             this.holder = buildHolder(holderBuilder);
             this.manager = buildManager(mngrBuilderOperator);
-        }
-
-        ActivationHolder(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
-            this.holder = buildHolder(builderOperator);
-            this.manager = buildManager();
-        }
-
-        ActivationHolder(boolean activationListener) {
-            holder = buildIdentityHolder();
-            manager = new ActivationManager(activationListener){
-                @Override
-                protected boolean deactivationRequirements() {
-                    return ActivationHolder.this.deactivationRequirements();
-                }
-            };
         }
 
         final DispatcherHolder<T> holder;
@@ -457,13 +440,6 @@ final class Holders {
         //Only if isColdHolder == true;
         private final AtomicScheduler scheduler = new AtomicScheduler(eService::getScheduledService, TimeUnit.MILLISECONDS);
 
-        ExecutorHolder(boolean activationListener) {
-            super(activationListener);
-        }
-
-        ExecutorHolder() {
-        }
-
         ExecutorHolder(
                 UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
                 UnaryOperator<Builders.ManagerBuilder> mngrBuilderOperator
@@ -472,7 +448,7 @@ final class Holders {
         }
 
         ExecutorHolder(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
-            super(builderOperator);
+            super(builderOperator, myIdentity());
         }
 
         @Override

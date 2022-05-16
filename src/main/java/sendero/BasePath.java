@@ -1,7 +1,6 @@
 package sendero;
 
 import sendero.event_registers.ConsumerRegisters;
-import sendero.functions.Consumers;
 import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.interfaces.BinaryPredicate;
 import sendero.lists.SimpleLists;
@@ -41,8 +40,12 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
     }
 
 
-    BasePath(boolean mutableActivationListener) {
-        super(mutableActivationListener);
+//    BasePath(boolean mutableActivationListener) {
+//        super(mutableActivationListener);
+//    }
+
+    protected void setPath(BasePath<T> basePath) {
+        holderAppointer.setPathAndGet(basePath, myIdentity());
     }
 
     protected <S, P extends BasePath<S>> void setPath(P basePath, Function<S, T> map) {
@@ -54,7 +57,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
     }
 
     protected <P extends BasePath<T>> T setAndStart(P basePath) {
-        return holderAppointer.setAndStart(basePath);
+        return holderAppointer.setAndStart(basePath, myIdentity());
     }
 
     protected void stopListeningPathAndUnregister() {
@@ -77,8 +80,8 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         return holderAppointer.isCleared();
     }
 
-    public BasePath() {
-    }
+//    public BasePath() {
+//    }
 
     BasePath(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
@@ -103,8 +106,8 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
 
     protected abstract void demotionOverride(Consumer<Pair.Immutables.Int<T>> intConsumer);
 
-    private <S> Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> mainForkingFunctionBuilder(
-            Function<Holders.ColdHolder<S>, Consumer<Pair.Immutables.Int<T>>> converter
+    private <S> Function<Consumer<Pair.Immutables.Int<S>>, AtomicBinaryEventConsumer> mainForkingFunctionBuilder(
+            Function<Consumer<Pair.Immutables.Int<S>>, Consumer<Pair.Immutables.Int<T>>> converter
     ) {
         return intConsumer -> {
             final Consumer<Pair.Immutables.Int<T>> converted = converter.apply(intConsumer);
@@ -112,33 +115,21 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         };
     }
 
-    <S> Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> mapFunctionBuilder(Function<T, S> map) {
+    <S> Function<Consumer<Pair.Immutables.Int<S>>, AtomicBinaryEventConsumer> mapFunctionBuilder(Function<T, S> map) {
         @SuppressWarnings("unchecked")
-        final Function<Holders.ColdHolder<S>, Consumer<Pair.Immutables.Int<T>>> finalFunction = map == IDENTITY ?
+        final Function<Consumer<Pair.Immutables.Int<S>>, Consumer<Pair.Immutables.Int<T>>> finalFunction = map == IDENTITY ?
                 holder ->
-                        tInt -> holder.acceptVersionValue((Pair.Immutables.Int<S>) tInt) :
+                        tInt -> holder.accept((Pair.Immutables.Int<S>) tInt) :
                 tColdHolder ->
-                        tInt -> tColdHolder.acceptVersionValue(new Pair.Immutables.Int<>(tInt.getInt(), map.apply(tInt.getValue())));
+                        tInt -> tColdHolder.accept(new Pair.Immutables.Int<>(tInt.getInt(), map.apply(tInt.getValue())));
         return mainForkingFunctionBuilder(
                 finalFunction
         );
     }
 
-//    <S> Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> mutateFunctionBuilder(Function<Consumer<? super S>, ? extends Consumers.BaseConsumer<T>> exit) {
-//        return mainForkingFunctionBuilder(
-//                intConsumer ->
-//                        tInt -> {
-//                            T t = tInt.getValue();
-//                            int intT = tInt.getInt();
-//                            final Consumers.BaseConsumer<T> exitC = exit.apply(s -> intConsumer.acceptVersionValue(new Pair.Immutables.Int<>(intT, s)));
-//                            exitC.accept(t);
-//                        }
-//        );
-//    }
-
-    <S> Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> switchFunctionBuilder(Function<T, BasePath<S>> switchMap) {
+    <S> Function<Consumer<Pair.Immutables.Int<S>>, AtomicBinaryEventConsumer> switchFunctionBuilder(Function<T, BasePath<S>> switchMap) {
         return intConsumer -> {
-            final Appointers.SimpleAppointer<S> appointer = new Appointers.SimpleAppointer<>(intConsumer, BinaryPredicate.always(true));
+            final Appointers.SysPathListener<S> appointer = new Appointers.SimpleAppointer<>(intConsumer);
             final Consumer<Pair.Immutables.Int<T>> toAppoint = new Consumer<Pair.Immutables.Int<T>>() {
                 final Holders.DispatcherHolder<BasePath<S>> domainHolder = new Holders.DispatcherHolder<BasePath<S>>() {
                     @Override
@@ -173,49 +164,43 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         };
     }
 
-//    <S> Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> switchMutateFunctionBuilder(Function<Consumer<? super BasePath<S>>, ? extends Consumers.BaseConsumer<T>> mutate) {
-//        return coldHolder -> {
-//            //Controls domain subscription
-//            final Appointers.SimpleAppointer<S> appointer = new Appointers.SimpleAppointer<>(coldHolder,BinaryPredicate.always(true));
-//            // Captures the value to be transformed into an observable
-//            final Consumer<Pair.Immutables.Int<T>> toAppoint = new Consumer<Pair.Immutables.Int<T>>() {
-//                //Controls domain version
-//                final Holders.DispatcherHolder<BasePath<S>> domainHolder = new Holders.DispatcherHolder<BasePath<S>>() {
-//                    @Override
-//                    void coldDispatch(Pair.Immutables.Int<BasePath<S>> t) {
-//                        appointer.setAndStart(t.getValue());
-//                    }
-//                };
-//                {
-//                    domainHolder.expectIn(
-//                            sDomain -> sDomain != null && sDomain != domainHolder.get()
-//                    );
-//                }
-//                @Override
-//                public void accept(Pair.Immutables.Int<T> tInt) {
-//                    int intS = tInt.getInt();
-//                    T s = tInt.getValue();
-//                    final Consumer<T> transformed = mutate.apply(
-//                            tDomain -> domainHolder.acceptVersionValue(new Pair.Immutables.Int<>(intS, tDomain))
-//                    );
-//                    transformed.accept(s);
-//                }
-//            };
-//            return new AtomicBinaryEventConsumer() {
-//                @Override
-//                protected void onStateChange(boolean isActive) {
-//                    if (isActive) {
-//                        appointer.start();
-//                        appoint(toAppoint);
-//                    }
-//                    else {
-//                        appointer.stop();
-//                        demotionOverride(toAppoint);
-//                    }
-//                }
-//            };
-//        };
-//    }
+    <S> Function<Appointers.HolderAppointer<S>, AtomicBinaryEventConsumer> switchFunctionBuilder2(Function<T, BasePath<S>> switchMap) {
+        return appointer -> {
+//            final Appointers.SysPathListener<S> appointer = new Appointers.SimpleAppointer<>(intConsumer);
+            final Consumer<Pair.Immutables.Int<T>> toAppoint = new Consumer<Pair.Immutables.Int<T>>() {
+                final Holders.DispatcherHolder<BasePath<S>> domainHolder = new Holders.DispatcherHolder<BasePath<S>>() {
+                    @Override
+                    void coldDispatch(Pair.Immutables.Int<BasePath<S>> t) {
+                        BasePath<S> toStart = t.getValue();
+                        appointer.setAndStart(toStart);
+//                        appointer.setAndStart(toStart);
+                    }
+                };
+                {
+                    domainHolder.expectIn(
+                            sDomain -> sDomain != null && sDomain != domainHolder.get()
+                    );
+                }
+                @Override
+                public void accept(Pair.Immutables.Int<T> tInt) {
+                    domainHolder.acceptVersionValue(new Pair.Immutables.Int<>(tInt.getInt(), switchMap.apply(tInt.getValue())));
+                }
+            };
+            return new AtomicBinaryEventConsumer() {
+                @Override
+                protected void onStateChange(boolean isActive) {
+                    if (isActive) {
+                        appointer.start();
+                        appoint(toAppoint); // I give to appoint
+                    }
+                    else {
+                        appointer.stop();
+                        demotionOverride(toAppoint);
+                    }
+                }
+            };
+        };
+    }
 
     static abstract class PathDispatcher<T> extends Dispatcher<T> implements IBasePath<T> {
         private final Holders.ExecutorHolder<T> executorHolder;
@@ -355,13 +340,6 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
             return !remote.isRegistered();
         }
 
-    }
-
-    /**The state should avoid outside side effect manipulation
-     * If manipulation is required, a copy or deep copy must be used*/
-    @Override
-    public T get() {
-        return super.get();
     }
 }
 

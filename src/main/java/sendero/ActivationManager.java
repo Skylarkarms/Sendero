@@ -35,10 +35,10 @@ abstract class ActivationManager {
         this.thrower = mutableActivationListener ? ON_MUTABLE : createThrower();
     }
 
-    protected ActivationManager(boolean withActivationListener) {
-        switchRegister = withActivationListener ? BinaryEventRegisters.getAtomicRegister() : Switchers.getAtomic();
-        thrower = withActivationListener ? Functions.emptyRunnable() : createThrower();
-    }
+//    protected ActivationManager(boolean withActivationListener) {
+//        switchRegister = withActivationListener ? BinaryEventRegisters.getAtomicRegister() : Switchers.getAtomic();
+//        thrower = withActivationListener ? Functions.emptyRunnable() : createThrower();
+//    }
 
     abstract boolean deactivationRequirements();
 

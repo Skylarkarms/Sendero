@@ -76,10 +76,10 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             super(operator, true);
         }
 
-        @Override
-        public <P extends BasePath<T>> void bind(P basePath) {
-            baseUnbound.bind(basePath);
-        }
+//        @Override
+//        public <P extends BasePath<T>> void bind(P basePath) {
+//            baseUnbound.bind(basePath);
+//        }
 
         @Override
         public <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {

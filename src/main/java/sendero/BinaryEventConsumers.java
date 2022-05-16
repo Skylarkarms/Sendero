@@ -28,7 +28,6 @@ public final class BinaryEventConsumers {
                                 //By incrementing the source's version by one, we allow for the first version to be allowed to pass.
                                 sInt.getInt() + 1,
                         next
-//                        updateFun.apply(holder.get(), sInt.getValue())
                         )
                 );
             }

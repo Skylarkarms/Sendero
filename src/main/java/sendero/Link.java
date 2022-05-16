@@ -74,10 +74,10 @@ public class Link<T> extends Path<T> implements BaseLink {
             super(builderOperator);
         }
 
-        @Override
-        public <P extends BasePath<T>> void bind(P basePath) {
-            baseUnbound.bind(basePath);
-        }
+//        @Override
+//        public <P extends BasePath<T>> void bind(P basePath) {
+//            baseUnbound.bind(basePath);
+//        }
 
         @Override
         public <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {

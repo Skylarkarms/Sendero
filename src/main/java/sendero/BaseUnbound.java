@@ -28,10 +28,10 @@ public class BaseUnbound<T> implements UnboundLink<T>, BaseLink {
         return activePathListener.unbound();
     }
 
-    @Override
-    public <P extends BasePath<T>> void bind(P basePath) {
-        activePathListener.bind(basePath);
-    }
+//    @Override
+//    public <P extends BasePath<T>> void bind(P basePath) {
+//        activePathListener.bind(basePath);
+//    }
 
     @Override
     public <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {

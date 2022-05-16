@@ -1,11 +1,14 @@
 package sendero;
 
+import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.pairs.Pair;
 
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
+
+import static sendero.functions.Functions.myIdentity;
 
 public abstract class PathDispatcherHolder<T> extends BasePath<T> {
     private final PathDispatcher<T> pathDispatcher;
@@ -17,12 +20,16 @@ public abstract class PathDispatcherHolder<T> extends BasePath<T> {
     }
 
     protected PathDispatcherHolder() {
-        super();
+        super(myIdentity(), myIdentity());
         pathDispatcher = pathDispatcherBuild();
     }
 
     protected PathDispatcherHolder(boolean activationListener) {
-        super(activationListener);
+        super(
+                myIdentity(),
+managerBuilder -> managerBuilder.withMutable(activationListener)
+//                activationListener
+        );
         pathDispatcher = pathDispatcherBuild();
     }
 
@@ -47,6 +54,19 @@ public abstract class PathDispatcherHolder<T> extends BasePath<T> {
         super(builderOperator, mngrBuilderOperator);
         pathDispatcher = pathDispatcherBuild();
     }
+
+    protected PathDispatcherHolder(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap
+    ) {
+        super(builderOperator,
+                managerBuilder -> managerBuilder.withFixedFun(
+                        (Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer>) tColdHolder -> selfMap.apply(tColdHolder::acceptVersionValue)
+                )
+        );
+        pathDispatcher = pathDispatcherBuild();
+    }
+
 
     PathDispatcherHolder(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
         super(builderOperator);
@@ -86,10 +106,20 @@ public abstract class PathDispatcherHolder<T> extends BasePath<T> {
     @SuppressWarnings("unchecked")
     @Override
     public <S, O extends Gate.Out<S>> O out(Class<? super O> outputType, Function<T, S> map) {
+        final Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> function = new Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer>() {
+            final Function<Consumer<Pair.Immutables.Int<S>>, AtomicBinaryEventConsumer> innerFunction = mapFunctionBuilder(map);
+            @Override
+            public AtomicBinaryEventConsumer apply(Holders.ColdHolder<S> sColdHolder) {
+                return innerFunction.apply(sColdHolder::acceptVersionValue);
+            }
+        };
         if (outputType == Gate.Out.Single.class) {
-            return (O) new Gate.Outs.SingleImpl<>(mapFunctionBuilder(map));
+            return (O) new Gate.Outs.SingleImpl<>(function);
         } else if (outputType == Gate.Out.Many.class) {
-            return (O) new Gate.Outs.ManyImpl<>(mapFunctionBuilder(map));
+            return (O) new Gate.Outs.ManyImpl<>(
+                    function
+//                    mapFunctionBuilder(map)
+            );
         }
         throw new IllegalStateException("invalid class: " + outputType);
     }

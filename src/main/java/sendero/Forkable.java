@@ -1,10 +1,8 @@
 package sendero;
 
-import sendero.functions.Consumers;
 import sendero.interfaces.BinaryPredicate;
 
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
@@ -21,7 +19,7 @@ interface Forkable<T> {
     <S> Forkable<S> forkMap(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, S> map);
     default <S> Forkable<S> forkMap(BinaryPredicate<S> constraintIn, Function<T, S> map) {
         return forkMap(
-                Builders.constraintIn(constraintIn),
+                Builders.excludeIn(constraintIn),
                 map
         );
     }
@@ -33,7 +31,7 @@ interface Forkable<T> {
     <S> Forkable<S> forkUpdate(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, BiFunction<S, T, S> update);
     default  <S> Forkable<S> forkUpdate(BinaryPredicate<S> constraintIn, BiFunction<S, T, S> update) {
         return forkUpdate(
-               Builders.constraintIn(constraintIn),
+               Builders.excludeIn(constraintIn),
                update
         );
     }
@@ -52,7 +50,7 @@ interface Forkable<T> {
     <S> Forkable<S> forkSwitch(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, BasePath<S>> switchMap);
     default <S> Forkable<S> forkSwitch(BinaryPredicate<S> constraintIn, Function<T, BasePath<S>> switchMap) {
         return forkSwitch(
-                Builders.constraintIn(constraintIn),
+                Builders.excludeIn(constraintIn),
                 switchMap
         );
     }
