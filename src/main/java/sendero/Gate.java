@@ -97,7 +97,7 @@ public final class Gate {
                 super(builderOperator);
             }
 
-            protected static final class Many<T> extends OutBasePath<T> implements Out.Many<T> {
+            protected static class Many<T> extends OutBasePath<T> implements Out.Many<T> {
 
                 private final SimpleLists.LockFree.Snapshooter<Consumer<? super T>, Integer>
                         locale = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
@@ -176,7 +176,7 @@ public final class Gate {
                 }
             }
 
-            protected static final class Single<T> extends OutBasePath<T> implements Out.Single<T> {
+            protected static class Single<T> extends OutBasePath<T> implements Out.Single<T> {
 
                 private final ConsumerRegisters.IConsumerRegister.SnapshottingConsumerRegister<Integer, T>
                         locale = ConsumerRegisters.IConsumerRegister.getInstance(this::getVersion);
@@ -185,7 +185,6 @@ public final class Gate {
                     return () -> {
                         boolean registered = locale.isRegistered();
                         if (!registered) pathDispatch(false, t);
-//                    if (!registered) super.dispatchAppointees(false, t);
                         else {
                             pathDispatch(true, t);
                             if (t.compareTo(getVersion()) != 0) return;
@@ -238,7 +237,6 @@ public final class Gate {
                 @Override
                 public void unregister() {
                     if (locale.unregister() != null) deactivate();
-//                    if (locale.unregister() != null) tryDeactivate();
 
                 }
 
@@ -255,7 +253,6 @@ public final class Gate {
 
             protected ManyImpl(
                     Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
-//                    Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap
             ) {
                 super(
                         myIdentity(),
@@ -329,12 +326,10 @@ public final class Gate {
 
             protected SingleImpl(
                     Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
-//                    Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap
             ) {
                 super(
                         myIdentity(),
                         Builders.withFixed(selfMap)
-//                        Builders.getManagerBuild().withFixedFun(selfMap)
                 );
             }
 
