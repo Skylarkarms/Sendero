@@ -54,13 +54,6 @@ class ComplexHelloWorld {
                         .withInitial(
                                 new String[2]
                         )
-//                new String[2], strings -> {
-//            for (String s:strings
-//            ) {
-//                if (s == null) return false;
-//            }
-//            return true;
-//        }
         );
         private final Gate.Out.Single<String[]> finalRes = res.out(Gate.Out.Single.class);
 

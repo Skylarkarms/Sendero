@@ -3,13 +3,18 @@ package sendero.functions;
 import sendero.interfaces.BinaryPredicate;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 public final class Functions {
     private static final String CLEARED_STRING = ": [EMPTY FUNCTION]";
 
-    public static final UnaryOperator<?> IDENTITY = UnaryOperator.identity();
+    private static final UnaryOperator<?> IDENTITY = UnaryOperator.identity();
+
+    public static boolean isIdentity(Function<?, ?> operator) {
+        return operator == IDENTITY;
+    }
 
     @SuppressWarnings("unchecked")
     public static<T> UnaryOperator<T> myIdentity() {
@@ -43,7 +48,7 @@ public final class Functions {
         }
     };
 
-    private static final BinaryPredicate<?> alwaysTrue = new BinaryPredicate<Object>() {
+    public static final BinaryPredicate<?> binaryAlwaysTrue = new BinaryPredicate<Object>() {
         @Override
         public boolean test(Object next, Object prev) {
             return true;
@@ -56,7 +61,7 @@ public final class Functions {
         }
     };
 
-    private static final BinaryPredicate<?> alwaysFalse = new BinaryPredicate<Object>() {
+    static final BinaryPredicate<?> alwaysFalse = new BinaryPredicate<Object>() {
         @Override
         public boolean test(Object next, Object prev) {
             return false;
@@ -71,13 +76,27 @@ public final class Functions {
 
     @SuppressWarnings("unchecked")
     public static<T> BinaryPredicate<T> binaryAlways(boolean aBoolean) {
-        return aBoolean ? (BinaryPredicate<T>) alwaysTrue : (BinaryPredicate<T>) alwaysFalse;
-//        return (o, t2) -> aBoolean;
+        return aBoolean ? (BinaryPredicate<T>) binaryAlwaysTrue : (BinaryPredicate<T>) alwaysFalse;
     }
     public static Runnable emptyRunnable() {
         return emptyRunnable;
     }
+    public static final Predicate<?> alwaysTrue = new Predicate<Object>() {
+        @Override
+        public boolean test(Object next) {
+            return true;
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + CLEARED_STRING + ",\n" +
+                    " value = true";
+        }
+    };
+
+    @SuppressWarnings("unchecked")
     public static<T> Predicate<T> always(boolean fixed) {
-        return t -> fixed;
+        return fixed ? (Predicate<T>) alwaysTrue : t -> false;
     }
+
 }

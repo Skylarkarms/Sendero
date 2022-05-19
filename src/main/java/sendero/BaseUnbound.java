@@ -2,14 +2,14 @@ package sendero;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 public class BaseUnbound<T> implements UnboundLink<T>, BaseLink {
 
     final ActivePathListener<T> activePathListener;
 
     BaseUnbound(BasePath<T> basePath) {
-        activePathListener = new ActivePathListener<>(basePath.manager, basePath.holderAppointer);
+        final Appointers.UnboundPathListenerImpl<T> pathListener = new Appointers.UnboundPathListenerImpl<>(basePath.baseTestDispatcher);
+        activePathListener = new ActivePathListener<>(basePath.manager, pathListener);
 
     }
 
@@ -28,11 +28,6 @@ public class BaseUnbound<T> implements UnboundLink<T>, BaseLink {
         return activePathListener.unbound();
     }
 
-//    @Override
-//    public <P extends BasePath<T>> void bind(P basePath) {
-//        activePathListener.bind(basePath);
-//    }
-
     @Override
     public <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
         activePathListener.bindMap(basePath, map);
@@ -43,21 +38,16 @@ public class BaseUnbound<T> implements UnboundLink<T>, BaseLink {
         activePathListener.bindUpdate(basePath, update);
     }
 
-    static final class LinkIllegalAccessException {
-        private final Supplier<IllegalAccessException> getExc;
-        LinkIllegalAccessException(Class<?> aClass) {
-            getExc = () -> new IllegalAccessException(
-                    aClass.getSimpleName() + " is unable to listen paths. \n " +
-                            "Attempting to integrate both listen and bind would greatly diminish performance on both ends.");
+    @Override
+    public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
+        activePathListener.forcedSet(
+                AtomicBinaryEventConsumer.switchMapEventConsumer(
+                        activePathListener.getColdHolder(),
+//                        getColdHolder(),
+                        path,
+                        switchMap
+                )
+        );
 
-        }
-
-        void throwE() {
-            try {
-                throw getExc.get();
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            }
-        }
     }
 }

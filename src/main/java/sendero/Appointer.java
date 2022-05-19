@@ -1,6 +1,5 @@
 package sendero;
 
-import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.pairs.Pair;
 
 import java.util.function.Consumer;

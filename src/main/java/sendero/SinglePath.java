@@ -1,22 +1,18 @@
 package sendero;
 
-import sendero.functions.Consumers;
-import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.interfaces.BinaryPredicate;
-import sendero.pairs.Pair;
 
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 import static sendero.functions.Functions.myIdentity;
 
-public class SinglePath<T> extends PathDispatcherHolder<T> {
+public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
 
     @Override
-    PathDispatcher<T> getPathDispatcher() {
-        return new InjectivePathDispatcher<>(this);
+    PathAbsDispatcher<T> getPathDispatcher() {
+        return new InjectivePathAbsDispatcher<>(this);
     }
 
     protected SinglePath() {
@@ -37,7 +33,7 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
 
     SinglePath(
             UnaryOperator<Builders.HolderBuilder<T>> operator,
-            Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap
+            Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
     ) {
         super(
                 operator,
@@ -98,13 +94,6 @@ public class SinglePath<T> extends PathDispatcherHolder<T> {
     public <S> SinglePath<S> forkSwitch(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, BasePath<S>> switchMap) {
         return new SinglePath<>(
                 builderOperator,
-//                new Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer>() {
-//                    final Function<Consumer<Pair.Immutables.Int<S>>, AtomicBinaryEventConsumer> function = switchFunctionBuilder(switchMap);
-//                    @Override
-//                    public AtomicBinaryEventConsumer apply(Holders.ColdHolder<S> holder) {
-//                        return function.apply(holder::acceptVersionValue);
-//                    }
-//                }
                 switchFunctionBuilder(switchMap)
         );
     }

@@ -2,9 +2,7 @@ package sendero;
 
 import sendero.atomics.AtomicUtils;
 import sendero.functions.Functions;
-import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.interfaces.BinaryPredicate;
-import sendero.interfaces.Updater;
 import sendero.pairs.Pair;
 import sendero.threshold_listener.ThresholdListeners;
 
@@ -15,70 +13,100 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
-import static sendero.functions.Functions.IDENTITY;
+import static sendero.functions.Functions.isIdentity;
 import static sendero.functions.Functions.myIdentity;
 
 final class Holders {
 
-    interface HolderIO<T> extends Updater<T>, Consumer<T>, Supplier<T> {
+    interface HolderIO<T> extends ConsumerUpdater<T>, Supplier<T> {
     }
 
-    interface StatefulHolder<T> extends HolderIO<T> {
-        /**The map function happens BEFORE the "expect" predicate test*/
-        StatefulHolder<T> setMap(UnaryOperator<T> map);
-        StatefulHolder<T> expectIn(Predicate<T> expect);
-        StatefulHolder<T> expectIn(BinaryPredicate<T> expect);
-        StatefulHolder<T> expectOut(Predicate<T> expect);
-    }
-
-
-
-    interface ColdHolder<T> extends Supplier<T> {
-        void acceptVersionValue(Pair.Immutables.Int<T> versionValue);
-
+    interface ColdHolder<T> extends Supplier<T>, Consumer<Pair.Immutables.Int<T>> {
         /**@return: the last value*/
         T getAndInvalidate();
     }
 
-    public static class SingleColdHolder<T> implements ColdHolder<T> {
+    public static abstract class BaseColdHolder<T> implements ColdHolder<T> {
         @SuppressWarnings("unchecked")
         protected final T INVALID = (T) new Object();
-        private final Pair.Immutables.Int<T> FIRST = new Pair.Immutables.Int<>(0, INVALID);
-        private final Consumer<Pair.Immutables.Int<T>> dispatcher;
-//        private final BinaryPredicate<T> expectIn;
-        private final AtomicReference<Pair.Immutables.Int<T>> reference;
+        final Pair.Immutables.Int<T> FIRST = new Pair.Immutables.Int<>(0, INVALID);
+        final AtomicReference<Pair.Immutables.Int<T>> reference;
+        private final BinaryPredicate<T> expectInput;
 
-        SingleColdHolder(
-                Consumer<Pair.Immutables.Int<T>> target
-//                Consumer<Pair.Immutables.Int<T>> target,
-//                BinaryPredicate<T> expectIn
-        ) {
-            this.dispatcher = target;
-//            this.expectIn = BinaryPredicate.always(true);
-//            this.expectIn = expectIn;
+        private final Consumer<Pair.Immutables.Int<T>> coreAcceptor;
+
+        BaseColdHolder() {
             reference = new AtomicReference<>(FIRST);
+            expectInput = BinaryPredicate.always(true);
+            coreAcceptor = nonTestBuilder();
         }
 
-//        private boolean test(T next, T prev) {
-//            return expectIn.test(next, prev == INVALID ? null : prev);
-//        }
+
+        BaseColdHolder(
+                BinaryPredicate<T> expectInput
+        ) {
+            this.expectInput = expectInput == null ? BinaryPredicate.always(true) : expectInput;
+            coreAcceptor = inferBuild(expectInput);
+            this.reference = new AtomicReference<>(FIRST);
+        }
+
+        BaseColdHolder(
+                AtomicReference<Pair.Immutables.Int<T>> reference,
+                BinaryPredicate<T> expectInput
+        ) {
+            this.expectInput = expectInput == null ? BinaryPredicate.always(true) : expectInput;
+            coreAcceptor = inferBuild(expectInput);
+            this.reference = reference == null ? new AtomicReference<>(FIRST) : reference;
+        }
 
         @Override
-        public void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
-            versionValueCAS(versionValue.getInt(), versionValue.getValue());
+        public void accept(Pair.Immutables.Int<T> tInt) {
+            coreAcceptor.accept(tInt);
         }
-        private void versionValueCAS(int newVersion, T nextT) {
-            Pair.Immutables.Int<T> prev, next;
-            while ((prev = reference.get()).compareTo(newVersion) < 0) {
-//                if (test(nextT, prev.getValue())) {
+
+        protected boolean testIn(T next, T prev) {
+            return expectInput.test(next, prev == INVALID ? null : prev);
+        }
+
+        private Consumer<Pair.Immutables.Int<T>> inferBuild(BinaryPredicate<T> expectInput) {
+            return expectInput == Functions.binaryAlwaysTrue ? nonTestBuilder() : testBuilder();
+        }
+
+        private Consumer<Pair.Immutables.Int<T>> testBuilder() {
+            return tInt -> {
+                Pair.Immutables.Int<T> prev, next;
+                int newVersion = tInt.getInt();
+                T nextT = tInt.getValue();
+                while ((prev = reference.get()).compareTo(newVersion) < 0) {
+                    if (testIn(nextT, prev.getValue())) {
+                        next = new Pair.Immutables.Int<>(newVersion, nextT);
+                        if (reference.compareAndSet(prev, next)) {
+                            T prevVal = prev.getValue();
+                            coldSwapped(prevVal == INVALID ? null : prevVal, next);
+                            break;
+                        }
+                    } else return;
+                }
+            };
+        }
+
+        private Consumer<Pair.Immutables.Int<T>> nonTestBuilder() {
+            return tInt -> {
+                Pair.Immutables.Int<T> prev, next;
+                int newVersion = tInt.getInt();
+                T nextT = tInt.getValue();
+                while ((prev = reference.get()).compareTo(newVersion) < 0) {
                     next = new Pair.Immutables.Int<>(newVersion, nextT);
                     if (reference.compareAndSet(prev, next)) {
-                        dispatcher.accept(next);
+                        T prevVal = prev.getValue();
+                        coldSwapped(prevVal == INVALID ? null : prevVal, next);
                         break;
                     }
-//                } else return;
-            }
+                }
+            };
         }
+
+        abstract void coldSwapped(T prev, Pair.Immutables.Int<T> next);
 
         @Override
         public T getAndInvalidate() {
@@ -93,194 +121,83 @@ final class Holders {
         }
     }
 
-    static class TestDispatcher<T> extends Dispatcher<T> {
-        private volatile Predicate<T> expectOutput = Functions.always(true);
+    static class BaseTestDispatcher<T> extends BaseColdHolder<T>  {
+        private final Predicate<T> expectOutput;
+        private final Consumer<Pair.Immutables.Int<T>> coldSwapped;
+        private final DelayedConsumer<T> hotSwapped;
 
-        public TestDispatcher(Predicate<T> expectOutput) {
+        private final AbsDispatcher<T> dispatcher;
+
+        private DelayedConsumer<T> noTestDelayed() {
+            return dispatcher::dispatch;
+        }
+
+        private DelayedConsumer<T> testDelayed() {
+            return (delay, t) -> {
+                if (expectOutput.test(t.getValue())) {
+                    dispatcher.dispatch(delay, t);
+                }
+            };
+        }
+
+        private DelayedConsumer<T> inferDelayerBuild(Predicate<T> expectOut) {
+            return expectOut == Functions.alwaysTrue ? noTestDelayed() : testDelayed();
+        }
+
+        @FunctionalInterface
+        private interface DelayedConsumer<T> {
+            void accept(long delay, Pair.Immutables.Int<T> t);
+        }
+
+        public BaseTestDispatcher(AbsDispatcher<T> owner) {
+            this.expectOutput = Functions.always(true);
+            this.dispatcher = owner;
+            this.coldSwapped = noTest();
+            this.hotSwapped = noTestDelayed();
+        }
+
+        public BaseTestDispatcher(
+                AtomicReference<Pair.Immutables.Int<T>> reference,
+                BinaryPredicate<T> expectIn,
+                Predicate<T> expectOutput,
+                AbsDispatcher<T> dispatcher
+        ) {
+            super(reference, expectIn);
             this.expectOutput = expectOutput == null ? Functions.always(true) : expectOutput;
+            this.dispatcher = dispatcher;
+            coldSwapped = inferBuild(this.expectOutput);
+            hotSwapped = inferDelayerBuild(this.expectOutput);
         }
 
-        public TestDispatcher() {
-        }
-
-        static final long COLD = -1, HOT = 0;
-
-        protected void setExpectOutput(Predicate<T> expectOutput) {
-            this.expectOutput = expectOutput;
-        }
-
-        protected void inferDispatch(T prev, Pair.Immutables.Int<T> t, long delay) {
+        protected void hotSwapped(T prev, Pair.Immutables.Int<T> t, long delay) {
             T next = t.getValue();
-            onSwapped(prev, next);
-            if (expectOutput.test(next)) {
-                delayDispatch(t, delay);
-            }
-            if (delay < COLD) throw new IllegalStateException("Illegal delay value");
-        }
-
-        private void delayDispatch(Pair.Immutables.Int<T> toDispatch, long delay) {
-            if (delay >= HOT) dispatch(delay, toDispatch);
-            else coldDispatch(toDispatch);
+            dispatcher.onSwapped(prev, next);
+            hotSwapped.accept(delay, t);
         }
 
         protected boolean outPutTest(T value) {
             return expectOutput.test(value);
         }
 
-    }
-
-    static class DispatcherHolder<T> extends TestDispatcher<T> implements StatefulHolder<T>, ColdHolder<T> {
-        @SuppressWarnings("unchecked")
-        protected final T INVALID = (T) new Object();
-        private final Pair.Immutables.Int<T> FIRST = new Pair.Immutables.Int<>(0, INVALID);
-        private final AtomicReference<Pair.Immutables.Int<T>> reference;
-
-        public DispatcherHolder() {
-            reference = new AtomicReference<>(FIRST);
+        private Consumer<Pair.Immutables.Int<T>> inferBuild(Predicate<T> expectOut) {
+            return expectOut == Functions.alwaysTrue ? noTest() : withTest();
+        }
+        private Consumer<Pair.Immutables.Int<T>> noTest() {
+            return dispatcher::coldDispatch;
         }
 
-        DispatcherHolder(AtomicReference<Pair.Immutables.Int<T>> reference, UnaryOperator<T> map, BinaryPredicate<T> expectInput, Predicate<T> expectOut) {
-            super(expectOut);
-            this.reference = reference == null ?  new AtomicReference<>(FIRST) : reference;
-            this.map = map == null ? CLEARED_MAP : map;
-            this.expectInput = expectInput == null ? Functions.binaryAlways(true) : expectInput;
-        }
-
-        private final UnaryOperator<T> CLEARED_MAP = UnaryOperator.identity();
-        private volatile UnaryOperator<T> map = CLEARED_MAP;
-        @Override
-        public DispatcherHolder<T> setMap(UnaryOperator<T> map) {
-            this.map = map;
-            return this;
-        }
-
-        private volatile BinaryPredicate<T> expectInput = Functions.binaryAlways(true);
-        @Override
-        public DispatcherHolder<T> expectIn(Predicate<T> expect) {
-            this.expectInput = (next, prev) -> expect.test(next);
-            return this;
-        }
-
-        @Override
-        public StatefulHolder<T> expectIn(BinaryPredicate<T> expect) {
-            this.expectInput = expect;
-            return this;
-        }
-
-        @Override
-        public StatefulHolder<T> expectOut(Predicate<T> expect) {
-            setExpectOutput(expect);
-            return this;
-        }
-
-        private UnaryOperator<T> lazyProcess(UnaryOperator<T> update) {
-            return currentValue -> {
-                //Not valid if same instance
-                try {
-                    T nulledInvalid = currentValue == INVALID ? null : currentValue;
-                    T updated, mapped;
-                    updated = update.apply(nulledInvalid);
-                    if (updated == nulledInvalid) {
-                        return INVALID;
-                    }
-                    mapped = map.apply(updated);
-                    return expectInput.test(mapped, nulledInvalid) ? mapped : INVALID;
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    throw new RuntimeException(e);
+        private Consumer<Pair.Immutables.Int<T>> withTest() {
+            return next -> {
+                if (expectOutput.test(next.getValue())) {
+                    dispatcher.coldDispatch(next);
                 }
             };
         }
 
-        private void lazyCASAccept(long delay, UnaryOperator<T> t) {
-            Pair.Immutables.Int<T> prev = null, next;
-            T prevVal, newVal;
-            while (prev != (prev = reference.get())) {
-                prevVal = prev.getValue();
-                newVal = t.apply(prevVal);
-                if (newVal != INVALID) {
-                    next = new Pair.Immutables.Int<>(prev.getInt() + 1, newVal);
-                    if (reference.compareAndSet(prev, next)) {
-                        inferDispatch(prevVal, next, delay);
-                        break;
-                    }
-                }
-            }
-        }
-        /**The
-         * function should be side-effect-free, since it may be re-applied
-         * when attempted updates fail due to contention among threads.*/
         @Override
-        public void update(UnaryOperator<T> update) {
-            lazyCASProcess(TestDispatcher.HOT ,update);
-        }
-
-        @Override
-        public void update(long delay, UnaryOperator<T> update) {
-            lazyCASProcess(delay, update);
-        }
-
-        private void lazyCASProcess(long delay, UnaryOperator<T> update) {
-            lazyCASAccept(delay, lazyProcess(update));
-        }
-
-        private T process(T next, T prev) {
-            T mapped = map.apply(next);
-            return expectInput.test(mapped, prev == INVALID ? null : prev) ? mapped : INVALID;
-        }
-
-        private void CASAccept(T nextT) {
-            Pair.Immutables.Int<T> prev = null, next;
-            while (prev != (prev = reference.get())) {
-                T processed = process(nextT, prev.getValue());
-                if (processed != INVALID) {
-                    next = new Pair.Immutables.Int<>(prev.getInt() + 1, processed);
-                    if (reference.compareAndSet(prev, next)) {
-                        inferDispatch(prev.getValue(), next, HOT);
-                        break;
-                    }
-                } else return;
-            }
-        }
-
-        @Override
-        public void accept(T t) {
-            CASAccept(t);
-        }
-
-        @Override
-        public void acceptVersionValue(Pair.Immutables.Int<T> versionValue) {
-            versionValueCAS(versionValue.getInt(), versionValue.getValue());
-        }
-
-        private void versionValueCAS(int newVersion, T nextT) {
-            Pair.Immutables.Int<T> prev, next;
-            while ((prev = reference.get()).compareTo(newVersion) < 0) {
-                T processed = process(nextT, prev.getValue());
-                if (processed != INVALID) {
-                    next = new Pair.Immutables.Int<>(newVersion, processed);
-                    if (reference.compareAndSet(prev, next)) {
-                        inferDispatch(prev.getValue(), next, TestDispatcher.COLD);
-                        break;
-                    }
-                } else return;
-            }
-        }
-
-        @Override
-        public T get() {
-            Pair.Immutables.Int<T> pair = reference.get();
-            return pair == FIRST ? null : pair.getValue();
-        }
-
-        @Override
-        public T getAndInvalidate() {
-            Pair.Immutables.Int<T> pair = reference.getAndSet(FIRST);
-            return pair == FIRST ? null : pair.getValue();
-        }
-
-        protected int getVersion() {
-            return reference.get().getInt();
+        void coldSwapped(T prev, Pair.Immutables.Int<T> next) {
+            dispatcher.onSwapped(prev, next.getValue());
+            coldSwapped.accept(next);
         }
 
         Pair.Immutables.Int<T> getSnapshot() {
@@ -288,14 +205,19 @@ final class Holders {
             return res != FIRST ? res : null;
         }
 
+        protected int getVersion() {
+            return reference.get().getInt();
+        }
+
     }
-    static class ActivationHolder<T> extends Dispatcher<T> {
+
+    static class ActivationHolder<T> extends AbsDispatcher<T> {
+
+        final ActivationManager manager;
 
         boolean deactivationRequirements() {
             return true;
         }
-
-        final ActivationManager manager;
 
         protected void setOnStateChangeListener(AtomicBinaryEventConsumer listener) {
             manager.setActivationListener(listener);
@@ -305,38 +227,13 @@ final class Holders {
             return manager.clearActivationListener();
         }
 
-
         /**For LinkHolder*/
         boolean activationListenerIsSet() {
             return manager.activationListenerIsSet();
         }
 
-
-        private DispatcherHolder<T> buildIdentityHolder() {
-            return new DispatcherHolder<T>() {
-                @Override
-                void dispatch(long delay, Pair.Immutables.Int<T> t) {
-                    ActivationHolder.this.dispatch(delay,t);
-                }
-
-                @Override
-                void coldDispatch(Pair.Immutables.Int<T> t) {
-                    ActivationHolder.this.coldDispatch(t);
-                }
-
-                @Override
-                protected void onSwapped(T prev, T next) {
-                    ActivationHolder.this.onSwapped(prev, next);
-                }
-            };
-        }
-
-        private DispatcherHolder<T> buildHolder(UnaryOperator<Builders.HolderBuilder<T>> operator) {
-            return operator == IDENTITY ? buildIdentityHolder() : Builders.getHolderBuild(operator).build(this);
-        }
-
-        private ActivationManager buildManager(UnaryOperator<Builders.ManagerBuilder> operator) {
-            return operator == IDENTITY ? buildManager() : operator.apply(Builders.getManagerBuild()).build(holder, this::deactivationRequirements);
+        private ActivationManager buildManager(Holders.BaseTestDispatcher<T> baseTestDispatcher, UnaryOperator<Builders.ManagerBuilder> operator) {
+            return isIdentity(operator) ? buildManager() : operator.apply(Builders.getManagerBuild()).build(baseTestDispatcher, this::deactivationRequirements);
         }
 
         private ActivationManager buildManager() {
@@ -352,11 +249,9 @@ final class Holders {
                 UnaryOperator<Builders.HolderBuilder<T>> holderBuilder,
                 UnaryOperator<Builders.ManagerBuilder> mngrBuilderOperator
         ) {
-            this.holder = buildHolder(holderBuilder);
-            this.manager = buildManager(mngrBuilderOperator);
+            super(holderBuilder);
+            this.manager = buildManager(baseTestDispatcher, mngrBuilderOperator);
         }
-
-        final DispatcherHolder<T> holder;
 
         <S> void onRegistered(
                 Consumer<? super S> subscriber,
@@ -369,9 +264,8 @@ final class Holders {
             if (res.aBoolean) tryActivate();
             int snapshot = res.value;
             Runnable runnable = () -> {
-                final Pair.Immutables.Int<T> holderSnap  = holder.getSnapshot();//this method could be passed downStream along
-                // with Manager in the executor class, Holder needs to be made package private.
-                if (holderSnap != null && snapshot == holderSnap.getInt() && holder.outPutTest(holderSnap.getValue())) {
+                final Pair.Immutables.Int<T> holderSnap  = getSnapshot();
+                if (holderSnap != null && snapshot == holderSnap.getInt() && outPutTest(holderSnap.getValue())) {
                     subscriber.accept(map.apply(holderSnap));
                 }
             };
@@ -392,46 +286,6 @@ final class Holders {
         void tryDeactivate() {
             if (manager.tryDeactivate()) onStateChange(false);
         }
-
-        protected void accept(T t) {
-            holder.accept(t);
-        }
-
-        protected ActivationHolder<T> setMap(UnaryOperator<T> map) {
-            holder.setMap(map);
-            return this;
-        }
-
-        protected ActivationHolder<T> setExpectInput(Predicate<T> expect) {
-            holder.expectIn(expect);
-            return this;
-        }
-
-        protected ActivationHolder<T> setExpectInput(BinaryPredicate<T> expect) {
-            holder.expectIn(expect);
-            return this;
-        }
-
-        protected void update(UnaryOperator<T> update) {
-            holder.update(update);
-        }
-
-        protected void update(long delay, UnaryOperator<T> update) {
-            holder.update(delay, update);
-        }
-
-        protected T get() {
-            return holder.get();
-        }
-
-        protected int getVersion() {
-            return holder.getVersion();
-        }
-
-        protected void setExpectOutput(Predicate<T> expectOutput) {
-            holder.setExpectOutput(expectOutput);
-        }
-
     }
 
     abstract static class ExecutorHolder<T> extends ActivationHolder<T> {
@@ -462,7 +316,7 @@ final class Holders {
         }
 
         void scheduleExecution(long delay, Runnable action) {
-            if (delay > TestDispatcher.HOT) scheduler.scheduleOrReplace(delay, action);
+            if (delay > HOT) scheduler.scheduleOrReplace(delay, action);
             else action.run();
         }
 

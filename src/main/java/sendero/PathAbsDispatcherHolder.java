@@ -1,6 +1,5 @@
 package sendero;
 
-import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.pairs.Pair;
 
 import java.util.function.BiFunction;
@@ -10,44 +9,44 @@ import java.util.function.UnaryOperator;
 
 import static sendero.functions.Functions.myIdentity;
 
-public abstract class PathDispatcherHolder<T> extends BasePath<T> {
-    private final PathDispatcher<T> pathDispatcher;
+public abstract class PathAbsDispatcherHolder<T> extends BasePath<T> {
+    private final PathAbsDispatcher<T> pathDispatcher;
 
-    abstract PathDispatcher<T> getPathDispatcher();
+    abstract PathAbsDispatcher<T> getPathDispatcher();
 
-    private PathDispatcher<T> pathDispatcherBuild() {
+    private PathAbsDispatcher<T> pathDispatcherBuild() {
         return getPathDispatcher();
     }
 
-    protected PathDispatcherHolder() {
+    protected PathAbsDispatcherHolder() {
         super(myIdentity(), myIdentity());
         pathDispatcher = pathDispatcherBuild();
     }
 
-    protected PathDispatcherHolder(boolean activationListener) {
+    protected PathAbsDispatcherHolder(boolean mutable) {
         super(
                 myIdentity(),
-managerBuilder -> managerBuilder.withMutable(activationListener)
-//                activationListener
+                Builders.mutabilityAllowed(mutable)
         );
         pathDispatcher = pathDispatcherBuild();
     }
 
-    protected <S> PathDispatcherHolder(
+    protected <S> PathAbsDispatcherHolder(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
-            BasePath<S> basePath, Function<S, T> map) {
+            BasePath<S> basePath, Function<S, T> map
+    ) {
         super(builderOperator, basePath, map);
         pathDispatcher = pathDispatcherBuild();
     }
 
-    protected <S> PathDispatcherHolder(
+    protected <S> PathAbsDispatcherHolder(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
             BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
         super(builderOperator, basePath, updateFun);
         pathDispatcher = pathDispatcherBuild();
     }
 
-    protected PathDispatcherHolder(
+    protected PathAbsDispatcherHolder(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
             UnaryOperator<Builders.ManagerBuilder> mngrBuilderOperator
     ) {
@@ -55,20 +54,19 @@ managerBuilder -> managerBuilder.withMutable(activationListener)
         pathDispatcher = pathDispatcherBuild();
     }
 
-    protected PathDispatcherHolder(
+    protected PathAbsDispatcherHolder(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
-            Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap
+            Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
     ) {
         super(builderOperator,
-                managerBuilder -> managerBuilder.withFixedFun(
-                        (Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer>) tColdHolder -> selfMap.apply(tColdHolder::acceptVersionValue)
+                Builders.withFixed(
+                        selfMap
                 )
         );
         pathDispatcher = pathDispatcherBuild();
     }
 
-
-    PathDispatcherHolder(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+    PathAbsDispatcherHolder(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
         super(builderOperator);
         pathDispatcher = pathDispatcherBuild();
     }
@@ -106,19 +104,13 @@ managerBuilder -> managerBuilder.withMutable(activationListener)
     @SuppressWarnings("unchecked")
     @Override
     public <S, O extends Gate.Out<S>> O out(Class<? super O> outputType, Function<T, S> map) {
-        final Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> function = new Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer>() {
-            final Function<Consumer<Pair.Immutables.Int<S>>, AtomicBinaryEventConsumer> innerFunction = mapFunctionBuilder(map);
-            @Override
-            public AtomicBinaryEventConsumer apply(Holders.ColdHolder<S> sColdHolder) {
-                return innerFunction.apply(sColdHolder::acceptVersionValue);
-            }
-        };
         if (outputType == Gate.Out.Single.class) {
-            return (O) new Gate.Outs.SingleImpl<>(function);
+            return (O) new Gate.Outs.SingleImpl<>(
+                    mapFunctionBuilder(map)
+            );
         } else if (outputType == Gate.Out.Many.class) {
             return (O) new Gate.Outs.ManyImpl<>(
-                    function
-//                    mapFunctionBuilder(map)
+                    mapFunctionBuilder(map)
             );
         }
         throw new IllegalStateException("invalid class: " + outputType);

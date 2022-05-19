@@ -1,7 +1,7 @@
 package sendero.event_registers;
 
+import sendero.AtomicBinaryEventConsumer;
 import sendero.functions.Functions;
-import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.pairs.Pair;
 import sendero.switchers.Switchers;
 
@@ -157,6 +157,7 @@ public class ConsumerRegisters<T> {
                         return consumer.off();
                     }
 
+                    @Override
                     public boolean isActive() {
                         return consumer.isActive();
                     }
@@ -298,10 +299,12 @@ public class ConsumerRegisters<T> {
                 return ref2.get().isEqualTo(other);
             }
 
+            @Override
             public boolean on() {
                 return ref2.get().on();
             }
 
+            @Override
             public boolean off() {
                 return ref2.get().off();
             }

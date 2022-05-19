@@ -1,7 +1,5 @@
-import sendero.Builders;
-import sendero.Gate;
-import sendero.Path;
-import sendero.interfaces.AtomicBinaryEventConsumer;
+import sendero.*;
+import sendero.AtomicBinaryEventConsumer;
 import sendero.interfaces.BinaryPredicate;
 import sendero.pairs.Pair;
 
@@ -20,8 +18,7 @@ public class LivePath extends Path<Map<String, ?>> {
                             Map::equals).negate()
                     )
                     ,
-                    builder -> builder.withMutable(true)
-//                    Builders.getManagerBuild().withMutable(true)
+                    Builders.mutabilityAllowed()
             );
         }
 
@@ -51,6 +48,8 @@ public class LivePath extends Path<Map<String, ?>> {
             test.put("BUG TEST", new Object());
         }
 
+        private final HolderInput.Updater<Map<String, ?>> updater = new HolderInput.Updater<>(this);
+
         public void setup(
                 Gate.IO<Map<String, ?>> pref
         ) {
@@ -63,7 +62,7 @@ public class LivePath extends Path<Map<String, ?>> {
                             new AtomicBinaryEventConsumer() {
                                 final Consumer<Map<String, ?>> prefListener = (map) -> {
                                     Map<String, ?> deref = new HashMap<>(map);
-                                    update(
+                                    updater.update(
                                             delay,
                                             prev -> deref
                                     );

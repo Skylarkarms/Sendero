@@ -1,8 +1,12 @@
-package sendero.interfaces;
+package sendero;
+
+import sendero.pairs.Pair;
+import sendero.switchers.Switchers;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
-public abstract class AtomicBinaryEventConsumer {
+public abstract class AtomicBinaryEventConsumer implements Switchers.Switch {
     private static final int SHUT_DOWN = -1, ON = 1, OFF = 0;
     private final AtomicInteger versionedState = new AtomicInteger(SHUT_DOWN);
 
@@ -55,12 +59,14 @@ public abstract class AtomicBinaryEventConsumer {
 
     protected abstract void onStateChange(boolean isActive);
 
+    @Override
     public boolean on() {
         boolean isOn = expectAndSetOpposite(false);
         if (isOn) onStateChange(true);
         return isOn;
     }
 
+    @Override
     public boolean off() {
         boolean isOff = expectAndSetOpposite(true);
         if (isOff) onStateChange(false);
@@ -81,6 +87,7 @@ public abstract class AtomicBinaryEventConsumer {
         return started;
     }
 
+    @Override
     public boolean isActive() {
         return isOn(versionedState.get());
     }
@@ -91,5 +98,41 @@ public abstract class AtomicBinaryEventConsumer {
 
     public boolean isCleared() {
         return false;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static<S, T> AtomicBinaryEventConsumer switchMapEventConsumer(
+            Holders.ColdHolder<T> target,
+            BasePath<S> source,
+            Function<S, ? extends BasePath<T>> switchMap
+    ) {
+        final Appointers.BasePathListener<T> pathListener = new Appointers.BasePathListenerImpl<>(target);
+
+        final AtomicBinaryEventConsumer booleanConsumerAppointer = BinaryEventConsumers.producerHolderConnector(
+                source,
+                new Holders.BaseColdHolder<BasePath<T>>(
+                        (next, prev) -> next != null && next != prev
+                ) {
+                    @Override
+                    void coldSwapped(BasePath<T> prev, Pair.Immutables.Int<BasePath<T>> next) {
+                        pathListener.setAndStart(next.getValue());
+                    }
+                },
+                (Function<S, BasePath<T>>) switchMap
+        );
+
+        return new AtomicBinaryEventConsumer() {
+            @Override
+            protected void onStateChange(boolean isActive) {
+                if (isActive) {
+                    pathListener.on();
+                    booleanConsumerAppointer.on();
+                }
+                else {
+                    pathListener.off();
+                    booleanConsumerAppointer.off();
+                }
+            }
+        };
     }
 }

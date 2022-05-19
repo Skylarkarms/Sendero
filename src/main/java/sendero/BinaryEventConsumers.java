@@ -1,6 +1,5 @@
 package sendero;
 
-import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.pairs.Pair;
 
 import java.util.function.BiFunction;
@@ -22,7 +21,7 @@ public final class BinaryEventConsumers {
         return sInt -> {
             T prev = holder.get(), next = updateFun.apply(prev, sInt.getValue());
             if (prev != next) {
-                holder.acceptVersionValue(
+                holder.accept(
                         new Pair.Immutables.Int<>(
                                 //Link.Bound begins with a versions value of 1 (initialValue) this is done to prevent null checks on first update,
                                 //By incrementing the source's version by one, we allow for the first version to be allowed to pass.
@@ -42,7 +41,11 @@ public final class BinaryEventConsumers {
         return new Appointer<>(producer, holder);
     }
 
-    static<S, T> AtomicBinaryEventConsumer producerHolderConnector(BasePath<S> producer, Consumer<Pair.Immutables.Int<T>> holder, Function<S, T> map) {
+    static<S, T> AtomicBinaryEventConsumer producerHolderConnector(
+            BasePath<S> producer,
+            Consumer<Pair.Immutables.Int<T>> holder,
+            Function<S, T> map
+    ) {
         return new Appointer<>(producer, toAppointCreator(holder, map));
     }
 

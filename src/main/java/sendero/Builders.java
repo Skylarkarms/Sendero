@@ -1,6 +1,5 @@
 package sendero;
 
-import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.interfaces.BinaryPredicate;
 import sendero.pairs.Pair;
 
@@ -13,6 +12,15 @@ import java.util.function.UnaryOperator;
 public final class Builders {
     public static<S> UnaryOperator<HolderBuilder<S>> excludeIn(BinaryPredicate<S> excludeInput) {
         return sHolderBuilder -> sHolderBuilder.excludeIn(excludeInput);
+    }
+    public static <S> UnaryOperator<ManagerBuilder> withFixed(Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> activationListenerFun) {
+        return managerBuilder -> managerBuilder.withFixedFun(activationListenerFun);
+    }
+    public static UnaryOperator<ManagerBuilder> mutabilityAllowed() {
+        return managerBuilder -> managerBuilder.withMutable(true);
+    }
+    public static UnaryOperator<ManagerBuilder> mutabilityAllowed(boolean value) {
+        return managerBuilder -> managerBuilder.withMutable(value);
     }
     static <T>HolderBuilder<T> getHolderBuild() {
         return new HolderBuilder<>();
@@ -28,7 +36,7 @@ public final class Builders {
         private AtomicReference<Pair.Immutables.Int<T>> reference;
         private Predicate<T> expectOut;
         private BinaryPredicate<T> expectInput;
-        private UnaryOperator<T> map;
+//        private UnaryOperator<T> map;
 
         private HolderBuilder() {
         }
@@ -68,34 +76,14 @@ public final class Builders {
             return this;
         }
 
-        public HolderBuilder<T> with(UnaryOperator<T> map) {
-            this.map = map;
-            return this;
-        }
-
-        Holders.DispatcherHolder<T>
-        build(Dispatcher<T> dispatcher) {
-            return new Holders.DispatcherHolder<T>(reference, map, expectInput, expectOut){
-                @Override
-                void coldDispatch(Pair.Immutables.Int<T> t) {
-                    dispatcher.coldDispatch(t);
-                }
-
-                @Override
-                void dispatch(long delay, Pair.Immutables.Int<T> t) {
-                    dispatcher.dispatch(delay, t);
-                }
-
-                @Override
-                protected void onSwapped(T prev, T next) {
-                    dispatcher.onSwapped(prev, next);
-                }
-            };
+        Holders.BaseTestDispatcher<T> buildDispatcher(AbsDispatcher<T> owner) {
+            return new Holders.BaseTestDispatcher<>(reference, expectInput, expectOut, owner);
         }
     }
 
     public static class ManagerBuilder {
         private Function<Holders.ColdHolder<?>, AtomicBinaryEventConsumer> activationListenerFun;
+        private Function<Appointers.BasePathListener<?>, AtomicBinaryEventConsumer> activationListenerFun2;
         private boolean mutableActivationListener;
 
         @SuppressWarnings("unchecked")
@@ -124,6 +112,22 @@ public final class Builders {
                     return deactivation.getAsBoolean();
                 }
             };
+        }
+        protected ActivationManager build(Appointers.BasePathListener<?> basePathListener, BooleanSupplier deactivation) {
+            final AtomicBinaryEventConsumer finalConsumer = activationListenerFun != null ? activationListenerFun2.apply(basePathListener) : null;
+            return new ActivationManager(finalConsumer, mutableActivationListener) {
+                @Override
+                protected boolean deactivationRequirements() {
+                    return deactivation.getAsBoolean();
+                }
+            };
+        }
+
+        @SuppressWarnings("unchecked")
+        public<S> ManagerBuilder setActivationListenerFun2(Function<Appointers.BasePathListener<S>, AtomicBinaryEventConsumer> activationListenerFun2) {
+            this.activationListenerFun2 = basePathListener -> activationListenerFun2.apply((Appointers.BasePathListener<S>) basePathListener);
+//            this.activationListenerFun2 = activationListenerFun2;
+            return this;
         }
     }
 }

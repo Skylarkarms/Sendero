@@ -4,7 +4,9 @@ import sendero.pairs.Pair;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.*;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 
 public final class AtomicUtils {
 
@@ -49,43 +51,6 @@ public final class AtomicUtils {
         }
         return new Witness<>(prev, null);
     }
-
-//    /**retryIf on miss*/
-//    public static<T> Witness<T> complyWithCAS(
-//            AtomicReference<T> ref,
-//            Predicate<T> updateIf,
-//            UnaryOperator<T> nextOperator,
-//            Predicate<T> retryIf
-//    ) {
-//        T prev = ref.get(), next = null;
-//        boolean update;
-//        do {
-//            update = updateIf.test(prev);
-//            if (update) {
-//                next = nextOperator.apply(prev);
-//                if (ref.compareAndSet(prev, next)) return new Witness<>(prev, next);
-//            }
-//        } while (retryIf.test(prev = ref.get()));
-//        return new Witness<>(prev, next);
-//    }
-
-//    public static Witness.Int complyWithCAS(
-//            AtomicInteger ref,
-//            IntPredicate updateIf,
-//            IntUnaryOperator nextOperator,
-//            IntPredicate retryIf
-//    ) {
-//        int prev = ref.get(), next = -1;
-//        boolean update;
-//        do {
-//            update = updateIf.test(prev);
-//            if (update) {
-//                next = nextOperator.applyAsInt(prev);
-//                if (ref.compareAndSet(prev, next)) return new Witness.Int(prev, next);
-//            }
-//        } while (retryIf.test(prev = ref.get()));
-//        return new Witness.Int(prev, next);
-//    }
 
     /**Delays the first execution, and then blocks contention and reuses Thread.*/
     public static class SwapScheduler {

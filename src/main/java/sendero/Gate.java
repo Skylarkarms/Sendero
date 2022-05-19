@@ -1,21 +1,19 @@
 package sendero;
 
 import sendero.event_registers.ConsumerRegisters;
-import sendero.interfaces.AtomicBinaryEventConsumer;
-import sendero.interfaces.BinaryPredicate;
 import sendero.interfaces.Register;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 import static sendero.functions.Functions.myIdentity;
 
 public final class Gate {
-    public static class IO<T> extends Outs.OutBasePath.Many<T> implements Holders.StatefulHolder<T> {
+    public static final class IO<T> extends Outs.OutBasePath.Many<T> implements Holders.HolderIO<T> {
+        private final ConsumerUpdater<T> consumerUpdater = HolderInput.getConsumerUpdater(baseTestDispatcher);
 
         public IO() {
             super();
@@ -26,37 +24,13 @@ public final class Gate {
         }
 
         @Override
-        public IO<T> setMap(UnaryOperator<T> map) {
-            super.setMap(map);
-            return this;
-        }
-
-        @Override
-        public IO<T> expectIn(Predicate<T> expect) {
-            super.setExpectInput(expect);
-            return this;
-        }
-
-        @Override
-        public Holders.StatefulHolder<T> expectIn(BinaryPredicate<T> expect) {
-            super.setExpectInput(expect);
-            return this;
-        }
-
-        @Override
-        public IO<T> expectOut(Predicate<T> expect) {
-            setExpectOutput(expect);
-            return this;
-        }
-
-        @Override
         public void update(UnaryOperator<T> update) {
-            super.update(update);
+            consumerUpdater.update(update);
         }
 
         @Override
         public void accept(T t) {
-            super.accept(t);
+            consumerUpdater.accept(t);
         }
 
         @Override
@@ -66,10 +40,12 @@ public final class Gate {
 
         @Override
         public void update(long delay, UnaryOperator<T> update) {
-            super.update(delay, update);
+            consumerUpdater.update(delay, update);
         }
     }
-    public static class In<T> extends Path<T> implements Holders.StatefulHolder<T> {
+    public static final class In<T> extends Path<T> implements Holders.HolderIO<T> {
+
+        private final ConsumerUpdater<T> consumerUpdater = HolderInput.getConsumerUpdater(baseTestDispatcher);
 
         public In(UnaryOperator<Builders.HolderBuilder<T>> operator) {
             super(operator);
@@ -84,37 +60,13 @@ public final class Gate {
         }
 
         @Override
-        public In<T> setMap(UnaryOperator<T> map) {
-            super.setMap(map);
-            return this;
-        }
-
-        @Override
-        public In<T> expectIn(Predicate<T> expect) {
-            super.setExpectInput(expect);
-            return this;
-        }
-
-        @Override
-        public Holders.StatefulHolder<T> expectIn(BinaryPredicate<T> expect) {
-            super.setExpectInput(expect);
-            return this;
-        }
-
-        @Override
-        public In<T> expectOut(Predicate<T> expect) {
-            setExpectOutput(expect);
-            return this;
-        }
-
-        @Override
         public void update(UnaryOperator<T> update) {
-            super.update(update);
+            consumerUpdater.update(update);
         }
 
         @Override
         public void accept(T t) {
-            super.accept(t);
+            consumerUpdater.accept(t);
         }
 
         @Override
@@ -124,7 +76,7 @@ public final class Gate {
 
         @Override
         public void update(long delay, UnaryOperator<T> update) {
-            super.update(delay, update);
+            consumerUpdater.update(delay, update);
         }
     }
     public interface Out<T> extends Register<T> {
@@ -145,7 +97,7 @@ public final class Gate {
                 super(builderOperator);
             }
 
-            protected static class Many<T> extends OutBasePath<T> implements Out.Many<T> {
+            protected static final class Many<T> extends OutBasePath<T> implements Out.Many<T> {
 
                 private final SimpleLists.LockFree.Snapshooter<Consumer<? super T>, Integer>
                         locale = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
@@ -224,7 +176,7 @@ public final class Gate {
                 }
             }
 
-            protected static class Single<T> extends OutBasePath<T> implements Out.Single<T> {
+            protected static final class Single<T> extends OutBasePath<T> implements Out.Single<T> {
 
                 private final ConsumerRegisters.IConsumerRegister.SnapshottingConsumerRegister<Integer, T>
                         locale = ConsumerRegisters.IConsumerRegister.getInstance(this::getVersion);
@@ -305,12 +257,9 @@ public final class Gate {
                     Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
 //                    Function<Consumer<Pair.Immutables.Int<T>>, AtomicBinaryEventConsumer> selfMap
             ) {
-//            protected ManyImpl(Function<Consumer<Pair.Immutables.Int<T>>, BooleanConsumer> selfMap) {
                 super(
                         myIdentity(),
-                        builder -> builder.withFixedFun(selfMap)
-//                        Builders.getManagerBuild().withFixedFun(selfMap)
-//                        selfMap
+                        Builders.withFixed(selfMap)
                 );
             }
 
@@ -336,7 +285,7 @@ public final class Gate {
                     }
                 }
 
-                if (delay > Holders.TestDispatcher.HOT) throw new IllegalArgumentException("This dispatcher cannot be delayed.");
+                if (delay > HOT) throw new IllegalArgumentException("This dispatcher cannot be delayed.");
             }
 
             @Override
@@ -384,7 +333,7 @@ public final class Gate {
             ) {
                 super(
                         myIdentity(),
-                        builder -> builder.withFixedFun(selfMap)
+                        Builders.withFixed(selfMap)
 //                        Builders.getManagerBuild().withFixedFun(selfMap)
                 );
             }
@@ -406,7 +355,7 @@ public final class Gate {
                     locale.accept(t.getValue());
                 }
 
-                if (delay > Holders.TestDispatcher.HOT) throw new IllegalArgumentException("This dispatcher cannot be delayed.");
+                if (delay > HOT) throw new IllegalArgumentException("This dispatcher cannot be delayed.");
             }
 
             @Override

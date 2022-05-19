@@ -9,7 +9,8 @@ public class TestHard {
 
     Gate.In<Integer> input = new Gate.In<>();
     Gate.In<Integer> input2 = new Gate.In<>(3);
-    Link.Unbound.Switch<String> ALink = new Link.Unbound.Switch<>();
+    Link.Unbound<String> ALink = new Link.Unbound<>();
+//    Link.Unbound.Switch<String> ALink = new Link.Unbound.Switch<>();
 
     Gate.In<String> hello = new Gate.In<>("Hello");
     Path<String> hey = hello.forkMap(

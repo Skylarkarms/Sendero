@@ -1,28 +1,21 @@
 package sendero;
 
-import sendero.interfaces.AtomicBinaryEventConsumer;
-import sendero.pairs.Pair;
-
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.UnaryOperator;
 
-//A BooleanConsumer is bounded by a BasePath Producer, so Appointer can be final.
 class ActivePathListener<T> {
     private final ActivationManager manager;
-    private final Appointers.HolderAppointer<T> appointerCache;
+    private final Appointers.UnboundPathListenerImpl<T> appointerCache;
 
-    Consumer<Pair.Immutables.Int<T>> getColdHolder() {
-        return appointerCache.getColdHolder()::acceptVersionValue;
+    Holders.ColdHolder<T> getColdHolder() {
+        return appointerCache.getColdHolder();
     }
 
-    protected ActivePathListener(ActivationManager manager, Appointers.HolderAppointer<T> appointerCache) {
+    public ActivePathListener(ActivationManager manager, Appointers.UnboundPathListenerImpl<T> appointerCache) {
         this.manager = manager;
         this.appointerCache = appointerCache;
     }
 
-    /**should be protected*/
     protected  <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
         manager.setActivationListener(
                 appointerCache.setPathAndGet(basePath, map)
@@ -40,11 +33,6 @@ class ActivePathListener<T> {
                 appointerCache.getAndClear(), activationListener
         );
     }
-
-//    /**should be protected*/
-//    protected  <S, P extends BasePath<T>> void bind(P basePath) {
-//        bindMap(basePath, UnaryOperator.identity());
-//    }
 
     protected boolean unbound() {
         final Appointer<?> app = appointerCache.getAndClear();

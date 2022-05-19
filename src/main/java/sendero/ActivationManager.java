@@ -2,7 +2,6 @@ package sendero;
 
 import sendero.event_registers.BinaryEventRegisters;
 import sendero.functions.Functions;
-import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.switchers.Switchers;
 
 abstract class ActivationManager {
@@ -34,11 +33,6 @@ abstract class ActivationManager {
                         Switchers.getAtomic();
         this.thrower = mutableActivationListener ? ON_MUTABLE : createThrower();
     }
-
-//    protected ActivationManager(boolean withActivationListener) {
-//        switchRegister = withActivationListener ? BinaryEventRegisters.getAtomicRegister() : Switchers.getAtomic();
-//        thrower = withActivationListener ? Functions.emptyRunnable() : createThrower();
-//    }
 
     abstract boolean deactivationRequirements();
 

@@ -1,11 +1,8 @@
 package sendero;
 
-import sendero.functions.Consumers;
-import sendero.interfaces.AtomicBinaryEventConsumer;
 import sendero.interfaces.Updater;
 
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
@@ -19,7 +16,7 @@ public class Link<T> extends Path<T> implements BaseLink {
 
     private Link(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
         super(builderOperator,
-                (UnaryOperator<Builders.ManagerBuilder>) builder -> builder.withMutable(true)
+                Builders.mutabilityAllowed()
         );
     }
 
@@ -74,11 +71,6 @@ public class Link<T> extends Path<T> implements BaseLink {
             super(builderOperator);
         }
 
-//        @Override
-//        public <P extends BasePath<T>> void bind(P basePath) {
-//            baseUnbound.bind(basePath);
-//        }
-
         @Override
         public <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
             baseUnbound.bindMap(basePath, map);
@@ -90,39 +82,18 @@ public class Link<T> extends Path<T> implements BaseLink {
         }
 
         @Override
+        public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
+            baseUnbound.switchMap(path, switchMap);
+        }
+
+        @Override
         public boolean unbound() {
             return baseUnbound.unbound();
         }
 
-        public static class Switch<T> extends Unbound<T> implements UnboundSwitch<T> {
+        public static final class In<T> extends Unbound<T> implements Updater<T> {
+            private final HolderInput.Updater<T> updater = new HolderInput.Updater<>(baseTestDispatcher);
 
-            private final BaseUnboundSwitch<T> baseSwitch = new BaseUnboundSwitch<>(baseUnbound.activePathListener);
-
-            public Switch() {
-                super();
-            }
-
-            public Switch(UnaryOperator<Builders.HolderBuilder<T>> operator) {
-                super(operator);
-            }
-
-            @Override
-            public <S> void bindFun(BasePath<S> path, Function<Consumer<? super T>, ? extends Consumers.BaseConsumer<S>> exit) {
-                baseSwitch.bindFun(path, exit);
-            }
-
-            @Override
-            public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
-                baseSwitch.switchMap(path, switchMap);
-            }
-
-            @Override
-            public <S> void switchFun(BasePath<S> path, Function<Consumer<? super BasePath<T>>, ? extends Consumers.BaseConsumer<S>> exit) {
-                baseSwitch.switchFun(path, exit);
-            }
-        }
-
-        public static class In<T> extends Unbound<T> implements Updater<T> {
             public In() {
                 super();
             }
@@ -133,12 +104,12 @@ public class Link<T> extends Path<T> implements BaseLink {
 
             @Override
             public void update(UnaryOperator<T> update) {
-                super.update(update);
+                updater.update(update);
             }
 
             @Override
             public void update(long delay, UnaryOperator<T> update) {
-                super.update(delay, update);
+                updater.update(delay, update);
             }
         }
 
@@ -202,7 +173,8 @@ public class Link<T> extends Path<T> implements BaseLink {
             );
         }
 
-        public static class In<T> extends Bound<T> implements Updater<T> {
+        public static final class In<T> extends Bound<T> implements Updater<T> {
+            private final HolderInput.Updater<T> updater = new HolderInput.Updater<>(baseTestDispatcher);
             public<S> In(
                     BasePath<S> fixedPath,
                     BiFunction<T, S, T> update
@@ -220,61 +192,13 @@ public class Link<T> extends Path<T> implements BaseLink {
 
             @Override
             public void update(UnaryOperator<T> update) {
-                super.update(update);
+                updater.update(update);
             }
 
             @Override
             public void update(long delay, UnaryOperator<T> update) {
-                super.update(delay, update);
+                updater.update(delay, update);
             }
         }
-    }
-
-    private final BaseUnbound.LinkIllegalAccessException exception = new BaseUnbound.LinkIllegalAccessException(getClass());
-
-    @Override
-    protected <S, P extends BasePath<S>> void setPath(P basePath, Function<S, T> map) {
-        exception.throwE();
-    }
-
-    @Override
-    protected <S, P extends BasePath<S>> T setAndStart(P basePath, Function<S, T> map) {
-        exception.throwE();
-        return null;
-    }
-
-    @Override
-    protected <P extends BasePath<T>> T setAndStart(P basePath) {
-        exception.throwE();
-        return null;
-    }
-
-    @Override
-    protected void stopListeningPathAndUnregister() {
-        exception.throwE();
-    }
-
-    @Override
-    protected boolean startListeningPath() {
-        exception.throwE();
-        return false;
-    }
-
-    @Override
-    protected boolean stopListeningPath() {
-        exception.throwE();
-        return false;
-    }
-
-    @Override
-    protected boolean pathIsActive() {
-        exception.throwE();
-        return false;
-    }
-
-    @Override
-    protected boolean pathIsSet() {
-        exception.throwE();
-        return false;
     }
 }

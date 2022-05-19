@@ -1,6 +1,6 @@
 package sendero.event_registers;
 
-import sendero.interfaces.AtomicBinaryEventConsumer;
+import sendero.AtomicBinaryEventConsumer;
 import sendero.switchers.Switchers;
 
 public final class BinaryEventRegisters {

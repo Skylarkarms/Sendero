@@ -1,20 +1,20 @@
 package sendero;
 
 import sendero.event_registers.ConsumerRegisters;
-import sendero.interfaces.BinaryPredicate;
 import sendero.interfaces.Register;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 import static sendero.functions.Functions.myIdentity;
 
 public final class SingleGate {
-    public static class IO<T> extends Outs.OutBaseSinglePath.Single<T> implements Holders.StatefulHolder<T> {
+    public static class IO<T> extends Outs.OutBaseSinglePath.Single<T> implements Holders.HolderIO<T> {
+        private final ConsumerUpdater<T> consumerUpdater = HolderInput.getConsumerUpdater(baseTestDispatcher);
+
 
         public IO() {
             this(myIdentity());
@@ -29,37 +29,13 @@ public final class SingleGate {
         }
 
         @Override
-        public IO<T> setMap(UnaryOperator<T> map) {
-            super.setMap(map);
-            return this;
-        }
-
-        @Override
-        public IO<T> expectIn(Predicate<T> expect) {
-            super.setExpectInput(expect);
-            return this;
-        }
-
-        @Override
-        public Holders.StatefulHolder<T> expectIn(BinaryPredicate<T> expect) {
-            super.setExpectInput(expect);
-            return this;
-        }
-
-        @Override
-        public IO<T> expectOut(Predicate<T> expect) {
-            setExpectOutput(expect);
-            return this;
-        }
-
-        @Override
         public void update(UnaryOperator<T> update) {
-            super.update(update);
+            consumerUpdater.update(update);
         }
 
         @Override
         public void accept(T t) {
-            super.accept(t);
+            consumerUpdater.accept(t);
         }
 
         @Override
@@ -69,10 +45,12 @@ public final class SingleGate {
 
         @Override
         public void update(long delay, UnaryOperator<T> update) {
-            super.update(delay, update);
+            consumerUpdater.update(delay, update);
         }
     }
-    public static class In<T> extends SinglePath<T> implements Holders.StatefulHolder<T> {
+    public static class In<T> extends SinglePath<T> implements Holders.HolderIO<T> {
+
+        private final ConsumerUpdater<T> consumerUpdater = HolderInput.getConsumerUpdater(baseTestDispatcher);
 
         public In() {
             this(myIdentity());
@@ -87,37 +65,13 @@ public final class SingleGate {
         }
 
         @Override
-        public In<T> setMap(UnaryOperator<T> map) {
-            super.setMap(map);
-            return this;
-        }
-
-        @Override
-        public In<T> expectIn(Predicate<T> expect) {
-            super.setExpectInput(expect);
-            return this;
-        }
-
-        @Override
-        public In<T> expectIn(BinaryPredicate<T> expect) {
-            super.setExpectInput(expect);
-            return this;
-        }
-
-        @Override
-        public In<T> expectOut(Predicate<T> expect) {
-            setExpectOutput(expect);
-            return this;
-        }
-
-        @Override
         public void update(UnaryOperator<T> update) {
-            super.update(update);
+            consumerUpdater.update(update);
         }
 
         @Override
         public void accept(T t) {
-            super.accept(t);
+            consumerUpdater.accept(t);
         }
 
         @Override
@@ -127,7 +81,7 @@ public final class SingleGate {
 
         @Override
         public void update(long delay, UnaryOperator<T> update) {
-            super.update(delay, update);
+            consumerUpdater.update(delay, update);
         }
     }
     public interface Out<T> extends Register<T> {
@@ -237,7 +191,6 @@ public final class SingleGate {
                 }
 
                 Single(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
-//                Single(Builders.HolderBuilder<T> holderBuilder) {
                     super(builderOperator);
                 }
 
@@ -245,7 +198,6 @@ public final class SingleGate {
                     return () -> {
                         boolean registered = locale.isRegistered();
                         if (!registered) pathDispatch(false, t);
-//                    if (!registered) super.dispatchAppointees(false, t);
                         else {
                             pathDispatch(true, t);
                             if (t.compareTo(getVersion()) != 0) return;
