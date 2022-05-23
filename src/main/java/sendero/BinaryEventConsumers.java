@@ -1,5 +1,6 @@
 package sendero;
 
+import sendero.functions.Functions;
 import sendero.pairs.Pair;
 
 import java.util.function.BiFunction;
@@ -8,8 +9,10 @@ import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 public final class BinaryEventConsumers {
+    @SuppressWarnings("unchecked")
     private static<T, S> Consumer<Pair.Immutables.Int<S>> toAppointCreator(Consumer<Pair.Immutables.Int<T>> holder, Function<S, T> map) {
-        return sInt -> holder.accept(new Pair.Immutables.Int<>(sInt.getInt(), map.apply(sInt.getValue())));
+        if (Functions.isIdentity(map)) return sInt -> holder.accept((Pair.Immutables.Int<T>) sInt);
+        else return sInt -> holder.accept(new Pair.Immutables.Int<>(sInt.getInt(), map.apply(sInt.getValue())));
     }
 
     /*This update operation will happen ONCE as opposed to holder's update which will retry until set.

@@ -1,6 +1,4 @@
-package sendero;
-
-import sendero.interfaces.Updater;
+package sendero.interfaces;
 
 import java.util.function.Consumer;
 

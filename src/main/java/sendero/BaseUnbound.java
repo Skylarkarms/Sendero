@@ -7,9 +7,9 @@ public class BaseUnbound<T> implements UnboundLink<T>, BaseLink {
 
     final ActivePathListener<T> activePathListener;
 
-    BaseUnbound(BasePath<T> basePath) {
-        final Appointers.UnboundPathListenerImpl<T> pathListener = new Appointers.UnboundPathListenerImpl<>(basePath.baseTestDispatcher);
-        activePathListener = new ActivePathListener<>(basePath.manager, pathListener);
+    BaseUnbound(Holders.ActivationHolder<T> activationHolder) {
+        final Appointers.UnboundPathListenerImpl<T> pathListener = new Appointers.UnboundPathListenerImpl<>(activationHolder.baseTestDispatcher);
+        activePathListener = new ActivePathListener<>(activationHolder.manager, pathListener);
 
     }
 
@@ -43,11 +43,9 @@ public class BaseUnbound<T> implements UnboundLink<T>, BaseLink {
         activePathListener.forcedSet(
                 AtomicBinaryEventConsumer.switchMapEventConsumer(
                         activePathListener.getColdHolder(),
-//                        getColdHolder(),
                         path,
                         switchMap
                 )
         );
-
     }
 }

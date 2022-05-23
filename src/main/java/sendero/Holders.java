@@ -1,8 +1,9 @@
 package sendero;
 
-import sendero.atomics.AtomicUtils;
+import sendero.executor.DelayedServiceExecutor;
 import sendero.functions.Functions;
 import sendero.interfaces.BinaryPredicate;
+import sendero.interfaces.ConsumerUpdater;
 import sendero.pairs.Pair;
 import sendero.threshold_listener.ThresholdListeners;
 
@@ -272,8 +273,10 @@ final class Holders {
             executionMethod.accept(runnable);
         }
 
-        void tryActivate() {
-            if (manager.tryActivate()) onStateChange(true);
+        boolean tryActivate() {
+            boolean active = manager.tryActivate();
+            if (active) onStateChange(true);
+            return active;
         }
 
         /**WARNING: Calls bound to race conditions*/
@@ -283,8 +286,10 @@ final class Holders {
             return manager.isIdle();
         }
 
-        void tryDeactivate() {
-            if (manager.tryDeactivate()) onStateChange(false);
+        boolean tryDeactivate() {
+            boolean deactive = manager.tryDeactivate();
+            if (deactive) onStateChange(false);
+            return deactive;
         }
     }
 
@@ -306,9 +311,9 @@ final class Holders {
         }
 
         @Override
-        void tryActivate() {
+        boolean tryActivate() {
             eService.increment();
-            super.tryActivate();
+            return super.tryActivate();
         }
 
         void fastExecute(Runnable action) {
@@ -346,48 +351,36 @@ final class Holders {
             eService.decrement();
         }
 
-        private static abstract class LifeCycledThreshold {
-            private final AtomicUtils.SwapScheduler.Long delayer = new AtomicUtils.SwapScheduler.Long(100);
+        private static final class LifeCycledThresholdExecutor<S extends ExecutorService> {
+
             private final ThresholdListeners.ThresholdListener thresholdSwitch = ThresholdListeners.getAtomicOf(
                     0, 0
             );
+            private final DelayedServiceExecutor<S> delayedServiceExecutor;
 
-            protected abstract void onCreate();
-            protected abstract void onDestroy();
-
-            public void tryActivate() {if (thresholdSwitch.increment()) if (!delayer.interrupt()) onCreate();}
-            public void tryDeactivate() {if (thresholdSwitch.decrement()) delayer.scheduleOrSwap(this::onDestroy);}
-        }
-
-        private static final class LifeCycledExecutor<S extends ExecutorService> extends LifeCycledThreshold {
-
-            private volatile S service;
-            private final Supplier<S> serviceSupplier;
-            private final Consumer<S> serviceDestroyer;
-
-            private LifeCycledExecutor(Supplier<S> serviceSupplier, Consumer<S> serviceDestroyer) {
-                this.serviceSupplier = serviceSupplier;
-                this.serviceDestroyer = serviceDestroyer;
+            private LifeCycledThresholdExecutor(long millis, Supplier<S> serviceSupplier, Consumer<S> serviceDestroyer) {
+                delayedServiceExecutor = new DelayedServiceExecutor<>(millis, serviceSupplier, serviceDestroyer);
             }
 
-            @Override
-            protected void onCreate() {
-                service = serviceSupplier.get();
+            public void tryActivate() {
+                if (thresholdSwitch.increment()) {
+                    delayedServiceExecutor.create();
+                }
             }
 
-            @Override
-            protected void onDestroy() {
-                serviceDestroyer.accept(service);
+            public void tryDeactivate() {
+                if (thresholdSwitch.decrement()) delayedServiceExecutor.destroy();
             }
 
             public S getService() {
-                return service;
+                return delayedServiceExecutor.getService();
             }
         }
 
         public enum EService {
             INSTANCE;
-            private final LifeCycledExecutor<ScheduledExecutorService> lifeCycledSchedulerExecutor = new LifeCycledExecutor<>(
+            private final LifeCycledThresholdExecutor<ScheduledExecutorService> lifeCycledSchedulerExecutor = new LifeCycledThresholdExecutor<>(
+                    100,
                     () -> Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors()),
                     ExecutorService::shutdown
             );

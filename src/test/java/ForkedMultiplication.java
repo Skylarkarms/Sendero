@@ -1,14 +1,12 @@
-import sendero.Builders;
-import sendero.Gate;
-import sendero.Merge;
-import sendero.Path;
+import sendero.*;
 
-import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 public class ForkedMultiplication {
     private final Gate.In<Integer> in = new Gate.In<>(2);
     private final Gate.Out.Single<Integer> resultOutput;
+
+    private final ActiveSuppliers.Unbound<Integer> activeSupplier = ActiveSuppliers.unbound();
     public ForkedMultiplication() {
         Path<Integer> firstFork = in.forkMap(
                 (UnaryOperator<Integer>) integer -> {
@@ -92,6 +90,24 @@ public class ForkedMultiplication {
                     );
                 }
         );
+        activeSupplier.bindMap(finalResult, ints -> ints[2]);
+        new Thread(
+                () -> {
+                    try {
+                        System.out.println("SLEEPING... FOR SUPPLIER");
+                        Thread.sleep(200);
+                        activeSupplier.get(
+                                100,
+                                integer -> {
+                                    System.out.println("Result is: " + integer);
+                                    activeSupplier.off();
+                                }
+                        );
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+        ).start();
         resultOutput = finalResult.out(Gate.Out.Single.class, ints -> ints[2]);
         resultOutput.register(
                 integer -> System.out.println("Final result is: " + integer)

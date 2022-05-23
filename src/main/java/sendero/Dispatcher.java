@@ -9,6 +9,4 @@ interface Dispatcher<T> {
 
     /**dispatch is trigger by client input*/
     void dispatch(long delay,Pair.Immutables.Int<T> t);
-
-//    void onSwapped(T prev, T next);
 }

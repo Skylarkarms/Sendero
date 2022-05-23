@@ -36,7 +36,6 @@ public final class Builders {
         private AtomicReference<Pair.Immutables.Int<T>> reference;
         private Predicate<T> expectOut;
         private BinaryPredicate<T> expectInput;
-//        private UnaryOperator<T> map;
 
         private HolderBuilder() {
         }
@@ -112,22 +111,6 @@ public final class Builders {
                     return deactivation.getAsBoolean();
                 }
             };
-        }
-        protected ActivationManager build(Appointers.BasePathListener<?> basePathListener, BooleanSupplier deactivation) {
-            final AtomicBinaryEventConsumer finalConsumer = activationListenerFun != null ? activationListenerFun2.apply(basePathListener) : null;
-            return new ActivationManager(finalConsumer, mutableActivationListener) {
-                @Override
-                protected boolean deactivationRequirements() {
-                    return deactivation.getAsBoolean();
-                }
-            };
-        }
-
-        @SuppressWarnings("unchecked")
-        public<S> ManagerBuilder setActivationListenerFun2(Function<Appointers.BasePathListener<S>, AtomicBinaryEventConsumer> activationListenerFun2) {
-            this.activationListenerFun2 = basePathListener -> activationListenerFun2.apply((Appointers.BasePathListener<S>) basePathListener);
-//            this.activationListenerFun2 = activationListenerFun2;
-            return this;
         }
     }
 }

@@ -115,6 +115,5 @@ public abstract class PathAbsDispatcherHolder<T> extends BasePath<T> {
         }
         throw new IllegalStateException("invalid class: " + outputType);
     }
-
 }
 

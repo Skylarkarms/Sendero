@@ -1,0 +1,179 @@
+package sendero;
+
+import sendero.executor.DelayedServiceExecutor;
+import sendero.pairs.Pair;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.UnaryOperator;
+
+import static sendero.functions.Functions.myIdentity;
+
+public class ActiveSuppliers<T> implements ActiveSupplier<T> {
+
+    final Holders.ActivationHolder<T> activationHolder;
+
+    public static<T> Unbound<T> unbound(UnaryOperator<Builders.HolderBuilder<T>> operator) {
+        return new Unbound<T>(operator);
+    }
+
+    public static<T> Unbound<T> unbound() {
+        return unbound(myIdentity());
+    }
+
+    public static<S, T> Bound<T> bound(UnaryOperator<Builders.HolderBuilder<T>> operator, BasePath<S> source, Function<S, T> map) {
+        return new Bound<T>(operator, source, map);
+    }
+
+    public static <S, T> Bound<T> bound(BasePath<S> source, Function<S, T> map) {
+        return bound(myIdentity(), source, map);
+    }
+
+    public static <T> Bound<T> bound(UnaryOperator<Builders.HolderBuilder<T>> operator, BasePath<T> source) {
+        return bound(operator, source, myIdentity());
+    }
+
+    public static <T> Bound<T> bound(BasePath<T> source) {
+        return bound(myIdentity(), source, myIdentity());
+    }
+
+    private static final UnaryOperator<Builders.ManagerBuilder> mutabilityAllowedOperator = Builders.mutabilityAllowed();
+
+    public static class Bound<T> extends ActiveSuppliers<T> {
+
+        <S>Bound(UnaryOperator<Builders.HolderBuilder<T>> holderBuilder, BasePath<S> source, Function<S, T> map) {
+            super(holderBuilder,
+                    coldHolder -> BinaryEventConsumers.producerHolderConnector(source, coldHolder, map)
+
+            );
+        }
+    }
+
+    public static class Unbound<T> extends ActiveSuppliers<T> implements UnboundLink<T> {
+
+        private final BaseUnbound<T> baseUnbound;
+
+        Unbound(
+                UnaryOperator<Builders.HolderBuilder<T>> holderBuilder
+        ) {
+            super(holderBuilder, null);
+            baseUnbound = new BaseUnbound<>(activationHolder);
+        }
+
+        @Override
+        public <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
+            baseUnbound.bindMap(basePath, map);
+        }
+
+        @Override
+        public <S, P extends BasePath<S>> void bindUpdate(P basePath, BiFunction<T, S, T> update) {
+            baseUnbound.bindUpdate(basePath, update);
+        }
+
+        @Override
+        public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
+            baseUnbound.switchMap(path, switchMap);
+        }
+    }
+
+
+    private void NOT_ACTIVE_WARNING() {
+        if (!isActive())
+            System.err.println("This Supplier has not been activated yet!!");
+    }
+    
+    ActiveSuppliers(UnaryOperator<Builders.HolderBuilder<T>> holderBuilder, Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> function) {
+        final UnaryOperator<Builders.ManagerBuilder> finalOp = function == null ? mutabilityAllowedOperator : Builders.withFixed(function);
+        activationHolder = new Holders.ActivationHolder<T>(holderBuilder, finalOp);
+        on();
+    }
+
+    private final Pair.Immutables.Int<T> NOT_SET = new Pair.Immutables.Int<>(-1, null);
+
+
+    @Override
+    public T get() {
+        NOT_ACTIVE_WARNING();
+        return activationHolder.get();
+    }
+    private static final int max_tries = 3;
+
+    private final DelayedServiceExecutor<ExecutorService> delayedServiceExecutor = new DelayedServiceExecutor<>(
+            100,
+        () -> Executors.newFixedThreadPool(2),
+        ExecutorService::shutdown
+    );
+
+    private void deliver(long delay, Consumer<? super T> consumer) {
+        if (delay == 0) {
+            zeroDelay(consumer);
+        } else {
+            delayedServiceExecutor.getService().execute(
+                    () -> {
+                        int tries = 0;
+                        Pair.Immutables.Int<T> snapshot;
+                        do {
+                            Pair.Immutables.Int<T> nullable = activationHolder.getSnapshot();
+                            snapshot = nullable == null ? NOT_SET : nullable;
+                            try {
+                                Thread.sleep(delay);
+                                tries++;
+                            } catch (InterruptedException ignored) {
+                            }
+                        } while (tries < max_tries && snapshot.compareTo(activationHolder.getVersion()) != 0);
+                        makeAccept(snapshot, consumer);
+                    }
+            );
+        }
+    }
+
+    private void zeroDelay(Consumer<? super T> consumer) {
+        Pair.Immutables.Int<T> snapshot = NOT_SET;
+        int tries = 0;
+        while (tries < max_tries && snapshot.compareTo(activationHolder.getVersion()) != 0) {
+            Pair.Immutables.Int<T> nullable = activationHolder.getSnapshot();
+            snapshot = nullable == null ? NOT_SET : nullable;
+            tries++;
+        }
+        makeAccept(snapshot, consumer);
+    }
+
+    private void makeAccept(Pair.Immutables.Int<T> snapshot, Consumer<? super T> consumer) {
+        final T finalT = snapshot != NOT_SET ? snapshot.getValue() : null;
+        NOT_ACTIVE_WARNING();
+        consumer.accept(finalT);
+    }
+
+    @Override
+    public void get(Consumer<? super T> tConsumer) {
+        zeroDelay(tConsumer);
+    }
+
+    @Override
+    public void get(long delay, Consumer<? super T> tConsumer) {
+        deliver(delay, tConsumer);
+    }
+
+    @Override
+    public boolean on() {
+        boolean active = activationHolder.tryActivate();
+        if (active) delayedServiceExecutor.create();
+        return active;
+    }
+
+    @Override
+    public boolean off() {
+        boolean deactive = activationHolder.tryDeactivate();
+        if (deactive) delayedServiceExecutor.destroy();
+        return deactive;
+    }
+
+    @Override
+    public boolean isActive() {
+        return !activationHolder.isIdle();
+    }
+
+}

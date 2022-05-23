@@ -216,8 +216,6 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
                 updater.update(delay, update);
             }
         }
-
-
     }
 }
 

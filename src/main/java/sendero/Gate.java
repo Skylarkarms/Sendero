@@ -1,6 +1,7 @@
 package sendero;
 
 import sendero.event_registers.ConsumerRegisters;
+import sendero.interfaces.ConsumerUpdater;
 import sendero.interfaces.Register;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;

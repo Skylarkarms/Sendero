@@ -15,5 +15,4 @@ interface UnboundLink<T> {
             BasePath<S> path,
             Function<S, ? extends BasePath<T>> switchMap
     );
-
 }

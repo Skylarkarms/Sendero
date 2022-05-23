@@ -1,5 +1,6 @@
 package sendero;
 
+import sendero.interfaces.ConsumerUpdater;
 import sendero.pairs.Pair;
 
 import java.util.concurrent.atomic.AtomicReference;
