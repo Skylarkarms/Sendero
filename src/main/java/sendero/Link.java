@@ -92,7 +92,7 @@ public class Link<T> extends Path<T> implements BaseLink {
         }
 
         public static final class In<T> extends Unbound<T> implements Updater<T> {
-            private final HolderInput.Updater<T> updater = new HolderInput.Updater<>(baseTestDispatcher);
+            private final Updater<T> updater = Inputs.getUpdater(this);
 
             public In() {
                 super();
@@ -174,7 +174,7 @@ public class Link<T> extends Path<T> implements BaseLink {
         }
 
         public static final class In<T> extends Bound<T> implements Updater<T> {
-            private final HolderInput.Updater<T> updater = new HolderInput.Updater<>(baseTestDispatcher);
+            private final Updater<T> updater = Inputs.getUpdater(this);
             public<S> In(
                     BasePath<S> fixedPath,
                     BiFunction<T, S, T> update

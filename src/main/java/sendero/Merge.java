@@ -4,20 +4,19 @@ import sendero.interfaces.Updater;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;
 
-import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 import java.util.function.UnaryOperator;
 
 import static sendero.functions.Functions.myIdentity;
 
 public final class Merge<T> extends Path<T> implements BaseMerge<T> {
 
-    private final SimpleLists.LockFree.Snapshooter<Appointer<?>, Boolean> joints = SimpleLists.getSnapshotting(
+    private final SimpleLists.LockFree.Snapshooter<AtomicBinaryEventConsumer, Boolean> joints = SimpleLists.getSnapshotting(
             AtomicBinaryEventConsumer.class,
             () -> !isIdle()
     );
 
-    private final HolderInput.Updater<T> updater = new HolderInput.Updater<>(baseTestDispatcher);
+    private final Updater<T> updater = Inputs.getUpdater(this);
 
     public Merge() {
         this(myIdentity());
@@ -30,34 +29,19 @@ public final class Merge<T> extends Path<T> implements BaseMerge<T> {
     @Override
     public<S> Merge<T> from(
             BasePath<S> path,
-            Function<Updater<T>, Consumer<S>> observer
+            BiFunction<T, S, T> update
     ) {
         if (path == null) {
             throw new IllegalStateException("Observer is null");
         }
 
-        final Appointer<?> jointAppointer = BinaryEventConsumers.fixedAppointer(
+        final AtomicBinaryEventConsumer jointAppointer = Appointer.producerConnector(
                 path,
-                new Consumer<Pair.Immutables.Int<S>>() {
-                    final Consumer<S> sConsumer = observer.apply(updater);
-                    final Holders.BaseColdHolder<S> simpleHolder = new Holders.BaseColdHolder<S>(){
-                        @Override
-                        void coldSwapped(S prev, Pair.Immutables.Int<S> next) {
-                            sConsumer.accept(next.getValue());
-                        }
-
-                        //                    final Holders.AbsDispatcherHolder<S> simpleHolder = new Holders.AbsDispatcherHolder<S>(){
-//                        @Override
-//                        void coldDispatch(Pair.Immutables.Int<S> versionValue) {
-//                            sConsumer.accept(versionValue.getValue());
-//                        }
-                    };
-                    @Override
-                    public void accept(Pair.Immutables.Int<S> sInt) {
-                        simpleHolder.accept(sInt);
-//                        simpleHolder.acceptVersionValue(sInt);
-                    }
-                }
+                Holders.StreamManager.baseManager(
+                        (prev, next, delay) -> updater.update(
+                                t -> update.apply(t, next.get())
+                        )
+                )
         );
 
         final Pair.Immutables.Bool<Boolean> res = joints.snapshotAdd(jointAppointer);
@@ -86,7 +70,6 @@ public final class Merge<T> extends Path<T> implements BaseMerge<T> {
                 final AtomicBinaryEventConsumer j = toDispatch[i];
                 j.off();
             }
-
         }
     }
 }

@@ -1,14 +1,11 @@
 package sendero;
 
-import sendero.interfaces.Updater;
-
-import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.BiFunction;
 
 interface BaseMerge<T> {
     <S> Merge<T> from(
             BasePath<S> path,
-            Function<Updater<T>, Consumer<S>> observer
+            BiFunction<T, S, T> update
     );
     <S> boolean drop(
             BasePath<S> path

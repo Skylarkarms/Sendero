@@ -9,16 +9,16 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
-import static sendero.functions.Functions.isIdentity;
-import static sendero.functions.Functions.myIdentity;
-
 public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements Forkable<T> {
 
-    <S> BasePath(UnaryOperator<Builders.HolderBuilder<T>> builderOperator, BasePath<S> basePath, Function<S, T> map) {
+    <S> BasePath(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            BasePath<S> basePath, Function<S, T> map
+    ) {
         super(builderOperator,
                 Builders.withFixed(
-                        (Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer>) coldHolder ->
-                                BinaryEventConsumers.producerHolderConnector(basePath, coldHolder, map)
+                        (Function<Holders.StreamManager<T>, AtomicBinaryEventConsumer>) coldHolder ->
+                                Appointer.producerConnector(basePath, coldHolder, map)
 
                 ));
     }
@@ -28,8 +28,8 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
             BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
         super(builderOperator,
                 Builders.withFixed(
-                        (Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer>) coldHolder ->
-                                BinaryEventConsumers.producerHolderConnector(basePath, coldHolder, updateFun)
+                        (Function<Holders.StreamManager<T>, AtomicBinaryEventConsumer>) coldHolder ->
+                                Appointer.producerHolderConnector(basePath, coldHolder, updateFun)
 
                 )
         );
@@ -46,40 +46,21 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         super(builderOperator);
     }
 
-    protected abstract void appoint(Consumer<Pair.Immutables.Int<T>> subscriber);
+    protected abstract void appoint(Receptor<T> receptor);
 
-    /**boolean continuation is:
-     * <li>true if: is a dispatch product from the continuation of events in a forking path stream</li>
-     * <li>false if: is a dispatch product from a client's input via update() or accept()</li>
-     * */
-    abstract void pathDispatch(boolean fullyParallel, Pair.Immutables.Int<T> t);
+    abstract void pathDispatch(boolean fullyParallel, Immutable<T> t);
 
     // ------------------ Forking Functions ------------------
 
-    protected abstract void demotionOverride(Consumer<Pair.Immutables.Int<T>> intConsumer);
+    protected abstract void demotionOverride(Receptor<T> intConsumer);
 
-    private <S> Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> mainForkingFunctionBuilder(
-            Function<Consumer<Pair.Immutables.Int<S>>, Consumer<Pair.Immutables.Int<T>>> converter
-    ) {
-        return intConsumer -> {
-            final Consumer<Pair.Immutables.Int<T>> converted = converter.apply(intConsumer);
-            return BinaryEventConsumers.fixedAppointer(this, converted);
-        };
-    }
-
-    <S> Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> mapFunctionBuilder(Function<T, S> map) {
-        @SuppressWarnings("unchecked")
-        final Function<Consumer<Pair.Immutables.Int<S>>, Consumer<Pair.Immutables.Int<T>>> finalFunction = isIdentity(map) ?
-                holder ->
-                        tInt -> holder.accept((Pair.Immutables.Int<S>) tInt) :
-                tColdHolder ->
-                        tInt -> tColdHolder.accept(new Pair.Immutables.Int<>(tInt.getInt(), map.apply(tInt.getValue())));
-        return mainForkingFunctionBuilder(
-                finalFunction
+    <S> Function<Holders.StreamManager<S>, AtomicBinaryEventConsumer> mapFunctionBuilder(Function<T, S> map) {
+        return holder -> Appointer.producerConnector(this,
+                holder, map
         );
     }
 
-    <S> Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> switchFunctionBuilder(Function<T, BasePath<S>> switchMap) {
+    <S> Function<Holders.StreamManager<S>, AtomicBinaryEventConsumer> switchFunctionBuilder(Function<T, BasePath<S>> switchMap) {
         return intConsumer -> AtomicBinaryEventConsumer.switchMapEventConsumer(
                 intConsumer,
                 this,
@@ -87,34 +68,77 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         );
     }
 
-    static abstract class PathAbsDispatcher<T> implements Dispatcher<T>, IBasePath<T> {
+    interface Receptor<T> extends Holders.ColdConsumer<T>, Holders.Invalidator {
+        static<S, T> Receptor<T> withManagerInput(Holders.StreamManager<S> manager, InputMethod.Type<S, T> methodType) {
+            return new ReceptorInputMethod<>(manager, methodType);
+        }
+    }
+    static class ReceptorInputMethod<T> implements Receptor<T> {
+        private final Holders.StreamManager<?> coreReceptor;
+        private final Holders.ColdConsumer<T> methodType;
+
+        private <S> ReceptorInputMethod(Holders.StreamManager<S> coreReceptor, InputMethod.Type<S, T> methodType) {
+            this.coreReceptor = coreReceptor;
+            this.methodType = tImmutable -> methodType.acceptorMethod(coreReceptor, tImmutable);
+        }
+
+        @Override
+        public void accept(Immutable<T> tImmutable) {
+            methodType.accept(tImmutable);
+        }
+
+        @Override
+        public String toString() {
+            return "ReceptorInputMethod{" +
+                    "\n core receptor=" + coreReceptor +
+                    "\n}";
+        }
+
+        @Override
+        public void invalidate() {
+            coreReceptor.invalidate();
+        }
+    }
+
+    static abstract class PathAbsDispatcher<T> extends Holders.DispatcherReader<T> implements Dispatcher<T>, IBasePath<T> {
 
         private final Holders.ExecutorHolder<T> executorHolder;
+
+        @Override
+        Immutable<T> getSnapshot() {
+            return executorHolder.getSnapshot();
+        }
 
         void scheduleExecution(long delay, Runnable action) {
             executorHolder.scheduleExecution(delay, action);
         }
 
-        <S> void parallelDispatch(int beginAt, Consumer<? super S>[] subs, Pair.Immutables.Int<T> t, Function<Pair.Immutables.Int<T>, S> map) {
+        <S> void parallelDispatch(
+                int beginAt,
+                Consumer<? super S>[] subs,
+                Immutable<T> t,
+                Function<Immutable<T>, S> map
+        ) {
             executorHolder.parallelDispatch(beginAt, subs, t, map);
         }
 
-            abstract Pair.Immutables.Bool<Integer> onAddRegister(Consumer<Pair.Immutables.Int<T>> subscriber);
-        abstract boolean onRegisterRemoved(Consumer<Pair.Immutables.Int<T>> intConsumer);
+        /**Returns true if this is the first item added
+         * @param core*/
+        abstract Pair.Immutables.Bool<Immutable.Values> onAddRegister(Receptor<T> core);
 
-        @SuppressWarnings("unchecked")
+        abstract boolean onRegisterRemoved(Receptor<T> core);
+
         @Override
-        public void appoint(Consumer<Pair.Immutables.Int<T>> subscriber) {
+        public void appoint(Receptor<T> receptor) {
             executorHolder.onAdd(
-                    subscriber,
-                    consumer -> onAddRegister((Consumer<Pair.Immutables.Int<T>>) consumer),
-                    myIdentity()
+                    receptor,
+                    () -> onAddRegister(receptor)
             );
         }
 
         @Override
-        public void demotionOverride(Consumer<Pair.Immutables.Int<T>> intConsumer) {
-            if (onRegisterRemoved(intConsumer)) executorHolder.deactivate();
+        public void demotionOverride(Receptor<T> receptor) {
+            if (onRegisterRemoved(receptor)) executorHolder.deactivate();
         }
 
         protected PathAbsDispatcher(Holders.ExecutorHolder<T> owner) {
@@ -123,22 +147,19 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
 
         abstract boolean isInactive();
 
-        int getVersion(){
-            return executorHolder.getVersion();
-        }
     }
 
     static final class ToManyPathsAbsDispatcher<T> extends PathAbsDispatcher<T> {
-        private final SimpleLists.LockFree.Snapshooter<Consumer<Pair.Immutables.Int<T>>, Integer>
+        private final SimpleLists.LockFree.Snapshooter<Receptor<T>, Immutable.Values>
                 remote;
 
         ToManyPathsAbsDispatcher(Holders.ExecutorHolder<T> owner) {
             super(owner);
-            remote = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
+            remote = SimpleLists.getSnapshotting(Receptor.class, this::localSerialValues);
         }
 
         @Override
-        public void dispatch(long delay, Pair.Immutables.Int<T> t) {
+        public void dispatch(long delay, Immutable<T> t) {
             //Last local observers on same thread
             scheduleExecution(
                         delay,
@@ -147,24 +168,28 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         }
 
         @Override
-        public void coldDispatch(Pair.Immutables.Int<T> t) {
+        public void coldDispatch(Immutable<T> t) {
             //From local observers on forked thread (if extended)
             pathDispatch(false, t);
         }
 
         @Override
-        Pair.Immutables.Bool<Integer> onAddRegister(Consumer<Pair.Immutables.Int<T>> subscriber) {
-            return remote.snapshotAdd(subscriber);
+        Pair.Immutables.Bool<Immutable.Values> onAddRegister(Receptor<T> core) {
+            /*2 registrations may arrive with race conditions, one of them will be eventually removed*/
+            return remote.snapshotAdd(
+                    core
+            );
         }
 
         @Override
-        boolean onRegisterRemoved(Consumer<Pair.Immutables.Int<T>> intConsumer) {
-            return remote.remove(intConsumer);
+        boolean onRegisterRemoved(Receptor<T> core) {
+            return remote.remove(core);
         }
 
+
         @Override
-        public void pathDispatch(boolean fullyParallel, Pair.Immutables.Int<T> t) {
-            final Consumer<Pair.Immutables.Int<T>>[] subs = remote.copy();
+        public void pathDispatch(boolean fullyParallel, Immutable<T> t) {
+            final Receptor<T>[] subs = remote.copy();
             final int length = subs.length;
             if (length == 0) return;
             if (!fullyParallel) {
@@ -185,40 +210,41 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
 
     static final class InjectivePathAbsDispatcher<T> extends PathAbsDispatcher<T> {
 
-        private final ConsumerRegisters.IConsumerRegister.SnapshottingConsumerRegister<Integer, Pair.Immutables.Int<T>>
+        private final ConsumerRegisters.IConsumerRegister.SnapshottingConsumerRegister<Immutable.Values, Immutable<T>>
                 remote;
 
         InjectivePathAbsDispatcher(Holders.ExecutorHolder<T> executorHolder) {
             super(executorHolder);
-            remote = ConsumerRegisters.IConsumerRegister.getInstance(this::getVersion);
+            remote = ConsumerRegisters.IConsumerRegister.getInstance(this::localSerialValues);
         }
 
         @Override
-        public void dispatch(long delay, Pair.Immutables.Int<T> t) {
+        public void dispatch(long delay, Immutable<T> t) {
             pathDispatch(false, t);
         }
 
         @Override
-        public void coldDispatch(Pair.Immutables.Int<T> t) {
+        public void coldDispatch(Immutable<T> t) {
             pathDispatch(false, t);
         }
 
         @Override
-        Pair.Immutables.Bool<Integer> onAddRegister(Consumer<Pair.Immutables.Int<T>> subscriber) {
-            return remote.snapshotRegister(subscriber);
-        }
-
-        @Override
-        public void pathDispatch(boolean fullyParallel, Pair.Immutables.Int<T> t) {
+        public void pathDispatch(boolean fullyParallel, Immutable<T> t) {
             if (remote.isRegistered()) {
-                if (t.compareTo(getVersion()) != 0) return;
-                remote.accept(t);
+                inferColdDispatch(t, remote);
             }
             if (fullyParallel) throw new IllegalStateException("Injective.class dispatch cannot be parallel.");
         }
 
         @Override
-        boolean onRegisterRemoved(Consumer<Pair.Immutables.Int<T>> intConsumer) {
+        Pair.Immutables.Bool<Immutable.Values> onAddRegister(Receptor<T> core) {
+            return remote.snapshotRegister(
+                    core
+            );
+        }
+
+        @Override
+        boolean onRegisterRemoved(Receptor<T> core) {
             return remote.unregister() != null;
         }
 
@@ -226,6 +252,12 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
             return !remote.isRegistered();
         }
 
+    }
+
+    @Override
+    public String toString() {
+        return super.toString() +
+                "\n baseTestDispatcher: " + coldHolder;
     }
 }
 

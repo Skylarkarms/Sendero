@@ -1,6 +1,7 @@
 import sendero.*;
 import sendero.AtomicBinaryEventConsumer;
 import sendero.interfaces.BinaryPredicate;
+import sendero.interfaces.Updater;
 import sendero.pairs.Pair;
 
 import java.util.HashMap;
@@ -48,13 +49,13 @@ public class LivePath extends Path<Map<String, ?>> {
             test.put("BUG TEST", new Object());
         }
 
-        private final HolderInput.Updater<Map<String, ?>> updater = new HolderInput.Updater<>(this);
+        private final Updater<Map<String, ?>> updater = Inputs.getUpdater(this);
 
         public void setup(
                 Gate.IO<Map<String, ?>> pref
         ) {
         pref.accept(test);
-            mapSupplier = pref;
+//            mapSupplier = pref;
 
             setOnStateChangeListener(
                     getConsumer(
@@ -62,6 +63,7 @@ public class LivePath extends Path<Map<String, ?>> {
                             new AtomicBinaryEventConsumer() {
                                 final Consumer<Map<String, ?>> prefListener = (map) -> {
                                     Map<String, ?> deref = new HashMap<>(map);
+                                    mapSupplier = () -> deref;
                                     updater.update(
                                             delay,
                                             prev -> deref

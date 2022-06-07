@@ -40,54 +40,31 @@ public class ForkedMultiplication {
                 ).withInitial(
                         new int[3]
                 )
-//                new int[3], ints -> {
-//            System.err.println("Expect out size is: " + ints.length);
-//            for (int i:ints
-//                 ) {
-//                System.err.println("integers are: " + i);
-//                if (i == 0) {
-//                    System.err.println("HAS A ZERO!!!>>>");
-//                    return false;
-//                }
-//            }
-//            System.err.println("should pass???: " + true);
-//            return true;
-//        }
         ).from(
                 firstFork,
-                integerUpdater -> integer -> {
-                    System.err.println("<<<<From first fork is: " + integer + ", to updater: " + integerUpdater);
-                    integerUpdater.update(
-                            50,
-                            ints -> {
-                                System.err.println("<FROM FIRST UPDATE!!>, prev ARRAY is: " + ints + ", at updater: " + integerUpdater);
-                                int prev = ints[2];
-                                System.err.println("<FROM FIRST UPDATE!!>, prev is: " + prev + ", at updater: " + integerUpdater);
-                                int[] clone = ints.clone();
-                                clone[0] = integer;
-                                clone[2] = solveArr(clone);
-                                System.err.println("First merged total is: " + clone[2] + "\n of prev: " + prev + ", \n by adding: " + integer);
-                                return clone;
-                            }
-                    );
+                (ints, integer) -> {
+                    System.err.println("<<<<From first fork is: " + integer);
+                    System.err.println("<FROM FIRST UPDATE!!>, prev ARRAY is: " + ints);
+                    int prev = ints[2];
+                    System.err.println("<FROM FIRST UPDATE!!>, prev is: " + prev);
+                    int[] clone = ints.clone();
+                    clone[0] = integer;
+                    clone[2] = solveArr(clone);
+                    System.err.println("First merged total is: " + clone[2] + "\n of prev: " + prev + ", \n by adding: " + integer);
+                    return clone;
                 }
         ).from(
                 secondFork,
-                integerUpdater -> integer -> {
-                    System.err.println("<<<<From second fork is: " + integer + ", to updater: " + integerUpdater);
-                    integerUpdater.update(
-                            50,
-                            ints -> {
-                                System.err.println("<FROM SECOND UPDATE!!>, prev ARRAY is: " + ints + ", at updater: " + integerUpdater);
-                                int prev = ints[2];
-                                System.err.println("<FROM SECOND UPDATE!!>, prev is: " + prev + ", at updater: " + integerUpdater);
-                                int[] clone = ints.clone();
-                                clone[1] = integer;
-                                clone[2] = solveArr(clone);
-                                System.err.println("Second merged total is: " + clone[2] + "\n of prev: " + prev + ", \n by adding: " + integer);
-                                return clone;
-                            }
-                    );
+                (ints, integer) -> {
+                    System.err.println("<<<<From second fork is: " + integer);
+                    System.err.println("<FROM SECOND UPDATE!!>, prev ARRAY is: " + ints);
+                    int prev = ints[2];
+                    System.err.println("<FROM SECOND UPDATE!!>, prev is: " + prev);
+                    int[] clone = ints.clone();
+                    clone[1] = integer;
+                    clone[2] = solveArr(clone);
+                    System.err.println("Second merged total is: " + clone[2] + "\n of prev: " + prev + ", \n by adding: " + integer);
+                    return clone;
                 }
         );
         activeSupplier.bindMap(finalResult, ints -> ints[2]);

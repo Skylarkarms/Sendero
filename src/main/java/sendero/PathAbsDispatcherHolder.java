@@ -1,9 +1,6 @@
 package sendero;
 
-import sendero.pairs.Pair;
-
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
@@ -56,7 +53,7 @@ public abstract class PathAbsDispatcherHolder<T> extends BasePath<T> {
 
     protected PathAbsDispatcherHolder(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
-            Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
+            Function<Holders.StreamManager<T>, AtomicBinaryEventConsumer> selfMap
     ) {
         super(builderOperator,
                 Builders.withFixed(
@@ -66,33 +63,35 @@ public abstract class PathAbsDispatcherHolder<T> extends BasePath<T> {
         pathDispatcher = pathDispatcherBuild();
     }
 
-    PathAbsDispatcherHolder(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+    PathAbsDispatcherHolder(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator
+    ) {
         super(builderOperator);
         pathDispatcher = pathDispatcherBuild();
     }
 
     @Override
-    void coldDispatch(Pair.Immutables.Int<T> t) {
+    void coldDispatch(Immutable<T> t) {
         pathDispatcher.coldDispatch(t);
     }
 
     @Override
-    void dispatch(long delay, Pair.Immutables.Int<T> t) {
+    void dispatch(long delay, Immutable<T> t) {
         pathDispatcher.dispatch(delay, t);
     }
 
     @Override
-    protected void appoint(Consumer<Pair.Immutables.Int<T>> subscriber) {
-        pathDispatcher.appoint(subscriber);
+    protected void appoint(Receptor<T> receptor) {
+        pathDispatcher.appoint(receptor);
     }
 
     @Override
-    void pathDispatch(boolean fullyParallel, Pair.Immutables.Int<T> t) {
+    void pathDispatch(boolean fullyParallel, Immutable<T> t) {
         pathDispatcher.pathDispatch(fullyParallel, t);
     }
 
     @Override
-    protected void demotionOverride(Consumer<Pair.Immutables.Int<T>> intConsumer) {
+    protected void demotionOverride(Receptor<T> intConsumer) {
         pathDispatcher.demotionOverride(intConsumer);
     }
 

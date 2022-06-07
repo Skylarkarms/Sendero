@@ -17,9 +17,10 @@ interface Forkable<T> {
 
 
     <S> Forkable<S> forkMap(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, S> map);
-    default <S> Forkable<S> forkMap(BinaryPredicate<S> constraintIn, Function<T, S> map) {
+//    <S> Forkable<S> forkMap(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, S> map);
+    default <S> Forkable<S> forkMap(BinaryPredicate<S> excludeIn, Function<T, S> map) {
         return forkMap(
-                Builders.excludeIn(constraintIn),
+                Builders.excludeIn(excludeIn),
                 map
         );
     }
@@ -29,9 +30,10 @@ interface Forkable<T> {
 
     /**For when additional rules are required, including an INITIAL value for S*/
     <S> Forkable<S> forkUpdate(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, BiFunction<S, T, S> update);
-    default  <S> Forkable<S> forkUpdate(BinaryPredicate<S> constraintIn, BiFunction<S, T, S> update) {
+//    <S> Forkable<S> forkUpdate(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, BiFunction<S, T, S> update);
+    default  <S> Forkable<S> forkUpdate(BinaryPredicate<S> excludeIn, BiFunction<S, T, S> update) {
         return forkUpdate(
-               Builders.excludeIn(constraintIn),
+               Builders.excludeIn(excludeIn),
                update
         );
     }
@@ -45,9 +47,10 @@ interface Forkable<T> {
     }
 
     <S> Forkable<S> forkSwitch(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, BasePath<S>> switchMap);
-    default <S> Forkable<S> forkSwitch(BinaryPredicate<S> constraintIn, Function<T, BasePath<S>> switchMap) {
+//    <S> Forkable<S> forkSwitch(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, BasePath<S>> switchMap);
+    default <S> Forkable<S> forkSwitch(BinaryPredicate<S> excludeIn, Function<T, BasePath<S>> switchMap) {
         return forkSwitch(
-                Builders.excludeIn(constraintIn),
+                Builders.excludeIn(excludeIn),
                 switchMap
         );
     }

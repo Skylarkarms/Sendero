@@ -3,6 +3,7 @@ import sendero.functions.Consumers;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
@@ -60,29 +61,21 @@ class ComplexHelloWorld {
         {
             res.from(
                     firstString,
-                    stringConsumerUpdater -> s1 -> {
-                        String finalS = s1 + "[FROM first string]";
-                        stringConsumerUpdater.update(
-                                s2 -> {
-                                    String[] copy = s2.clone();
-                                    copy[0] = finalS;
-                                    return copy;
-                                }
-                        );
+                    (strings, s) -> {
+                        String finalS = s + "[FROM first string]";
+                        String[] copy = strings.clone();
+                        copy[0] = finalS;
+                        return copy;
                     }
             );
 
             res.from(
                     process,
-                    stringConsumerUpdater -> s1 -> {
-                        String finalS = s1 + "[from second string]";
-                        stringConsumerUpdater.update(
-                                s -> {
-                                    String[] copy = s.clone();
-                                    copy[1] = finalS;
-                                    return copy;
-                                }
-                        );
+                    (strings, s) -> {
+                        String finalS = s + "[from second string]";
+                        String[] copy = strings.clone();
+                        copy[1] = finalS;
+                        return copy;
                     }
             );
         }

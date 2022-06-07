@@ -7,10 +7,9 @@ public class BaseUnbound<T> implements UnboundLink<T>, BaseLink {
 
     final ActivePathListener<T> activePathListener;
 
-    BaseUnbound(Holders.ActivationHolder<T> activationHolder) {
-        final Appointers.UnboundPathListenerImpl<T> pathListener = new Appointers.UnboundPathListenerImpl<>(activationHolder.baseTestDispatcher);
+    BaseUnbound(Holders.ActivationHolder2<T> activationHolder) {
+        final Appointers.UnboundPathListenerImpl<T> pathListener = new Appointers.UnboundPathListenerImpl<>(activationHolder.streamManager);
         activePathListener = new ActivePathListener<>(activationHolder.manager, pathListener);
-
     }
 
     @Override
@@ -42,7 +41,7 @@ public class BaseUnbound<T> implements UnboundLink<T>, BaseLink {
     public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
         activePathListener.forcedSet(
                 AtomicBinaryEventConsumer.switchMapEventConsumer(
-                        activePathListener.getColdHolder(),
+                        activePathListener.getStreamManager(),
                         path,
                         switchMap
                 )

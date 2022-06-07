@@ -1,7 +1,7 @@
 package sendero;
 
+import sendero.functions.Functions;
 import sendero.interfaces.BinaryPredicate;
-import sendero.pairs.Pair;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BooleanSupplier;
@@ -10,10 +10,16 @@ import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
 public final class Builders {
+
     public static<S> UnaryOperator<HolderBuilder<S>> excludeIn(BinaryPredicate<S> excludeInput) {
         return sHolderBuilder -> sHolderBuilder.excludeIn(excludeInput);
     }
-    public static <S> UnaryOperator<ManagerBuilder> withFixed(Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> activationListenerFun) {
+    public static<S> UnaryOperator<HolderBuilder<S>> withInitial(S value) {
+        return sHolderBuilder -> sHolderBuilder.withInitial(value);
+    }
+    public static <S> UnaryOperator<ManagerBuilder> withFixed(
+            Function<Holders.StreamManager<S>, AtomicBinaryEventConsumer> activationListenerFun
+    ) {
         return managerBuilder -> managerBuilder.withFixedFun(activationListenerFun);
     }
     public static UnaryOperator<ManagerBuilder> mutabilityAllowed() {
@@ -22,26 +28,28 @@ public final class Builders {
     public static UnaryOperator<ManagerBuilder> mutabilityAllowed(boolean value) {
         return managerBuilder -> managerBuilder.withMutable(value);
     }
-    static <T>HolderBuilder<T> getHolderBuild() {
+
+    static <T> HolderBuilder<T> getHolderBuild2() {
         return new HolderBuilder<>();
-    }
-    static <T>HolderBuilder<T> getHolderBuild(UnaryOperator<Builders.HolderBuilder<T>> op) {
-        return op.apply(getHolderBuild());
     }
 
     static ManagerBuilder getManagerBuild() {
         return new ManagerBuilder();
     }
+
     public static class HolderBuilder<T> {
-        private AtomicReference<Pair.Immutables.Int<T>> reference;
-        private Predicate<T> expectOut;
-        private BinaryPredicate<T> expectInput;
+        private AtomicReference<Immutable<T>> reference;
+        Predicate<T> expectOut;
+        BinaryPredicate<T> expectInput;
 
         private HolderBuilder() {
+            expectInput = BinaryPredicate.always(true);
+            expectOut = Functions.always(true);
+            reference = new AtomicReference<>(Immutable.getNotSet());
         }
 
         public HolderBuilder<T> withInitial(T value) {
-            reference = new AtomicReference<>(new Pair.Immutables.Int<>(1, value));
+            reference = new AtomicReference<>(Immutable.forFirstValue(value));
             return this;
         }
 
@@ -75,20 +83,21 @@ public final class Builders {
             return this;
         }
 
-        Holders.BaseTestDispatcher<T> buildDispatcher(AbsDispatcher<T> owner) {
-            return new Holders.BaseTestDispatcher<>(reference, expectInput, expectOut, owner);
+        Holders.Holder<T> buildHolder(Holders.SwapBroadcast<T> owner) {
+            return new Holders.Holder<>(owner, reference);
         }
     }
 
     public static class ManagerBuilder {
-        private Function<Holders.ColdHolder<?>, AtomicBinaryEventConsumer> activationListenerFun;
-        private Function<Appointers.BasePathListener<?>, AtomicBinaryEventConsumer> activationListenerFun2;
+        private Function<Holders.StreamManager<?>, AtomicBinaryEventConsumer> activationListenerFun;
         private boolean mutableActivationListener;
 
         @SuppressWarnings("unchecked")
-        public<S> ManagerBuilder withFixedFun(Function<Holders.ColdHolder<S>, AtomicBinaryEventConsumer> activationListenerFun) {
+        public<S> ManagerBuilder withFixedFun(
+                Function<Holders.StreamManager<S>, AtomicBinaryEventConsumer> activationListenerFun
+        ) {
             if (mutableActivationListener) throwException();
-            this.activationListenerFun = coldHolder -> activationListenerFun.apply((Holders.ColdHolder<S>) coldHolder);
+            this.activationListenerFun = coldHolder -> activationListenerFun.apply((Holders.StreamManager<S>) coldHolder);
             this.mutableActivationListener = false;
             return this;
         }
@@ -103,7 +112,7 @@ public final class Builders {
             return this;
         }
 
-        protected ActivationManager build(Holders.ColdHolder<?> coldHolder, BooleanSupplier deactivation) {
+        protected ActivationManager build(Holders.StreamManager<?> coldHolder, BooleanSupplier deactivation) {
             final AtomicBinaryEventConsumer finalConsumer = activationListenerFun != null ? activationListenerFun.apply(coldHolder) : null;
             return new ActivationManager(finalConsumer, mutableActivationListener) {
                 @Override

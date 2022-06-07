@@ -4,17 +4,15 @@ import sendero.event_registers.ConsumerRegisters;
 import sendero.interfaces.ConsumerUpdater;
 import sendero.interfaces.Register;
 import sendero.lists.SimpleLists;
-import sendero.pairs.Pair;
 
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 import static sendero.functions.Functions.myIdentity;
 
 public final class SingleGate {
     public static class IO<T> extends Outs.OutBaseSinglePath.Single<T> implements Holders.HolderIO<T> {
-        private final ConsumerUpdater<T> consumerUpdater = HolderInput.getConsumerUpdater(baseTestDispatcher);
+        private final ConsumerUpdater<T> consumerUpdater = Inputs.getConsumerUpdater(this);
 
 
         public IO() {
@@ -40,18 +38,13 @@ public final class SingleGate {
         }
 
         @Override
-        public T get() {
-            return super.get();
-        }
-
-        @Override
         public void update(long delay, UnaryOperator<T> update) {
             consumerUpdater.update(delay, update);
         }
     }
     public static class In<T> extends SinglePath<T> implements Holders.HolderIO<T> {
 
-        private final ConsumerUpdater<T> consumerUpdater = HolderInput.getConsumerUpdater(baseTestDispatcher);
+        private final ConsumerUpdater<T> consumerUpdater = Inputs.getConsumerUpdater(this);
 
         public In() {
             this(myIdentity());
@@ -73,11 +66,6 @@ public final class SingleGate {
         @Override
         public void accept(T t) {
             consumerUpdater.accept(t);
-        }
-
-        @Override
-        public T get() {
-            return super.get();
         }
 
         @Override
@@ -105,8 +93,8 @@ public final class SingleGate {
 
             protected static class Many<T> extends OutBaseSinglePath<T> implements Out.Many<T> {
 
-                private final SimpleLists.LockFree.Snapshooter<Consumer<? super T>, Integer>
-                        locale = SimpleLists.getSnapshotting(Consumer.class, this::getVersion);
+                private final SimpleLists.LockFree.Snapshooter<Consumer<? super T>, Immutable.Values>
+                        locale = SimpleLists.getSnapshotting(Consumer.class, this::localSerialValues);
 
                 public Many() {
                     super();
@@ -116,26 +104,20 @@ public final class SingleGate {
                     super(builderOperator);
                 }
 
-                private Runnable dispatchCommandFun(Pair.Immutables.Int<T> pair) {
+                private Runnable dispatchCommandFun(Immutable<T> pair) {
                     return () -> {
                         boolean emptyLocale = locale.isEmpty();
                         if (emptyLocale) pathDispatch(false, pair);
                         else {
                             pathDispatch(true, pair);
                             //If we are out of luck, lists may be empty at this point, but it won't matter.
-                            for (Consumer<? super T> observer:locale
-                            ) {
-                                if (pair.compareTo(getVersion()) != 0) return;
-                                //consecutive "losing" threads that got pass this check might get a boost, so we should prevent the override of lesser versions on the other end.
-                                //And the safety measure will end with subscriber's own version of dispatch();
-                                observer.accept(pair.getValue());
-                            }
+                            for (Consumer<? super T> observer:locale) inferDispatch(pair, observer);
                         }
                     };
                 }
 
                 @Override
-                void dispatch(long delay, Pair.Immutables.Int<T> t) {
+                void dispatch(long delay, Immutable<T> t) {
                     //It may be the case that the JNI hangs the thread for whatever reason it may deem proper.
                     //One example would arise in the case that the processes between holder CAS and THIS dispatch() take too long to resolve.
                     //And this, could very well be the case if some heavy transformation is being performed (at the subscriber level (If extended by Subscriber))
@@ -150,10 +132,12 @@ public final class SingleGate {
                 }
 
                 @Override
-                void coldDispatch(Pair.Immutables.Int<T> t) {
+                void coldDispatch(Immutable<T> t) {
                     Consumer<? super T>[] locals = locale.copy();
                     final int length = locals.length;
-                    if (length != 0) parallelDispatch(0, locals, t, Pair.Immutables.Int::getValue); // first locals, then keep with domain
+                    if (length != 0) parallelDispatch(0, locals, t,
+                            Immutable::get
+                    ); // first locals, then keep with domain
                     pathDispatch(false, t);//to appointees
                 }
 
@@ -171,9 +155,9 @@ public final class SingleGate {
 
                 @Override
                 public void register(Consumer<? super T> valueConsumer) {
-                    onAdd(valueConsumer,
-                            (Function<Consumer<? super T>, Pair.Immutables.Bool<Integer>>) locale::snapshotAdd,
-                            Pair.Immutables.Int::getValue
+                    onAdd(
+                            res -> valueConsumer.accept(res.get()),
+                            () ->  locale.snapshotAdd(valueConsumer)
                     );
                 }
 
@@ -185,8 +169,8 @@ public final class SingleGate {
 
             protected static class Single<T> extends OutBaseSinglePath<T> implements Out.Single<T> {
 
-                private final ConsumerRegisters.IConsumerRegister.SnapshottingConsumerRegister<Integer, T>
-                        locale = ConsumerRegisters.IConsumerRegister.getInstance(this::getVersion);
+                private final ConsumerRegisters.IConsumerRegister.SnapshottingConsumerRegister<Immutable.Values, T>
+                        locale = ConsumerRegisters.IConsumerRegister.getInstance(this::localSerialValues);
 
                 public Single() {
                 }
@@ -195,20 +179,19 @@ public final class SingleGate {
                     super(builderOperator);
                 }
 
-                private Runnable dispatchCommandFunction(Pair.Immutables.Int<T> t) {
+                private Runnable dispatchCommandFunction(Immutable<T> t) {
                     return () -> {
                         boolean registered = locale.isRegistered();
                         if (!registered) pathDispatch(false, t);
                         else {
                             pathDispatch(true, t);
-                            if (t.compareTo(getVersion()) != 0) return;
-                            locale.accept(t.getValue());
+                            inferDispatch(t, locale);
                         }
                     };
                 }
 
                 @Override
-                void dispatch(long delay, Pair.Immutables.Int<T> t) {
+                void dispatch(long delay, Immutable<T> t) {
                     //It may be the case that the JNI hangs the thread for whatever reason it may deem proper.
                     //One example would arise in the case that the processes between holder CAS and THIS dispatch() takes too long to resolve.
                     //And this, could very well be the case if some heavy transformation is being performed (at the subscriber level (If extended by Subscriber))
@@ -223,12 +206,9 @@ public final class SingleGate {
                 }
 
                 @Override
-                void coldDispatch(Pair.Immutables.Int<T> t) {
+                void coldDispatch(Immutable<T> t) {
                     fastExecute(
-                            () -> {
-                                if (t.compareTo(getVersion()) != 0) return;
-                                locale.accept(t.getValue());
-                            }
+                            () -> inferDispatch(t, locale)
                     );
                     pathDispatch(false, t);
                 }
@@ -242,9 +222,8 @@ public final class SingleGate {
                 @Override
                 public void register(Consumer<? super T> valueConsumer) {
                     onAdd(
-                            valueConsumer,
-                            consumer -> locale.snapshotRegister((Consumer<T>) consumer),
-                            Pair.Immutables.Int::getValue
+                            res -> valueConsumer.accept(res.get()),
+                            () -> locale.snapshotRegister((Consumer<T>) valueConsumer)
                     );
                 }
 

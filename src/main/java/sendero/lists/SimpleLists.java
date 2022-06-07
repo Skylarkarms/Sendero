@@ -27,6 +27,7 @@ public class SimpleLists {
         boolean add(E element);
         /**returns true if this is the last item to be removed*/
         boolean remove(E element);
+        /**First found will be removed*/
         boolean removeIf(Predicate<E> removeIf);
         boolean isEmpty();
         E[] copy();
@@ -64,6 +65,8 @@ public class SimpleLists {
             }
             return -1;
         }
+
+        /**Wil shortC upon first one found*/
         private static<E> int findIf(Predicate<E> removeIf, E[] prevArray, int prevSize) {
             int i = 0;
             for (; i < prevSize; i++) {
@@ -102,6 +105,7 @@ public class SimpleLists {
             }
 
         }
+        /**first found will be removed*/
         private static <E> boolean removeIf(AtomicReference<Snapshot<E>> atomicReference, Predicate<E> removeIf) {
             boolean wasLast;
             Snapshot<E> prev, next;
@@ -136,6 +140,7 @@ public class SimpleLists {
             }
             return prevSnap;
         }
+        /**first found will be removed*/
         @SuppressWarnings("unchecked")
         private static<E> Snapshot<E> removeIf(Predicate<E> removeIf, Snapshot<E> prevSnap) {
             E[] prevArray = prevSnap.copy;

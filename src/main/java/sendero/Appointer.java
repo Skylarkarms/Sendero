@@ -1,8 +1,7 @@
 package sendero;
 
-import sendero.pairs.Pair;
-
-import java.util.function.Consumer;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 public class Appointer<A> extends AtomicBinaryEventConsumer {
     public static final Appointer<?> CLEARED_APPOINTER = new Appointer<Object>(null, null) {
@@ -24,11 +23,53 @@ public class Appointer<A> extends AtomicBinaryEventConsumer {
     };
 
     final BasePath<A> producer;
-    final Consumer<Pair.Immutables.Int<A>> toAppoint;
+    final BasePath.Receptor<A> receptor;
 
-    public Appointer(BasePath<A> producer, Consumer<Pair.Immutables.Int<A>> toAppoint) {
+    @Override
+    void onStart() {
+        receptor.invalidate();
+    }
+
+    public static<S, T> AtomicBinaryEventConsumer producerConnector(
+            BasePath<S> producer,
+            Holders.StreamManager<T> consumer,
+            Function<S, T> map) {
+        return new Appointer<>(producer, BasePath.Receptor.withManagerInput(
+                consumer,
+                InputMethod.Type.map(map)
+        ));
+    }
+
+    public static<T> AtomicBinaryEventConsumer producerConnector(
+            BasePath<T> producer,
+            Holders.StreamManager<T> consumer
+    ) {
+        return new Appointer<>(producer,
+                BasePath.Receptor.withManagerInput(
+                        consumer,
+                        InputMethod.Type.identity()
+                )
+        );
+    }
+
+    static<S, T> AtomicBinaryEventConsumer producerHolderConnector(
+            BasePath<S> producer,
+            Holders.StreamManager<T> holder,
+            BiFunction<T, S, T> update) {
+        return new Appointer<>(producer,
+                BasePath.Receptor.withManagerInput(
+                        holder,
+                        InputMethod.Type.update(update)
+                )
+        );
+    }
+
+    private Appointer(
+            BasePath<A> producer,
+            BasePath.Receptor<A> receptor
+    ) {
         this.producer = producer;
-        this.toAppoint = toAppoint;
+        this.receptor = receptor;
     }
 
     @Override
@@ -38,22 +79,22 @@ public class Appointer<A> extends AtomicBinaryEventConsumer {
     }
 
     private void appoint() {
-        producer.appoint(toAppoint);
+        producer.appoint(receptor);
     }
     private void demote() {
-        producer.demotionOverride(toAppoint);
+        producer.demotionOverride(receptor);
     }
 
-    public<P> boolean equalTo(BasePath<P> basePath) {
-        return basePath.equals(producer);
+    @Override
+    <S> boolean equalTo(S s) {
+        return s instanceof BasePath<?> && s.equals(producer);
     }
 
     @Override
     public String toString() {
         return "Appointer{" +
-                "producer=" + producer +
-                ", consumer=" + toAppoint +
-                "}\n" +
-                " this is: Appointer" + "@" + hashCode();
+                "\n producer=" + producer +
+                ",\n consumer=" + receptor +
+                "} \n this is: Appointer" + "@" + hashCode();
     }
 }

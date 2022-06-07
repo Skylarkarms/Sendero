@@ -94,7 +94,8 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
         }
 
         public static class In<T> extends Unbound<T> implements Updater<T> {
-            private final HolderInput.Updater<T> updater = new HolderInput.Updater<>(baseTestDispatcher);
+            private final Updater<T> updater = Inputs.getUpdater(this);
+//            private final Updater<T> updater = new UpdaterImpl<T>(baseTestDispatcher);
 
             public In() {
                 super();
@@ -177,7 +178,8 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
 
         public static class In<T> extends Bound<T> implements Updater<T> {
 
-            private final HolderInput.Updater<T> updater = new HolderInput.Updater<>(baseTestDispatcher);
+            private final Updater<T> updater = Inputs.getUpdater(this);
+//            private final Updater<T> updater = new UpdaterImpl<T>(baseTestDispatcher);
 
             public  <S> In(
                     BasePath<S> fixedPath,

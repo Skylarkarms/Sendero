@@ -7,8 +7,10 @@ class ActivePathListener<T> {
     private final ActivationManager manager;
     private final Appointers.UnboundPathListenerImpl<T> appointerCache;
 
-    Holders.ColdHolder<T> getColdHolder() {
-        return appointerCache.getColdHolder();
+    Holders.StreamManager<T> getStreamManager() {
+//    ColdHolder<T> getColdHolder() {
+//    Holders.ColdHolder<T> getColdHolder() {
+        return appointerCache.getStreamManager();
     }
 
     public ActivePathListener(ActivationManager manager, Appointers.UnboundPathListenerImpl<T> appointerCache) {
@@ -35,8 +37,8 @@ class ActivePathListener<T> {
     }
 
     protected boolean unbound() {
-        final Appointer<?> app = appointerCache.getAndClear();
-        if (app != null) return manager.swapActivationListener(app, AtomicBinaryEventConsumer.CLEARED);
+        final AtomicBinaryEventConsumer binaryEventConsumer = appointerCache.getAndClear();
+        if (binaryEventConsumer != null) return manager.swapActivationListener(binaryEventConsumer, AtomicBinaryEventConsumer.CLEARED);
         return false;
     }
 }

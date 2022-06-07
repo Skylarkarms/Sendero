@@ -1,6 +1,5 @@
 package sendero;
 
-import sendero.pairs.Pair;
 import sendero.switchers.Switchers;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -10,10 +9,15 @@ public abstract class AtomicBinaryEventConsumer implements Switchers.Switch {
     private static final int SHUT_DOWN = -1, ON = 1, OFF = 0;
     private final AtomicInteger versionedState = new AtomicInteger(SHUT_DOWN);
 
-    private boolean expectAndSetOpposite(boolean expectIsOn) {
-        int next = expectIsOn ? OFF : ON;
-        int prev = versionedState.getAndSet(next);
-        return isOn(prev) == expectIsOn;
+    private boolean setOff() {
+        int prev = versionedState.getAndSet(OFF);
+        return isOn(prev);
+    }
+
+    private boolean setOn() {
+        int prev = versionedState.getAndSet(ON);
+        if (prev == SHUT_DOWN) onStart();
+        return !isOn(prev);
     }
 
     private boolean isOn(int now) {
@@ -61,14 +65,14 @@ public abstract class AtomicBinaryEventConsumer implements Switchers.Switch {
 
     @Override
     public boolean on() {
-        boolean isOn = expectAndSetOpposite(false);
+        boolean isOn = setOn();
         if (isOn) onStateChange(true);
         return isOn;
     }
 
     @Override
     public boolean off() {
-        boolean isOff = expectAndSetOpposite(true);
+        boolean isOff = setOff();
         if (isOff) onStateChange(false);
         return isOff;
     }
@@ -83,8 +87,21 @@ public abstract class AtomicBinaryEventConsumer implements Switchers.Switch {
     /**If a signal arrives first nothing will happen*/
     public boolean start() {
         boolean started = versionedState.compareAndSet(SHUT_DOWN, ON);
-        if (started) onStateChange(true);
+        if (started) setStart();
         return started;
+    }
+
+    private void setStart() {
+        onStart();
+        onStateChange(true);
+    }
+
+    void onStart() {
+
+    }
+
+    <S> boolean equalTo(S s) {
+        return false;
     }
 
     @Override
@@ -102,22 +119,21 @@ public abstract class AtomicBinaryEventConsumer implements Switchers.Switch {
 
     @SuppressWarnings("unchecked")
     public static<S, T> AtomicBinaryEventConsumer switchMapEventConsumer(
-            Holders.ColdHolder<T> target,
+            Holders.StreamManager<T> target,
             BasePath<S> source,
             Function<S, ? extends BasePath<T>> switchMap
     ) {
         final Appointers.BasePathListener<T> pathListener = new Appointers.BasePathListenerImpl<>(target);
 
-        final AtomicBinaryEventConsumer booleanConsumerAppointer = BinaryEventConsumers.producerHolderConnector(
+        final AtomicBinaryEventConsumer booleanConsumerAppointer = Appointer.producerConnector(
                 source,
-                new Holders.BaseColdHolder<BasePath<T>>(
-                        (next, prev) -> next != null && next != prev
-                ) {
-                    @Override
-                    void coldSwapped(BasePath<T> prev, Pair.Immutables.Int<BasePath<T>> next) {
-                        pathListener.setAndStart(next.getValue());
-                    }
-                },
+        Holders.StreamManager.baseManager(
+                (prev, next, delay) -> {
+                    BasePath<T> nextP = next.get();
+                    pathListener.setAndStart(nextP);
+                    if (nextP == null) throw new IllegalStateException("Path is null.");
+                }
+        ),
                 (Function<S, BasePath<T>>) switchMap
         );
 

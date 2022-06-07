@@ -1,7 +1,6 @@
 package sendero;
 
 import sendero.executor.DelayedServiceExecutor;
-import sendero.pairs.Pair;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -14,10 +13,10 @@ import static sendero.functions.Functions.myIdentity;
 
 public class ActiveSuppliers<T> implements ActiveSupplier<T> {
 
-    final Holders.ActivationHolder<T> activationHolder;
+    final Holders.ActivationHolder2<T> activationHolder;
 
     public static<T> Unbound<T> unbound(UnaryOperator<Builders.HolderBuilder<T>> operator) {
-        return new Unbound<T>(operator);
+        return new Unbound<>(operator);
     }
 
     public static<T> Unbound<T> unbound() {
@@ -25,7 +24,7 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
     }
 
     public static<S, T> Bound<T> bound(UnaryOperator<Builders.HolderBuilder<T>> operator, BasePath<S> source, Function<S, T> map) {
-        return new Bound<T>(operator, source, map);
+        return new Bound<>(operator, source, map);
     }
 
     public static <S, T> Bound<T> bound(BasePath<S> source, Function<S, T> map) {
@@ -46,7 +45,7 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
 
         <S>Bound(UnaryOperator<Builders.HolderBuilder<T>> holderBuilder, BasePath<S> source, Function<S, T> map) {
             super(holderBuilder,
-                    coldHolder -> BinaryEventConsumers.producerHolderConnector(source, coldHolder, map)
+                    streamManager -> Appointer.producerConnector(source, streamManager, map)
 
             );
         }
@@ -85,19 +84,21 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
             System.err.println("This Supplier has not been activated yet!!");
     }
     
-    ActiveSuppliers(UnaryOperator<Builders.HolderBuilder<T>> holderBuilder, Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> function) {
+    ActiveSuppliers(
+            UnaryOperator<Builders.HolderBuilder<T>> holderBuilder,
+            Function<Holders.StreamManager<T>, AtomicBinaryEventConsumer> function
+    ) {
         final UnaryOperator<Builders.ManagerBuilder> finalOp = function == null ? mutabilityAllowedOperator : Builders.withFixed(function);
-        activationHolder = new Holders.ActivationHolder<T>(holderBuilder, finalOp);
+        activationHolder = new Holders.ActivationHolder2<>(holderBuilder, finalOp);
         on();
     }
 
-    private final Pair.Immutables.Int<T> NOT_SET = new Pair.Immutables.Int<>(-1, null);
-
+    private final Immutable<T> NOT_SET = Immutable.getNotSet();
 
     @Override
     public T get() {
         NOT_ACTIVE_WARNING();
-        return activationHolder.get();
+        return activationHolder.getSnapshot().get();
     }
     private static final int max_tries = 3;
 
@@ -114,16 +115,16 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
             delayedServiceExecutor.getService().execute(
                     () -> {
                         int tries = 0;
-                        Pair.Immutables.Int<T> snapshot;
+                        Immutable<T> snapshot;
                         do {
-                            Pair.Immutables.Int<T> nullable = activationHolder.getSnapshot();
+                            Immutable<T> nullable = activationHolder.getSnapshot();
                             snapshot = nullable == null ? NOT_SET : nullable;
                             try {
                                 Thread.sleep(delay);
                                 tries++;
                             } catch (InterruptedException ignored) {
                             }
-                        } while (tries < max_tries && snapshot.compareTo(activationHolder.getVersion()) != 0);
+                        } while (tries < max_tries && !snapshot.match(activationHolder.localSerialValues()));
                         makeAccept(snapshot, consumer);
                     }
             );
@@ -131,18 +132,18 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
     }
 
     private void zeroDelay(Consumer<? super T> consumer) {
-        Pair.Immutables.Int<T> snapshot = NOT_SET;
+        Immutable<T> snapshot = NOT_SET;
         int tries = 0;
-        while (tries < max_tries && snapshot.compareTo(activationHolder.getVersion()) != 0) {
-            Pair.Immutables.Int<T> nullable = activationHolder.getSnapshot();
+        while (tries < max_tries && !snapshot.match(activationHolder.localSerialValues())) {
+            Immutable<T> nullable = activationHolder.getSnapshot();
             snapshot = nullable == null ? NOT_SET : nullable;
             tries++;
         }
         makeAccept(snapshot, consumer);
     }
 
-    private void makeAccept(Pair.Immutables.Int<T> snapshot, Consumer<? super T> consumer) {
-        final T finalT = snapshot != NOT_SET ? snapshot.getValue() : null;
+    private void makeAccept(Immutable<T> snapshot, Consumer<? super T> consumer) {
+        final T finalT = snapshot.isSet() ? snapshot.get() : null;
         NOT_ACTIVE_WARNING();
         consumer.accept(finalT);
     }

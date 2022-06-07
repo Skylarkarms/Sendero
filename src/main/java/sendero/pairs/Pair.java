@@ -28,6 +28,7 @@ public final class Pair {
                 return value;
             }
         }
+
         public static class Int<T> {
             private final int anInt;
             private final T value;
@@ -64,6 +65,7 @@ public final class Pair {
                 return new Int<>(anInt, value);
             }
         }
+
         public static class Bool<T> {
             public final boolean aBoolean;
             public final T value;

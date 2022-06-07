@@ -6,6 +6,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
+import static sendero.functions.Functions.myIdentity;
+
 public class Path<T> extends PathAbsDispatcherHolder<T> {
 
     @Override
@@ -23,7 +25,7 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
 
     Path(
             UnaryOperator<Builders.HolderBuilder<T>> operator,
-            Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
+            Function<Holders.StreamManager<T>, AtomicBinaryEventConsumer> selfMap
     ) {
         super(operator,
                 selfMap
@@ -42,16 +44,16 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
         super(builderOperator, basePath, updateFun);
     }
 
+    Path(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+        this(builderOperator, myIdentity());
+    }
+
     protected Path(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
             UnaryOperator<Builders.ManagerBuilder> mngrBuilderOperator
 
     ) {
         super(builderOperator, mngrBuilderOperator);
-    }
-
-    Path(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
-        super(builderOperator);
     }
 
     @Override
@@ -63,8 +65,8 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
     }
 
     @Override
-    public <S> Path<S> forkMap(BinaryPredicate<S> constraintIn, Function<T, S> map) {
-        return (Path<S>) super.forkMap(constraintIn, map);
+    public <S> Path<S> forkMap(BinaryPredicate<S> excludeIn, Function<T, S> map) {
+        return (Path<S>) super.forkMap(excludeIn, map);
     }
 
     @Override
@@ -82,8 +84,8 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
     }
 
     @Override
-    public <S> Path<S> forkUpdate(BinaryPredicate<S> constraintIn, BiFunction<S, T, S> update) {
-        return (Path<S>) super.forkUpdate(constraintIn, update);
+    public <S> Path<S> forkUpdate(BinaryPredicate<S> excludeIn, BiFunction<S, T, S> update) {
+        return (Path<S>) super.forkUpdate(excludeIn, update);
     }
 
     @Override
@@ -100,8 +102,8 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
     }
 
     @Override
-    public <S> Path<S> forkSwitch(BinaryPredicate<S> constraintIn, Function<T, BasePath<S>> switchMap) {
-        return (Path<S>) super.forkSwitch(constraintIn, switchMap);
+    public <S> Path<S> forkSwitch(BinaryPredicate<S> excludeIn, Function<T, BasePath<S>> switchMap) {
+        return (Path<S>) super.forkSwitch(excludeIn, switchMap);
     }
 
     @Override

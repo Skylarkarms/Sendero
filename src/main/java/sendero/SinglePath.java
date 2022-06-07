@@ -33,7 +33,7 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
 
     SinglePath(
             UnaryOperator<Builders.HolderBuilder<T>> operator,
-            Function<Holders.ColdHolder<T>, AtomicBinaryEventConsumer> selfMap
+            Function<Holders.StreamManager<T>, AtomicBinaryEventConsumer> selfMap
     ) {
         super(
                 operator,
@@ -62,8 +62,8 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
     }
 
     @Override
-    public <S> SinglePath<S> forkMap(BinaryPredicate<S> constraintIn, Function<T, S> map) {
-        return (SinglePath<S>) super.forkMap(constraintIn, map);
+    public <S> SinglePath<S> forkMap(BinaryPredicate<S> excludeIn, Function<T, S> map) {
+        return (SinglePath<S>) super.forkMap(excludeIn, map);
     }
 
     @Override
@@ -81,8 +81,8 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
     }
 
     @Override
-    public <S> SinglePath<S> forkUpdate(BinaryPredicate<S> constraintIn, BiFunction<S, T, S> update) {
-        return (SinglePath<S>) super.forkUpdate(constraintIn, update);
+    public <S> SinglePath<S> forkUpdate(BinaryPredicate<S> excludeIn, BiFunction<S, T, S> update) {
+        return (SinglePath<S>) super.forkUpdate(excludeIn, update);
     }
 
     @Override
@@ -99,8 +99,8 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
     }
 
     @Override
-    public <S> SinglePath<S> forkSwitch(BinaryPredicate<S> constraintIn, Function<T, BasePath<S>> switchMap) {
-        return (SinglePath<S>) super.forkSwitch(constraintIn, switchMap);
+    public <S> SinglePath<S> forkSwitch(BinaryPredicate<S> excludeIn, Function<T, BasePath<S>> switchMap) {
+        return (SinglePath<S>) super.forkSwitch(excludeIn, switchMap);
     }
 
     @Override

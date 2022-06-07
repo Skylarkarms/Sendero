@@ -1,12 +1,10 @@
 package sendero;
 
 import sendero.atomics.AtomicUtils;
-import sendero.pairs.Pair;
 import sendero.switchers.Switchers;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
@@ -16,19 +14,23 @@ import static sendero.functions.Functions.myIdentity;
 public class Appointers {
     static class AppointerSwapCore<T> implements Switchers.Switch {
         /**Accessed via side effects, ignore warnings*/
-        final AtomicReference<Appointer<?>> witnessAtomicReference;
-        final Holders.ColdHolder<T> holder;
+        final AtomicReference<AtomicBinaryEventConsumer> witnessAtomicReference;
+        final Holders.StreamManager<T> holder;
 
-        AppointerSwapCore(Holders.ColdHolder<T> holder) {
+        AppointerSwapCore(
+                Holders.StreamManager<T> holder
+        ) {
             this(holder, Appointer.CLEARED_APPOINTER);
         }
 
-        AppointerSwapCore(Holders.ColdHolder<T> holder, Appointer<?> fixedAppointer) {
+        AppointerSwapCore(
+                Holders.StreamManager<T> holder,
+                Appointer<?> fixedAppointer) {
             this.witnessAtomicReference = new AtomicReference<>(fixedAppointer);
             this.holder = holder;
         }
 
-        private Appointer<?> get() {
+        private AtomicBinaryEventConsumer get() {
             return witnessAtomicReference.get();
         }
 
@@ -39,7 +41,7 @@ public class Appointers {
 
         @Override
         public boolean isActive() {
-           return get().isActive();
+            return get().isActive();
         }
 
         @Override
@@ -47,56 +49,45 @@ public class Appointers {
             return get().off();
         }
 
-        void accept(Pair.Immutables.Int<T> pair) {
-            holder.accept(pair);
-        }
-
-        T getAndInvalidate() {
-            return holder.getAndInvalidate();
-        }
     }
 
     interface BasePathListener<T> extends Switchers.Switch {
         /**@return last holder value, shutsDown previous*/
-        default <P extends BasePath<T>> T setAndStart(P basePath) {
-            return setAndStart(basePath, myIdentity());
+        default <P extends BasePath<T>> void setAndStart(P basePath) {
+            setAndStart(basePath, myIdentity());
         }
-        /**@return last holder value, shutsDown previous*/
-        <S, P extends BasePath<S>> T setAndStart(P basePath, Function<S, T> map);
+        /** */
+        <S, P extends BasePath<S>> void setAndStart(P basePath, Function<S, T> map);
     }
 
     static class BasePathListenerImpl<T> implements BasePathListener<T> {
 
         final AppointerSwapCore<T> appointerSwapCore;
 
-        BasePathListenerImpl(Holders.ColdHolder<T> holder) {
-            appointerSwapCore = new AppointerSwapCore<>(holder);
+        BasePathListenerImpl(
+                Holders.StreamManager<T> manager
+        ) {
+            appointerSwapCore = new AppointerSwapCore<>(manager);
         }
 
         @Override
-        public <S, P extends BasePath<S>> T setAndStart(P basePath, Function<S, T> map) {
+        public <S, P extends BasePath<S>> void setAndStart(P basePath, Function<S, T> map) {
             assert basePath != null;
-            T lastValue = null;
-            final AtomicReference<Appointer<?>> witnessAtomicReference = appointerSwapCore.witnessAtomicReference;
-            final AtomicUtils.Witness<Appointer<?>> witness = AtomicUtils.contentiousCAS(
+            boolean isIdentity = isIdentity(map);
+            final AtomicReference<AtomicBinaryEventConsumer> witnessAtomicReference = appointerSwapCore.witnessAtomicReference;
+            final AtomicUtils.Witness<AtomicBinaryEventConsumer> witness = AtomicUtils.contentiousCAS(
                     witnessAtomicReference,
-                    prev -> prev == Appointer.CLEARED_APPOINTER || !prev.equalTo(basePath) || !isIdentity(map), // always update if map is NOT identity
-                    prev -> {
-                        final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt ->
-                                appointerSwapCore.accept(new Pair.Immutables.Int<>(anInt.getInt(), map.apply(anInt.getValue())));
-                        return new Appointer<>(basePath, intConsumer);
-                    }
+                    prev -> prev == Appointer.CLEARED_APPOINTER || !prev.equalTo(basePath) || !isIdentity, // always update if map is NOT identity
+                    prev -> Appointer.producerConnector(basePath, appointerSwapCore.holder, map)
             );
-            final Appointer<?> prev = witness.prev, next = witness.next;
+            final AtomicBinaryEventConsumer prev = witness.prev, next = witness.next;
             if (next != null && prev != next) {
                 prev.shutDown();
                 //contention check
                 if (witnessAtomicReference.get().equalTo(basePath)) {
-                    if (!prev.isCleared()) lastValue = appointerSwapCore.getAndInvalidate();
                     next.start();
                 }
             }
-            return lastValue;
         }
 
         @Override
@@ -117,12 +108,12 @@ public class Appointers {
 
     interface UnboundPathListener<T> {
         /**@return previous Path OR null under contention*/
-        <S, P extends BasePath<S>> Appointer<S> setPathAndGet(P basePath, Function<S, T> map);
-        default Appointer<T> setPathAndGet(BasePath<T> basePath) {
+        <S, P extends BasePath<S>> AtomicBinaryEventConsumer setPathAndGet(P basePath, Function<S, T> map);
+        default AtomicBinaryEventConsumer setPathAndGet(BasePath<T> basePath) {
             return setPathAndGet(basePath, myIdentity());
         }
         <S, P extends BasePath<S>> Appointer<S> setPathUpdateAndGet(P basePath, BiFunction<T, S, T> update);
-        Appointer<?> getAndClear();
+        AtomicBinaryEventConsumer getAndClear();
     }
 
     static class UnboundPathListenerImpl<T> implements UnboundPathListener<T> {
@@ -133,25 +124,24 @@ public class Appointers {
             this.appointerSwapCore = appointerSwapCore;
         }
 
-        UnboundPathListenerImpl(Holders.ColdHolder<T> coldHolder) {
+        UnboundPathListenerImpl(
+                Holders.StreamManager<T> coldHolder
+        ) {
             this.appointerSwapCore = new AppointerSwapCore<>(coldHolder);
         }
 
-        @SuppressWarnings("unchecked")
         @Override
-        public <S, P extends BasePath<S>> Appointer<S> setPathAndGet(P basePath, Function<S, T> map) {
-            return (Appointer<S>) AtomicUtils.contentiousCAS(
+        public <S, P extends BasePath<S>> AtomicBinaryEventConsumer setPathAndGet(P basePath, Function<S, T> map) {
+            return AtomicUtils.contentiousCAS(
                     appointerSwapCore.witnessAtomicReference,
                     prev -> !prev.equalTo(basePath),
-                    new UnaryOperator<Appointer<?>>() {
-                        final Consumer<Pair.Immutables.Int<S>> intConsumer =
-                                !isIdentity(map) ?
-                                        anInt -> appointerSwapCore.accept(new Pair.Immutables.Int<>(anInt.getInt(), map.apply(anInt.getValue())))
-                                        :
-                                        sInt -> appointerSwapCore.accept((Pair.Immutables.Int<T>) sInt);
+                    new UnaryOperator<AtomicBinaryEventConsumer>() {
+                        final AtomicBinaryEventConsumer next = Appointer.producerConnector(basePath,
+                                appointerSwapCore.holder,
+                                map);
                         @Override
-                        public Appointer<?> apply(Appointer<?> appointer) {
-                            return new Appointer<>(basePath, intConsumer);
+                        public AtomicBinaryEventConsumer apply(AtomicBinaryEventConsumer appointer) {
+                            return next;
                         }
                     }
             ).next;
@@ -163,22 +153,19 @@ public class Appointers {
             return (Appointer<S>) AtomicUtils.contentiousCAS(
                     appointerSwapCore.witnessAtomicReference,
                     prev -> !prev.equalTo(basePath),
-                    prev -> {
-                        final Consumer<Pair.Immutables.Int<S>> intConsumer = anInt ->
-                                appointerSwapCore.accept(new Pair.Immutables.Int<>(anInt.getInt(),
-                                                update.apply(getColdHolder().get(), anInt.getValue()))
-                                );
-                        return new Appointer<>(basePath, intConsumer);
-                    }
+                    prev -> Appointer.producerHolderConnector(basePath,
+                            getStreamManager(),
+                            update
+                    )
             ).next;
         }
 
         @Override
-        public Appointer<?> getAndClear() {
+        public AtomicBinaryEventConsumer getAndClear() {
             return appointerSwapCore.witnessAtomicReference.getAndSet(Appointer.CLEARED_APPOINTER);
         }
 
-        Holders.ColdHolder<T> getColdHolder() {
+        Holders.StreamManager<T> getStreamManager() {
             return appointerSwapCore.holder;
         }
     }
@@ -191,21 +178,21 @@ public class Appointers {
         boolean isCleared();
 
         static<T> PathListener<T> getInstance(BasePath<T> basePath) {
-            return new PathListenerImpl<>(basePath.baseTestDispatcher);
-        }
+            return new PathListenerImpl<>(basePath.streamManager);
+       }
     }
 
     static class PathListenerImpl<T> extends BasePathListenerImpl<T> implements PathListener<T> {
 
         final UnboundPathListenerImpl<T> unboundPathListener;
 
-        PathListenerImpl(Holders.ColdHolder<T> holder) {
-            super(holder);
+        PathListenerImpl(Holders.StreamManager<T> manager) {
+            super(manager);
             unboundPathListener = new UnboundPathListenerImpl<>(appointerSwapCore);
         }
 
         @Override
-        public <S, P extends BasePath<S>> Appointer<S> setPathAndGet(P basePath, Function<S, T> map) {
+        public <S, P extends BasePath<S>> AtomicBinaryEventConsumer setPathAndGet(P basePath, Function<S, T> map) {
             return unboundPathListener.setPathAndGet(basePath, map);
         }
 
@@ -216,24 +203,23 @@ public class Appointers {
 
         @Override
         public void stopAndClearPath() {
-            Appointer<?> appointer = appointerSwapCore.witnessAtomicReference.getAndSet(Appointer.CLEARED_APPOINTER);
-            appointer.shutDown();
+            appointerSwapCore.witnessAtomicReference.getAndSet(Appointer.CLEARED_APPOINTER).shutDown();
         }
 
         @Override
         public boolean isActive() {
-            return appointerSwapCore.witnessAtomicReference.get().isActive();
+            return appointerSwapCore.isActive();
         }
 
         @Override
         public boolean isCleared() {
-            return appointerSwapCore.witnessAtomicReference.get().isCleared();
+            return appointerSwapCore.get().isCleared();
         }
 
         /** If next == null, prev was already cleared
          * @return next appointer*/
         @Override
-        public Appointer<?> getAndClear() {
+        public AtomicBinaryEventConsumer getAndClear() {
             return unboundPathListener.getAndClear();
         }
     }
