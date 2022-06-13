@@ -17,8 +17,8 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
     ) {
         super(builderOperator,
                 Builders.withFixed(
-                        (Function<Holders.StreamManager<T>, AtomicBinaryEventConsumer>) coldHolder ->
-                                Appointer.producerConnector(basePath, coldHolder, map)
+                        (Function<Holders.StreamManager<T>, AtomicBinaryEvent>) coldHolder ->
+                                Builders.BinaryEventConsumers.producerConnector(basePath, coldHolder, map)
 
                 ));
     }
@@ -28,8 +28,8 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
             BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
         super(builderOperator,
                 Builders.withFixed(
-                        (Function<Holders.StreamManager<T>, AtomicBinaryEventConsumer>) coldHolder ->
-                                Appointer.producerHolderConnector(basePath, coldHolder, updateFun)
+                        (Function<Holders.StreamManager<T>, AtomicBinaryEvent>) coldHolder ->
+                                Builders.BinaryEventConsumers.producerHolderConnector(basePath, coldHolder, updateFun)
 
                 )
         );
@@ -54,13 +54,13 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
 
     protected abstract void demotionOverride(Receptor<T> intConsumer);
 
-    <S> Function<Holders.StreamManager<S>, AtomicBinaryEventConsumer> mapFunctionBuilder(Function<T, S> map) {
-        return holder -> Appointer.producerConnector(this,
+    <S> Function<Holders.StreamManager<S>, AtomicBinaryEvent> mapFunctionBuilder(Function<T, S> map) {
+        return holder -> Builders.BinaryEventConsumers.producerConnector(this,
                 holder, map
         );
     }
 
-    <S> Function<Holders.StreamManager<S>, AtomicBinaryEventConsumer> switchFunctionBuilder(Function<T, BasePath<S>> switchMap) {
+    <S> Function<Holders.StreamManager<S>, AtomicBinaryEvent> switchFunctionBuilder(Function<T, BasePath<S>> switchMap) {
         return intConsumer -> AtomicBinaryEventConsumer.switchMapEventConsumer(
                 intConsumer,
                 this,
@@ -69,22 +69,31 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
     }
 
     interface Receptor<T> extends Holders.ColdConsumer<T>, Holders.Invalidator {
-        static<S, T> Receptor<T> withManagerInput(Holders.StreamManager<S> manager, InputMethod.Type<S, T> methodType) {
-            return new ReceptorInputMethod<>(manager, methodType);
+        static<S, T> Receptor<T> withManagerInput(Holders.StreamManager<S> manager, InputMethod.Type<S, T> type) {
+            return new ReceptorInputMethod<>(manager, type);
         }
+        boolean equalTo(InputMethod.Type<?, ?> other);
     }
     static class ReceptorInputMethod<T> implements Receptor<T> {
         private final Holders.StreamManager<?> coreReceptor;
-        private final Holders.ColdConsumer<T> methodType;
+        private final Holders.ColdConsumer<T> mapped;
+        private final InputMethod.Type<?, T> type;
 
-        private <S> ReceptorInputMethod(Holders.StreamManager<S> coreReceptor, InputMethod.Type<S, T> methodType) {
+        private <S> ReceptorInputMethod(Holders.StreamManager<S> coreReceptor, InputMethod.Type<S, T> type) {
             this.coreReceptor = coreReceptor;
-            this.methodType = tImmutable -> methodType.acceptorMethod(coreReceptor, tImmutable);
+            this.type = type;
+            this.mapped = tImmutable -> type.acceptorMethod(coreReceptor, tImmutable);
         }
 
         @Override
         public void accept(Immutable<T> tImmutable) {
-            methodType.accept(tImmutable);
+            mapped.accept(tImmutable);
+        }
+
+        @Override
+        public boolean equalTo(InputMethod.Type<?, ?> other) {
+            return other != null
+                    && other == this.type;
         }
 
         @Override
@@ -123,7 +132,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         }
 
         /**Returns true if this is the first item added
-         * @param core*/
+         * @param core: receptor of the Immutable value*/
         abstract Pair.Immutables.Bool<Immutable.Values> onAddRegister(Receptor<T> core);
 
         abstract boolean onRegisterRemoved(Receptor<T> core);
@@ -257,7 +266,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
     @Override
     public String toString() {
         return super.toString() +
-                "\n baseTestDispatcher: " + coldHolder;
+                "\n baseTestDispatcher: " + holder;
     }
 }
 

@@ -25,8 +25,8 @@ public final class Gate {
         }
 
         @Override
-        public void update(UnaryOperator<T> update) {
-            consumerUpdater.update(update);
+        public T updateAndGet(UnaryOperator<T> update) {
+            return consumerUpdater.updateAndGet(update);
         }
 
         @Override
@@ -37,6 +37,44 @@ public final class Gate {
         @Override
         public void update(long delay, UnaryOperator<T> update) {
             consumerUpdater.update(delay, update);
+        }
+    }
+    public static class Acceptor<T> extends Path<T> implements Consumer<T> {
+        private final Consumer<T> scoped = Inputs.getConsumer(this);
+
+        public Acceptor(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+            super(builderOperator);
+        }
+
+        public Acceptor(T initialValue) {
+            super(initialValue);
+        }
+
+        @Override
+        public void accept(T t) {
+            scoped.accept(t);
+        }
+    }
+    public static class Updater<T> extends Path<T> implements sendero.interfaces.Updater<T> {
+
+        private final sendero.interfaces.Updater<T> scoped = Inputs.getUpdater(this);
+
+        public Updater() {
+            super();
+        }
+
+        public Updater(T initialValue) {
+            super(initialValue);
+        }
+
+        @Override
+        public T updateAndGet(UnaryOperator<T> update) {
+            return scoped.updateAndGet(update);
+        }
+
+        @Override
+        public void update(long delay, UnaryOperator<T> update) {
+            scoped.update(delay, update);
         }
     }
     public static class In<T> extends Path<T> implements Holders.HolderIO<T> {
@@ -51,13 +89,13 @@ public final class Gate {
             super();
         }
 
-        public In(T value) {
-            super(tHolderBuilder -> tHolderBuilder.withInitial(value));
+        public In(T initialValue) {
+            super(initialValue);
         }
 
         @Override
-        public void update(UnaryOperator<T> update) {
-            consumerUpdater.update(update);
+        public T updateAndGet(UnaryOperator<T> update) {
+            return consumerUpdater.updateAndGet(update);
         }
 
         @Override
@@ -145,8 +183,8 @@ public final class Gate {
                 }
 
                 @Override
-                public boolean isIdle() {
-                    return super.isIdle();
+                public boolean isActive() {
+                    return super.isActive();
                 }
 
                 @Override
@@ -233,13 +271,13 @@ public final class Gate {
 
         // Outs that do not belong to the basePath family do not need to perform any dispatching on new threads.
         // Hence, should only extend ActivationHolder.class
-        static class ManyImpl<T> extends Holders.ActivationHolder2<T> implements Out.Many<T> {
+        static class ManyImpl<T> extends Holders.ActivationHolder<T> implements Out.Many<T> {
 
             private final SimpleLists.LockFree.Snapshooter<Consumer<? super T>, Immutable.Values>
                     locale = SimpleLists.getSnapshotting(Consumer.class, this::localSerialValues);
 
             protected ManyImpl(
-                    Function<Holders.StreamManager<T>, AtomicBinaryEventConsumer> selfMap
+                    Function<Holders.StreamManager<T>, AtomicBinaryEvent> selfMap
             ) {
                 super(
                         myIdentity(),
@@ -278,8 +316,8 @@ public final class Gate {
             }
 
             @Override
-            public boolean isIdle() {
-                return super.isIdle();
+            public boolean isActive() {
+                return super.isActive();
             }
 
             @Override
@@ -298,13 +336,13 @@ public final class Gate {
             }
         }
 
-        static class SingleImpl<T> extends Holders.ActivationHolder2<T> implements Out.Single<T> {
+        static class SingleImpl<T> extends Holders.ActivationHolder<T> implements Out.Single<T> {
 
             private final ConsumerRegisters.IConsumerRegister.SnapshottingConsumerRegister<Immutable.Values, T>
                     locale = ConsumerRegisters.IConsumerRegister.getInstance(this::localSerialValues);
 
             protected SingleImpl(
-                    Function<Holders.StreamManager<T>, AtomicBinaryEventConsumer> selfMap
+                    Function<Holders.StreamManager<T>, AtomicBinaryEvent> selfMap
             ) {
                 super(
                         myIdentity(),

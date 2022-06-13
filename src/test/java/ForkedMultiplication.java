@@ -23,7 +23,7 @@ public class ForkedMultiplication {
                 }
         );
         Merge<int[]> finalResult = new Merge<>(
-                (UnaryOperator<Builders.HolderBuilder<int[]>>) builder -> builder.expectOut(
+                builder -> builder.expectOut(
                         ints -> {
                             System.err.println("Expect out size is: " + ints.length);
                             for (int i:ints
@@ -39,35 +39,37 @@ public class ForkedMultiplication {
                         }
                 ).withInitial(
                         new int[3]
+                ),
+                Merge.Entry.get(
+                        firstFork,
+                        (ints, integer) -> {
+                            System.err.println("<<<<From first fork is: " + integer);
+                            System.err.println("<FROM FIRST UPDATE!!>, prev ARRAY is: " + ints);
+                            int prev = ints[2];
+                            System.err.println("<FROM FIRST UPDATE!!>, prev is: " + prev);
+                            int[] clone = ints.clone();
+                            clone[0] = integer;
+                            clone[2] = solveArr(clone);
+                            System.err.println("First merged total is: " + clone[2] + "\n of prev: " + prev + ", \n by adding: " + integer);
+                            return clone;
+                        }
+                ),
+                Merge.Entry.get(
+                        secondFork,
+                        (ints, integer) -> {
+                            System.err.println("<<<<From second fork is: " + integer);
+                            System.err.println("<FROM SECOND UPDATE!!>, prev ARRAY is: " + ints);
+                            int prev = ints[2];
+                            System.err.println("<FROM SECOND UPDATE!!>, prev is: " + prev);
+                            int[] clone = ints.clone();
+                            clone[1] = integer;
+                            clone[2] = solveArr(clone);
+                            System.err.println("Second merged total is: " + clone[2] + "\n of prev: " + prev + ", \n by adding: " + integer);
+                            return clone;
+                        }
                 )
-        ).from(
-                firstFork,
-                (ints, integer) -> {
-                    System.err.println("<<<<From first fork is: " + integer);
-                    System.err.println("<FROM FIRST UPDATE!!>, prev ARRAY is: " + ints);
-                    int prev = ints[2];
-                    System.err.println("<FROM FIRST UPDATE!!>, prev is: " + prev);
-                    int[] clone = ints.clone();
-                    clone[0] = integer;
-                    clone[2] = solveArr(clone);
-                    System.err.println("First merged total is: " + clone[2] + "\n of prev: " + prev + ", \n by adding: " + integer);
-                    return clone;
-                }
-        ).from(
-                secondFork,
-                (ints, integer) -> {
-                    System.err.println("<<<<From second fork is: " + integer);
-                    System.err.println("<FROM SECOND UPDATE!!>, prev ARRAY is: " + ints);
-                    int prev = ints[2];
-                    System.err.println("<FROM SECOND UPDATE!!>, prev is: " + prev);
-                    int[] clone = ints.clone();
-                    clone[1] = integer;
-                    clone[2] = solveArr(clone);
-                    System.err.println("Second merged total is: " + clone[2] + "\n of prev: " + prev + ", \n by adding: " + integer);
-                    return clone;
-                }
         );
-        activeSupplier.bindMap(finalResult, ints -> ints[2]);
+        activeSupplier.bind(finalResult, ints -> ints[2]);
         new Thread(
                 () -> {
                     try {

@@ -1,4 +1,4 @@
-package sendero;
+package sendero.atomics;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;

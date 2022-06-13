@@ -6,7 +6,7 @@ import java.util.function.Supplier;
 /**The system is composed of 2 types of reconfigurations:
  * 1) Data reconfigurations, for when Data versions are changed either by mapping operations, or by user input.
  * 2) Branch flattening operations, for when "flattening" operations occur (branch switch/switchMap), */
-public final class Immutable<T> implements Supplier<T> {
+final class Immutable<T> implements Supplier<T> {
     private static final Immutable<?> NOT_SET = new Immutable<>(Values.NOT_SET, Values.NOT_SET, null);
 
     @SuppressWarnings("unchecked")
@@ -125,6 +125,10 @@ public final class Immutable<T> implements Supplier<T> {
 
     boolean match(Values localValues) {
         return localValues.equalTo(local);
+    }
+
+    boolean match(T data) {
+        return this.data == data;
     }
 
     @Override

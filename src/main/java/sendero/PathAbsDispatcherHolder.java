@@ -53,20 +53,13 @@ public abstract class PathAbsDispatcherHolder<T> extends BasePath<T> {
 
     protected PathAbsDispatcherHolder(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
-            Function<Holders.StreamManager<T>, AtomicBinaryEventConsumer> selfMap
+            Function<Holders.StreamManager<T>, AtomicBinaryEvent> selfMap
     ) {
         super(builderOperator,
                 Builders.withFixed(
                         selfMap
                 )
         );
-        pathDispatcher = pathDispatcherBuild();
-    }
-
-    PathAbsDispatcherHolder(
-            UnaryOperator<Builders.HolderBuilder<T>> builderOperator
-    ) {
-        super(builderOperator);
         pathDispatcher = pathDispatcherBuild();
     }
 

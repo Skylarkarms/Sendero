@@ -28,8 +28,8 @@ public final class SingleGate {
         }
 
         @Override
-        public void update(UnaryOperator<T> update) {
-            consumerUpdater.update(update);
+        public T updateAndGet(UnaryOperator<T> update) {
+            return consumerUpdater.updateAndGet(update);
         }
 
         @Override
@@ -59,8 +59,8 @@ public final class SingleGate {
         }
 
         @Override
-        public void update(UnaryOperator<T> update) {
-            consumerUpdater.update(update);
+        public T updateAndGet(UnaryOperator<T> update) {
+            return consumerUpdater.updateAndGet(update);
         }
 
         @Override
@@ -142,8 +142,8 @@ public final class SingleGate {
                 }
 
                 @Override
-                public boolean isIdle() {
-                    return super.isIdle();
+                public boolean isActive() {
+                    return super.isActive();
                 }
 
                 @Override

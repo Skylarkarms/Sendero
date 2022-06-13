@@ -4,7 +4,6 @@ import sendero.executor.DelayedServiceExecutor;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -13,7 +12,7 @@ import static sendero.functions.Functions.myIdentity;
 
 public class ActiveSuppliers<T> implements ActiveSupplier<T> {
 
-    final Holders.ActivationHolder2<T> activationHolder;
+    final Holders.ActivationHolder<T> activationHolder;
 
     public static<T> Unbound<T> unbound(UnaryOperator<Builders.HolderBuilder<T>> operator) {
         return new Unbound<>(operator);
@@ -45,7 +44,7 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
 
         <S>Bound(UnaryOperator<Builders.HolderBuilder<T>> holderBuilder, BasePath<S> source, Function<S, T> map) {
             super(holderBuilder,
-                    streamManager -> Appointer.producerConnector(source, streamManager, map)
+                    streamManager -> Builders.BinaryEventConsumers.producerConnector(source, streamManager, map)
 
             );
         }
@@ -63,18 +62,13 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
         }
 
         @Override
-        public <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
-            baseUnbound.bindMap(basePath, map);
-        }
-
-        @Override
-        public <S, P extends BasePath<S>> void bindUpdate(P basePath, BiFunction<T, S, T> update) {
-            baseUnbound.bindUpdate(basePath, update);
-        }
-
-        @Override
         public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
             baseUnbound.switchMap(path, switchMap);
+        }
+
+        @Override
+        public <S, P extends BasePath<S>> Void bind(P basePath, Builders.InputMethods<T, S> inputMethod) {
+            return baseUnbound.bind(basePath, inputMethod);
         }
     }
 
@@ -86,10 +80,10 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
     
     ActiveSuppliers(
             UnaryOperator<Builders.HolderBuilder<T>> holderBuilder,
-            Function<Holders.StreamManager<T>, AtomicBinaryEventConsumer> function
+            Function<Holders.StreamManager<T>, AtomicBinaryEvent> function
     ) {
         final UnaryOperator<Builders.ManagerBuilder> finalOp = function == null ? mutabilityAllowedOperator : Builders.withFixed(function);
-        activationHolder = new Holders.ActivationHolder2<>(holderBuilder, finalOp);
+        activationHolder = new Holders.ActivationHolder<>(holderBuilder, finalOp);
         on();
     }
 
@@ -174,7 +168,7 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
 
     @Override
     public boolean isActive() {
-        return !activationHolder.isIdle();
+        return activationHolder.isActive();
     }
 
 }

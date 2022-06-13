@@ -1,13 +1,10 @@
 package sendero;
 
-import java.util.function.BiFunction;
-
 interface BaseMerge<T> {
-    <S> Merge<T> from(
-            BasePath<S> path,
-            BiFunction<T, S, T> update
+    <S> void from(
+            Merge.Entry<S, T> entry
     );
     <S> boolean drop(
-            BasePath<S> path
+            Merge.Entry<S, T> entry
     );
 }

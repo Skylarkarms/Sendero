@@ -1,14 +1,13 @@
 package sendero;
 
-import java.util.function.BiFunction;
 import java.util.function.Function;
 
-public class BaseUnbound<T> implements UnboundLink<T>, BaseLink {
+public class BaseUnbound<T> implements BaseLink, InputMethodBinder<T> {
 
     final ActivePathListener<T> activePathListener;
 
-    BaseUnbound(Holders.ActivationHolder2<T> activationHolder) {
-        final Appointers.UnboundPathListenerImpl<T> pathListener = new Appointers.UnboundPathListenerImpl<>(activationHolder.streamManager);
+    BaseUnbound(Holders.ActivationHolder<T> activationHolder) {
+        final Appointers.BasePathListenerImpl<T> pathListener = new Appointers.BasePathListenerImpl<>(activationHolder.streamManager);
         activePathListener = new ActivePathListener<>(activationHolder.manager, pathListener);
     }
 
@@ -27,17 +26,6 @@ public class BaseUnbound<T> implements UnboundLink<T>, BaseLink {
         return activePathListener.unbound();
     }
 
-    @Override
-    public <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
-        activePathListener.bindMap(basePath, map);
-    }
-
-    @Override
-    public <S, P extends BasePath<S>> void bindUpdate(P basePath, BiFunction<T, S, T> update) {
-        activePathListener.bindUpdate(basePath, update);
-    }
-
-    @Override
     public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
         activePathListener.forcedSet(
                 AtomicBinaryEventConsumer.switchMapEventConsumer(
@@ -46,5 +34,10 @@ public class BaseUnbound<T> implements UnboundLink<T>, BaseLink {
                         switchMap
                 )
         );
+    }
+
+    @Override
+    public <S, P extends BasePath<S>> Void bind(P basePath, Builders.InputMethods<T, S> inputMethod) {
+        return activePathListener.bind(basePath, inputMethod);
     }
 }

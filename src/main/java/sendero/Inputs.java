@@ -8,19 +8,19 @@ import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 
 import static sendero.Holders.SwapBroadcast.HOT;
-import static sendero.functions.Functions.alwaysTrue;
+import static sendero.functions.Functions.binaryAlwaysTrue;
 
 public class Inputs<T> {
-    private final Holders.Holder<T> baseColdHolder;
+    private final Holders.Holder<T> baseColdHolderBroadcaster;
     private final BinaryPredicate<T> testIn;
     private static final Object INVALID = new Object();
 
     Inputs(Holders.BaseBroadcaster<T> broadcaster) {
-        this(broadcaster.coldHolder, broadcaster.expectInput);
+        this(broadcaster.holder, broadcaster.expectInput);
     }
 
-    private Inputs(Holders.Holder<T> baseColdHolder, BinaryPredicate<T> testIn) {
-        this.baseColdHolder = baseColdHolder;
+    private Inputs(Holders.Holder<T> baseColdHolderBroadcaster, BinaryPredicate<T> testIn) {
+        this.baseColdHolderBroadcaster = baseColdHolderBroadcaster;
         this.testIn = testIn;
     }
 
@@ -37,27 +37,27 @@ public class Inputs<T> {
     }
 
     Consumer<T> getConsumer() {
-        return new ConsumerImpl(baseColdHolder, testIn);
+        return new ConsumerImpl(baseColdHolderBroadcaster, testIn);
     }
 
     ConsumerUpdater<T> getConsumerUpdater() {
-        return new ConsumerUpdaterImpl(baseColdHolder, testIn);
+        return new ConsumerUpdaterImpl(baseColdHolderBroadcaster, testIn);
     }
 
     Updater<T> getUpdater() {
-        return new UpdaterImpl(baseColdHolder, testIn);
+        return new UpdaterImpl(baseColdHolderBroadcaster, testIn);
     }
 
     private Immutable<T> refGet() {
-        return baseColdHolder.getSnapshot();
+        return baseColdHolderBroadcaster.getSnapshot();
     }
 
     private boolean hotCompareAndSet(Immutable<T> prev, Immutable<T> next) {
-        return baseColdHolder.compareAndSet(prev, next, HOT);
+        return baseColdHolderBroadcaster.compareAndSet(prev, next, HOT);
     }
 
     private boolean compareAndSet(Immutable<T> prev, Immutable<T> next, long delay) {
-        return baseColdHolder.compareAndSet(prev, next, delay);
+        return baseColdHolderBroadcaster.compareAndSet(prev, next, delay);
     }
 
     class ConsumerUpdaterImpl extends Inputs<T> implements ConsumerUpdater<T> {
@@ -65,8 +65,8 @@ public class Inputs<T> {
         private final Consumer<T> consumer;
         private final Updater<T> updater;
 
-        private ConsumerUpdaterImpl(Holders.Holder<T> baseColdHolder, BinaryPredicate<T> testIn) {
-            super(baseColdHolder, testIn);
+        private ConsumerUpdaterImpl(Holders.Holder<T> baseColdHolderBroadcaster, BinaryPredicate<T> testIn) {
+            super(baseColdHolderBroadcaster, testIn);
             consumer = getConsumer();
             updater = getUpdater();
         }
@@ -77,8 +77,8 @@ public class Inputs<T> {
         }
 
         @Override
-        public void update(UnaryOperator<T> update) {
-            updater.update(update);
+        public T updateAndGet(UnaryOperator<T> update) {
+            return updater.updateAndGet(update);
         }
 
         @Override
@@ -92,7 +92,7 @@ public class Inputs<T> {
         private final Consumer<T> coreConsumer;
 
         private Consumer<T> build(BinaryPredicate<T> testIn) {
-            return testIn != alwaysTrue ?
+            return testIn != binaryAlwaysTrue ?
                     t -> {
                         Immutable<T> prev = null, next;
                         while (prev != (prev = refGet())) {
@@ -117,8 +117,8 @@ public class Inputs<T> {
                     };
         }
 
-        private ConsumerImpl(Holders.Holder<T> baseColdHolder, BinaryPredicate<T> testIn) {
-            super(baseColdHolder, testIn);
+        private ConsumerImpl(Holders.Holder<T> baseColdHolderBroadcaster, BinaryPredicate<T> testIn) {
+            super(baseColdHolderBroadcaster, testIn);
             coreConsumer = build(testIn);
         }
 
@@ -132,14 +132,14 @@ public class Inputs<T> {
 
         private final UnaryOperator<UnaryOperator<T>> lazyProcess;
 
-        private UpdaterImpl(Holders.Holder<T> baseColdHolder, BinaryPredicate<T> testIn) {
-            super(baseColdHolder, testIn);
+        private UpdaterImpl(Holders.Holder<T> baseColdHolderBroadcaster, BinaryPredicate<T> testIn) {
+            super(baseColdHolderBroadcaster, testIn);
             lazyProcess = build(testIn);
         }
 
         @SuppressWarnings("unchecked")
         private UnaryOperator<UnaryOperator<T>> build(BinaryPredicate<T> testIn) {
-            return testIn != alwaysTrue ?
+            return testIn != binaryAlwaysTrue ?
                     update -> currentValue -> {
                         //Not valid if same instance
                         try {
@@ -165,8 +165,8 @@ public class Inputs<T> {
         }
 
         @Override
-        public void update(UnaryOperator<T> update) {
-            lazyCASProcess(HOT ,update);
+        public T updateAndGet(UnaryOperator<T> update) {
+            return lazyCASProcess(HOT ,update);
         }
 
         @Override
@@ -174,11 +174,11 @@ public class Inputs<T> {
             lazyCASProcess(delay, update);
         }
 
-        private void lazyCASProcess(long delay, UnaryOperator<T> update) {
-            lazyCASAccept(delay, lazyProcess.apply(update));
+        private T lazyCASProcess(long delay, UnaryOperator<T> update) {
+            return lazyCASAccept(delay, lazyProcess.apply(update));
         }
 
-        private void lazyCASAccept(long delay, UnaryOperator<T> t) {
+        private T lazyCASAccept(long delay, UnaryOperator<T> t) {
             Immutable<T> prev = null, next;
             T prevVal, newVal;
             while (prev != (prev = refGet())) {
@@ -186,9 +186,11 @@ public class Inputs<T> {
                 newVal = t.apply(prevVal);
                 if (newVal != INVALID) {
                     next = prev.newValue(newVal);
-                    if (compareAndSet(prev, next, delay)) break;
+                    if (compareAndSet(prev, next, delay)) return newVal;
+//                    if (compareAndSet(prev, next, delay)) break;
                 }
             }
+            return null;
         }
     }
 }

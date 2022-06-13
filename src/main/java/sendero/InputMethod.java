@@ -5,13 +5,14 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public interface InputMethod<T> extends Holders.ColdConsumer<T> {
+interface InputMethod<T> extends Holders.ColdConsumer<T> {
     <S> void accept(Immutable<S> immutable, Function<S, T> map);
     <S> void accept(Immutable<S> immutable, BiFunction<T, S, T> update);
 
+    /**Where S is the parameter from incoming source*/
     @FunctionalInterface
-    interface Type<M, T> {
-        void acceptorMethod(InputMethod<M> method, Immutable<T> param);
+    interface Type<M, S> {
+        void acceptorMethod(InputMethod<M> method, Immutable<S> param);
         Type<?, ?> identity = Consumer::accept;
         default boolean isIdentity() {
             return this == identity;

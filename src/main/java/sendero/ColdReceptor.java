@@ -6,7 +6,7 @@ import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 @FunctionalInterface
-public interface ColdReceptor<T> extends InputMethod<T> {
+interface ColdReceptor<T> extends InputMethod<T> {
 
     /**Base Cold Stream receptive function*/
     void filterAccept(Immutable.Values topValues, UnaryOperator<T> topData);

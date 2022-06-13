@@ -33,7 +33,7 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
 
     SinglePath(
             UnaryOperator<Builders.HolderBuilder<T>> operator,
-            Function<Holders.StreamManager<T>, AtomicBinaryEventConsumer> selfMap
+            Function<Holders.StreamManager<T>, AtomicBinaryEvent> selfMap
     ) {
         super(
                 operator,

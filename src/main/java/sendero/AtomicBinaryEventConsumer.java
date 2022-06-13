@@ -1,65 +1,37 @@
 package sendero;
 
-import sendero.switchers.Switchers;
-
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
-public abstract class AtomicBinaryEventConsumer implements Switchers.Switch {
-    private static final int SHUT_DOWN = -1, ON = 1, OFF = 0;
-    private final AtomicInteger versionedState = new AtomicInteger(SHUT_DOWN);
+/**A 4 stage event consumer with state memorization, that dispatches a binary event true OR false PLUS a onStart phase.
+ * Once a SHUT_DOWN stage has been achieved there is no turning back and a new allocation needs to be assigned.
+ * */
+public abstract class AtomicBinaryEventConsumer implements AtomicBinaryEvent {
+
+    private static final int NOT_SET = -2, SHUT_DOWN = -1, ON = 1, OFF = 0;
+    private final AtomicInteger versionedState = new AtomicInteger(NOT_SET);
 
     private boolean setOff() {
-        int prev = versionedState.getAndSet(OFF);
+        int prev = setOnOff(OFF);
         return isOn(prev);
     }
 
+    private int setOnOff(int value) {
+        if (versionedState.get() != SHUT_DOWN) return versionedState.getAndSet(value);
+        else return SHUT_DOWN;
+    }
+
+
+
     private boolean setOn() {
-        int prev = versionedState.getAndSet(ON);
-        if (prev == SHUT_DOWN) onStart();
+        int prev = setOnOff(ON);
+        if (prev == NOT_SET) onStart();
         return !isOn(prev);
     }
 
     private boolean isOn(int now) {
         return now == ON;
     }
-
-    public static final AtomicBinaryEventConsumer CLEARED = new AtomicBinaryEventConsumer() {
-        @Override
-        protected void onStateChange(boolean isActive) {
-
-        }
-
-        @Override
-        public boolean on() {
-            return false;
-        }
-
-        @Override
-        public boolean off() {
-            return false;
-        }
-
-        @Override
-        public boolean isActive() {
-            return false;
-        }
-
-        @Override
-        public boolean shutDown() {
-            return false;
-        }
-
-        @Override
-        public boolean isCleared() {
-            return true;
-        }
-
-        @Override
-        public String toString() {
-            return  getClass() + " is CLEARED";
-        }
-    };
 
     protected abstract void onStateChange(boolean isActive);
 
@@ -77,16 +49,22 @@ public abstract class AtomicBinaryEventConsumer implements Switchers.Switch {
         return isOff;
     }
 
-    public boolean shutDown() {
+    @Override
+    public boolean shutoff() {
         int prev = versionedState.getAndSet(SHUT_DOWN);
         boolean wasOn = isOn(prev);
         if (wasOn) onStateChange(false);
         return wasOn;
     }
 
+    @Override
+    public boolean isOff() {
+        return versionedState.get() == SHUT_DOWN;
+    }
+
     /**If a signal arrives first nothing will happen*/
     public boolean start() {
-        boolean started = versionedState.compareAndSet(SHUT_DOWN, ON);
+        boolean started = versionedState.compareAndSet(NOT_SET, ON);
         if (started) setStart();
         return started;
     }
@@ -100,7 +78,12 @@ public abstract class AtomicBinaryEventConsumer implements Switchers.Switch {
 
     }
 
-    <S> boolean equalTo(S s) {
+    @Override
+    public <P, R> boolean equalTo(P producer, R receptor) {
+        return false;
+    }
+
+    <P> boolean equalTo(P producer) {
         return false;
     }
 
@@ -109,11 +92,7 @@ public abstract class AtomicBinaryEventConsumer implements Switchers.Switch {
         return isOn(versionedState.get());
     }
 
-    public boolean isShutDown() {
-        return versionedState.get() == SHUT_DOWN;
-    }
-
-    public boolean isCleared() {
+    public boolean isDefault() {
         return false;
     }
 
@@ -123,9 +102,9 @@ public abstract class AtomicBinaryEventConsumer implements Switchers.Switch {
             BasePath<S> source,
             Function<S, ? extends BasePath<T>> switchMap
     ) {
-        final Appointers.BasePathListener<T> pathListener = new Appointers.BasePathListenerImpl<>(target);
+        final Appointers.BasePathListenerImpl<T> pathListener = new Appointers.BasePathListenerImpl<>(target);
 
-        final AtomicBinaryEventConsumer booleanConsumerAppointer = Appointer.producerConnector(
+        final AtomicBinaryEvent booleanConsumerAppointer = Builders.BinaryEventConsumers.producerConnector(
                 source,
         Holders.StreamManager.baseManager(
                 (prev, next, delay) -> {

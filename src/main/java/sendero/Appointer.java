@@ -1,9 +1,6 @@
 package sendero;
 
-import java.util.function.BiFunction;
-import java.util.function.Function;
-
-public class Appointer<A> extends AtomicBinaryEventConsumer {
+class Appointer<A> extends AtomicBinaryEventConsumer {
     public static final Appointer<?> CLEARED_APPOINTER = new Appointer<Object>(null, null) {
 
         @Override
@@ -17,7 +14,7 @@ public class Appointer<A> extends AtomicBinaryEventConsumer {
         }
 
         @Override
-        public boolean isCleared() {
+        public boolean isDefault() {
             return true;
         }
     };
@@ -30,41 +27,7 @@ public class Appointer<A> extends AtomicBinaryEventConsumer {
         receptor.invalidate();
     }
 
-    public static<S, T> AtomicBinaryEventConsumer producerConnector(
-            BasePath<S> producer,
-            Holders.StreamManager<T> consumer,
-            Function<S, T> map) {
-        return new Appointer<>(producer, BasePath.Receptor.withManagerInput(
-                consumer,
-                InputMethod.Type.map(map)
-        ));
-    }
-
-    public static<T> AtomicBinaryEventConsumer producerConnector(
-            BasePath<T> producer,
-            Holders.StreamManager<T> consumer
-    ) {
-        return new Appointer<>(producer,
-                BasePath.Receptor.withManagerInput(
-                        consumer,
-                        InputMethod.Type.identity()
-                )
-        );
-    }
-
-    static<S, T> AtomicBinaryEventConsumer producerHolderConnector(
-            BasePath<S> producer,
-            Holders.StreamManager<T> holder,
-            BiFunction<T, S, T> update) {
-        return new Appointer<>(producer,
-                BasePath.Receptor.withManagerInput(
-                        holder,
-                        InputMethod.Type.update(update)
-                )
-        );
-    }
-
-    private Appointer(
+    Appointer(
             BasePath<A> producer,
             BasePath.Receptor<A> receptor
     ) {
@@ -86,8 +49,14 @@ public class Appointer<A> extends AtomicBinaryEventConsumer {
     }
 
     @Override
-    <S> boolean equalTo(S s) {
-        return s instanceof BasePath<?> && s.equals(producer);
+    public <P, R> boolean equalTo(P producer, R receptor) {
+        return producer instanceof BasePath<?> && producer.equals(this.producer)
+                && receptor instanceof InputMethod.Type<?, ?> && this.receptor.equalTo((InputMethod.Type<?, ?>) receptor);
+    }
+
+    @Override
+    <P> boolean equalTo(P producer) {
+        return producer instanceof BasePath<?> && producer.equals(this.producer);
     }
 
     @Override

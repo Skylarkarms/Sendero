@@ -1,6 +1,8 @@
 package sendero;
 
+import sendero.atomics.AtomicScheduler;
 import sendero.executor.DelayedServiceExecutor;
+import sendero.interfaces.BinaryConsumer;
 import sendero.interfaces.BinaryPredicate;
 import sendero.interfaces.Updater;
 import sendero.pairs.Pair;
@@ -52,6 +54,11 @@ final class Holders {
         static<S> StreamManager<S> baseManager(SwapBroadcast<S> broadcast) {
             return new ColdReceptorManager<>(broadcast);
         }
+        static<S> StreamManager<S> baseManager(BinaryConsumer<S> broadcast) {
+            return new ColdReceptorManager<>(
+                    (prev, next, delay) -> broadcast.accept(prev, next.get())
+            );
+        }
     }
 
     static final class ColdReceptorManager<T> implements StreamManager<T> {
@@ -59,12 +66,12 @@ final class Holders {
         private final ImmutableReadWrite<T> immutableRead;
         final ColdReceptor<T> receptor;
 
-        private ColdReceptorManager(SwapBroadcast<T> swapBroadcast) {
+        ColdReceptorManager(SwapBroadcast<T> swapBroadcast) {
             this(new Holder<>(swapBroadcast), BinaryPredicate.always(true));
         }
-        private ColdReceptorManager(Holder<T> holder, BinaryPredicate<T> test) {
+        ColdReceptorManager(Holder<T> holder, BinaryPredicate<T> test) {
             this.immutableRead = holder;
-            receptor = test != alwaysTrue ?
+            receptor = test != binaryAlwaysTrue ?
                     (topValues, topData) -> {
                         Immutable<T> prev;
                         Immutable.Values.LesserThan res;
@@ -135,12 +142,20 @@ final class Holders {
                 this.broadcaster = broadcaster;
         }
 
-        public Holder(
+        Holder(
+                SwapBroadcast<T> broadcaster,
+                Immutable<T> firstValue
+        ) {
+            this.broadcaster = broadcaster;
+            this.reference = new AtomicReference<>(firstValue);
+        }
+
+        Holder(
                 SwapBroadcast<T> broadcaster,
                 AtomicReference<Immutable<T>> reference
         ) {
             this.broadcaster = broadcaster;
-            this.reference = reference == null ? new AtomicReference<>(getNotSet()) : reference;
+            this.reference = reference;
         }
 
         @Override
@@ -195,13 +210,17 @@ final class Holders {
     abstract static class BaseBroadcaster<T> extends DispatcherReader<T> {
         public final SwapBroadcast<T> core;
 
-        final Holder<T> coldHolder;
+        final Holder<T> holder;
         final BinaryPredicate<T> expectInput;
         final StreamManager<T> streamManager;
 
         @Override
         Immutable<T> getSnapshot() {
-            return coldHolder.getSnapshot();
+            return holder.getSnapshot();
+        }
+
+        protected T getValue() {
+            return getSnapshot().get();
         }
 
         private SwapBroadcast<T> build(Predicate<T> expectOut) {
@@ -232,8 +251,8 @@ final class Holders {
             this.consumingFunction = builder(expectOut);
             this.expectInput = builder.expectInput;
             this.core = build(expectOut);
-            this.coldHolder = builder.buildHolder(core);
-            streamManager = StreamManager.getManagerFor(coldHolder, expectInput);
+            this.holder = builder.buildHolder(core);
+            streamManager = StreamManager.getManagerFor(holder, expectInput);
         }
 
         private SnapConsumer<T> builder(Predicate<T> expectOut) {
@@ -257,7 +276,7 @@ final class Holders {
                 Consumer<Runnable> executionMethod
         ) {
             Runnable runnable = () -> {
-                final Immutable<T> currentSnap = coldHolder.getSnapshot();
+                final Immutable<T> currentSnap = holder.getSnapshot();
                 consumingFunction.accept(currentSnap, localValues, consumer);
             };
             executionMethod.accept(runnable);
@@ -280,7 +299,7 @@ final class Holders {
         }
     }
 
-    static class ActivationHolder2<T> extends BaseBroadcaster<T> {
+    static class ActivationHolder<T> extends BaseBroadcaster<T> {
 
         final ActivationManager manager;
 
@@ -309,13 +328,13 @@ final class Holders {
             return new ActivationManager(){
                 @Override
                 protected boolean deactivationRequirements() {
-                    return ActivationHolder2.this.deactivationRequirements();
+                    return ActivationHolder.this.deactivationRequirements();
                 }
             };
         }
 
 
-        ActivationHolder2(
+        ActivationHolder(
                 UnaryOperator<Builders.HolderBuilder<T>> holderBuilder,
                 UnaryOperator<Builders.ManagerBuilder> mngrBuilderOperator
         ) {
@@ -339,7 +358,7 @@ final class Holders {
         }
 
         boolean tryActivate() {
-            boolean active = manager.tryActivate();
+            boolean active = manager.on();
             if (active) onStateChange(true);
             return active;
         }
@@ -347,18 +366,18 @@ final class Holders {
         /**WARNING: Calls bound to race conditions*/
         protected void onStateChange(boolean isActive) {}
 
-        protected boolean isIdle() {
-            return manager.isIdle();
+        protected boolean isActive() {
+            return manager.isActive();
         }
 
         boolean tryDeactivate() {
-            boolean deactive = manager.tryDeactivate();
+            boolean deactive = manager.off();
             if (deactive) onStateChange(false);
             return deactive;
         }
     }
 
-    abstract static class ExecutorHolder<T> extends ActivationHolder2<T> {
+    abstract static class ExecutorHolder<T> extends ActivationHolder<T> {
         private final EService eService = EService.INSTANCE;
 
         //Only if isColdHolder == true;

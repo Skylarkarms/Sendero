@@ -54,31 +54,49 @@ class ComplexHelloWorld {
                         )
                         .withInitial(
                                 new String[2]
-                        )
+                        ),
+                Merge.Entry.get(
+                        firstString,
+                        (strings, s) -> {
+                            String finalS = s + "[FROM first string]";
+                            String[] copy = strings.clone();
+                            copy[0] = finalS;
+                            return copy;
+                        }
+                ),
+                Merge.Entry.get(
+                        process,
+                        (strings, s) -> {
+                            String finalS = s + "[from second string]";
+                            String[] copy = strings.clone();
+                            copy[1] = finalS;
+                            return copy;
+                        }
+                )
         );
         private final Gate.Out.Single<String[]> finalRes = res.out(Gate.Out.Single.class);
 
-        {
-            res.from(
-                    firstString,
-                    (strings, s) -> {
-                        String finalS = s + "[FROM first string]";
-                        String[] copy = strings.clone();
-                        copy[0] = finalS;
-                        return copy;
-                    }
-            );
-
-            res.from(
-                    process,
-                    (strings, s) -> {
-                        String finalS = s + "[from second string]";
-                        String[] copy = strings.clone();
-                        copy[1] = finalS;
-                        return copy;
-                    }
-            );
-        }
+//        {
+//            res.from(
+//                    firstString,
+//                    (strings, s) -> {
+//                        String finalS = s + "[FROM first string]";
+//                        String[] copy = strings.clone();
+//                        copy[0] = finalS;
+//                        return copy;
+//                    }
+//            );
+//
+//            res.from(
+//                    process,
+//                    (strings, s) -> {
+//                        String finalS = s + "[from second string]";
+//                        String[] copy = strings.clone();
+//                        copy[1] = finalS;
+//                        return copy;
+//                    }
+//            );
+//        }
 
         final Consumer<String[]> exitGate = Consumers.transform(
                 strings -> strings[0] + " " + strings[1],

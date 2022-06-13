@@ -4,7 +4,7 @@ import sendero.event_registers.BinaryEventRegisters;
 import sendero.functions.Functions;
 import sendero.switchers.Switchers;
 
-abstract class ActivationManager {
+abstract class ActivationManager implements Switchers.Switch {
 
     private final Switchers.Switch switchRegister;
 
@@ -23,7 +23,7 @@ abstract class ActivationManager {
 
     private static final Runnable ON_MUTABLE = Functions.emptyRunnable();
 
-    ActivationManager(AtomicBinaryEventConsumer fixedActivationListener, boolean mutableActivationListener) {
+    ActivationManager(AtomicBinaryEvent fixedActivationListener, boolean mutableActivationListener) {
         this.switchRegister = fixedActivationListener != null ?
                 BinaryEventRegisters.getAtomicWith(fixedActivationListener)
                 :
@@ -36,23 +36,25 @@ abstract class ActivationManager {
 
     abstract boolean deactivationRequirements();
 
-    boolean tryActivate() {
+    @Override
+    public boolean on() {
         return switchRegister.on();
     }
 
-    boolean tryDeactivate() {
+    @Override
+    public boolean off() {
         if (deactivationRequirements()) {
             return switchRegister.off();
         }
         return false;
     }
 
-    protected void setActivationListener(AtomicBinaryEventConsumer listener) {
+    protected void setActivationListener(AtomicBinaryEvent listener) {
         thrower.run();
         ((BinaryEventRegisters.BinaryEventRegister)switchRegister).register(listener);
     }
 
-    protected boolean swapActivationListener(AtomicBinaryEventConsumer expect, AtomicBinaryEventConsumer set) {
+    protected boolean swapActivationListener(AtomicBinaryEvent expect, AtomicBinaryEvent set) {
         thrower.run();
         return ((BinaryEventRegisters.BinaryEventRegister.Atomic)switchRegister).swapRegister(expect, set) == expect;
     }
@@ -62,11 +64,12 @@ abstract class ActivationManager {
     }
 
     protected boolean clearActivationListener() {
-        return !((BinaryEventRegisters.BinaryEventRegister.Atomic)switchRegister).unregister().isCleared();
+        return !((BinaryEventRegisters.BinaryEventRegister.Atomic)switchRegister).unregister().isDefault();
     }
 
-    protected boolean isIdle() {
-        return !switchRegister.isActive();
+    @Override
+    public boolean isActive() {
+        return switchRegister.isActive();
     }
 
 }

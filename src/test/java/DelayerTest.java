@@ -1,4 +1,4 @@
-import sendero.AtomicScheduler;
+import sendero.atomics.AtomicScheduler;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;

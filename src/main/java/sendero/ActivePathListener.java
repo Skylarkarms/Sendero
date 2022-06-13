@@ -1,44 +1,38 @@
 package sendero;
 
-import java.util.function.BiFunction;
-import java.util.function.Function;
-
-class ActivePathListener<T> {
+class ActivePathListener<T> implements InputMethodBinder<T> {
     private final ActivationManager manager;
-    private final Appointers.UnboundPathListenerImpl<T> appointerCache;
+    private final Appointers.BasePathListenerImpl<T> basePathListener;
 
     Holders.StreamManager<T> getStreamManager() {
-//    ColdHolder<T> getColdHolder() {
-//    Holders.ColdHolder<T> getColdHolder() {
-        return appointerCache.getStreamManager();
+        return basePathListener.getStreamManager();
     }
 
-    public ActivePathListener(ActivationManager manager, Appointers.UnboundPathListenerImpl<T> appointerCache) {
+    public ActivePathListener(ActivationManager manager, Appointers.BasePathListenerImpl<T> basePathListener) {
         this.manager = manager;
-        this.appointerCache = appointerCache;
+        this.basePathListener = basePathListener;
     }
 
-    protected  <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
-        manager.setActivationListener(
-                appointerCache.setPathAndGet(basePath, map)
-        );
+    @Override
+    public <S, P extends BasePath<S>> Void bind(P basePath, Builders.InputMethods<T, S> inputMethod) {
+        AtomicBinaryEvent next = basePathListener.bind(basePath, inputMethod);
+        if (next != null) {
+            manager.setActivationListener(
+                    next
+            );
+        }
+        return null;
     }
 
-    protected  <S, P extends BasePath<S>> void bindUpdate(P basePath, BiFunction<T, S, T> update) {
-        manager.setActivationListener(
-                appointerCache.setPathUpdateAndGet(basePath, update)
-        );
-    }
-
-    void forcedSet(AtomicBinaryEventConsumer activationListener) {
+    public void forcedSet(AtomicBinaryEvent activationListener) {
         manager.swapActivationListener(
-                appointerCache.getAndClear(), activationListener
+                basePathListener.getAndClear(), activationListener
         );
     }
 
     protected boolean unbound() {
-        final AtomicBinaryEventConsumer binaryEventConsumer = appointerCache.getAndClear();
-        if (binaryEventConsumer != null) return manager.swapActivationListener(binaryEventConsumer, AtomicBinaryEventConsumer.CLEARED);
+        final AtomicBinaryEvent binaryEventConsumer = basePathListener.getAndClear();
+        if (binaryEventConsumer != null) return manager.swapActivationListener(binaryEventConsumer, AtomicBinaryEvent.DEFAULT);
         return false;
     }
 }

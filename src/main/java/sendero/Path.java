@@ -25,7 +25,7 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
 
     Path(
             UnaryOperator<Builders.HolderBuilder<T>> operator,
-            Function<Holders.StreamManager<T>, AtomicBinaryEventConsumer> selfMap
+            Function<Holders.StreamManager<T>, AtomicBinaryEvent> selfMap
     ) {
         super(operator,
                 selfMap
@@ -42,6 +42,10 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
             BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
         super(builderOperator, basePath, updateFun);
+    }
+
+    Path(T initialValue) {
+        this(Builders.withInitial(initialValue));
     }
 
     Path(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {

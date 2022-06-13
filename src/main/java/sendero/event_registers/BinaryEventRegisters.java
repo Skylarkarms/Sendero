@@ -1,23 +1,22 @@
 package sendero.event_registers;
 
-import sendero.AtomicBinaryEventConsumer;
+import sendero.AtomicBinaryEvent;
 import sendero.switchers.Switchers;
 
 public final class BinaryEventRegisters {
     public static BinaryEventRegister getAtomicRegister() {
         return new AtomicBinaryEventRegisterImpl();
     }
-    public static BinaryEventRegister getAtomicWith(AtomicBinaryEventConsumer fixed) {
+    public static BinaryEventRegister getAtomicWith(AtomicBinaryEvent fixed) {
         return new AtomicWithFixed(fixed);
     }
     public interface BinaryEventRegister extends Switchers.Switch {
-        void register(AtomicBinaryEventConsumer booleanConsumer);
-        AtomicBinaryEventConsumer unregister();
+        void register(AtomicBinaryEvent booleanConsumer);
+        AtomicBinaryEvent unregister();
         boolean isRegistered();
         interface Atomic extends BinaryEventRegister {
             /**@return prev, which is the same as expect if successful*/
-            AtomicBinaryEventConsumer swapRegister(AtomicBinaryEventConsumer expect, AtomicBinaryEventConsumer set);
-
+            AtomicBinaryEvent swapRegister(AtomicBinaryEvent expect, AtomicBinaryEvent set);
         }
     }
 
@@ -53,12 +52,12 @@ public final class BinaryEventRegisters {
         }
 
         @Override
-        public void register(AtomicBinaryEventConsumer booleanConsumer) {
+        public void register(AtomicBinaryEvent booleanConsumer) {
             register.registerDispatch(booleanConsumer);
         }
 
         @Override
-        public AtomicBinaryEventConsumer unregister() {
+        public AtomicBinaryEvent unregister() {
             return register.unregisterDispatch();
         }
 
@@ -68,7 +67,7 @@ public final class BinaryEventRegisters {
         }
 
         @Override
-        public AtomicBinaryEventConsumer swapRegister(AtomicBinaryEventConsumer expect, AtomicBinaryEventConsumer set) {
+        public AtomicBinaryEvent swapRegister(AtomicBinaryEvent expect, AtomicBinaryEvent set) {
             return register.swapRegister(expect, set);
         }
     }
@@ -76,9 +75,9 @@ public final class BinaryEventRegisters {
     private static class AtomicWithFixed implements BinaryEventRegister {
         private final Switchers.Switch state = Switchers.getAtomic();
 
-        private final AtomicBinaryEventConsumer fixed;
+        private final AtomicBinaryEvent fixed;
 
-        private AtomicWithFixed(AtomicBinaryEventConsumer fixed) {
+        private AtomicWithFixed(AtomicBinaryEvent fixed) {
             this.fixed = fixed;
         }
 
@@ -102,12 +101,12 @@ public final class BinaryEventRegisters {
         }
 
         @Override
-        public void register(AtomicBinaryEventConsumer booleanConsumer) {
+        public void register(AtomicBinaryEvent booleanConsumer) {
             throw new IllegalStateException("Fixed");
         }
 
         @Override
-        public AtomicBinaryEventConsumer unregister() {
+        public AtomicBinaryEvent unregister() {
             throw new IllegalStateException("Fixed");
         }
 

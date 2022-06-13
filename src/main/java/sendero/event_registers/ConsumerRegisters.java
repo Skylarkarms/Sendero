@@ -1,6 +1,6 @@
 package sendero.event_registers;
 
-import sendero.AtomicBinaryEventConsumer;
+import sendero.AtomicBinaryEvent;
 import sendero.functions.Functions;
 import sendero.pairs.Pair;
 import sendero.switchers.Switchers;
@@ -124,27 +124,27 @@ public class ConsumerRegisters<T> {
 
         public interface BinaryConsumerRegister extends Switchers.Switch {
             boolean isRegistered();
-            AtomicBinaryEventConsumer unregister();
+            AtomicBinaryEvent unregister();
 
             interface Atomic extends BinaryConsumerRegister {
                 /**Keeps spinning until match*/
-                BooleanSnapshot register(BooleanSupplier booleanValue, AtomicBinaryEventConsumer toRegister);
-                BooleanSnapshot swap(BooleanSupplier booleanValue, AtomicBinaryEventConsumer expect, AtomicBinaryEventConsumer set);
-                boolean isEqualTo(AtomicBinaryEventConsumer other);
+                BooleanSnapshot register(BooleanSupplier booleanValue, AtomicBinaryEvent toRegister);
+                BooleanSnapshot swap(BooleanSupplier booleanValue, AtomicBinaryEvent expect, AtomicBinaryEvent set);
+                boolean isEqualTo(AtomicBinaryEvent other);
                 final class ConsumerContainer implements Switchers.Switch {
-                    public static final ConsumerContainer CLEARED = new ConsumerContainer(AtomicBinaryEventConsumer.CLEARED);
-                    final AtomicBinaryEventConsumer consumer;
+                    public static final ConsumerContainer CLEARED = new ConsumerContainer(AtomicBinaryEvent.DEFAULT);
+                    final AtomicBinaryEvent consumer;
 
-                    public ConsumerContainer(AtomicBinaryEventConsumer consumer) {
+                    public ConsumerContainer(AtomicBinaryEvent consumer) {
                         this.consumer = consumer;
                     }
 
-                    public boolean isEqualTo(AtomicBinaryEventConsumer other) {
-                        return this.consumer.isCleared() && other.isCleared() || this.consumer == other;
+                    public boolean isEqualTo(AtomicBinaryEvent other) {
+                        return this.consumer.isDefault() && other.isDefault() || this.consumer == other;
                     }
 
-                    public boolean isCleared() {
-                        return consumer.isCleared();
+                    public boolean isDefault() {
+                        return consumer.isDefault();
                     }
 
                     @Override
@@ -172,8 +172,8 @@ public class ConsumerRegisters<T> {
                 final class BooleanSnapshot {
                     public final boolean set;
                     public final boolean snapshotValue;
-                    public final AtomicBinaryEventConsumer prev;
-                    private BooleanSnapshot(boolean snapshotValue, AtomicBinaryEventConsumer prev, boolean set) {
+                    public final AtomicBinaryEvent prev;
+                    private BooleanSnapshot(boolean snapshotValue, AtomicBinaryEvent prev, boolean set) {
                         this.snapshotValue = snapshotValue;
                         this.prev = prev;
                         this.set = set;
@@ -185,11 +185,11 @@ public class ConsumerRegisters<T> {
 
         public interface StateAwareBinaryConsumerRegister extends Switchers.Switch {
             boolean isRegistered();
-            void registerDispatch(AtomicBinaryEventConsumer newConsumer);
-            AtomicBinaryEventConsumer unregisterDispatch();
-            AtomicBinaryEventConsumer unregister();
+            void registerDispatch(AtomicBinaryEvent newConsumer);
+            AtomicBinaryEvent unregisterDispatch();
+            AtomicBinaryEvent unregister();
             /**@return prev*/
-            AtomicBinaryEventConsumer swapRegister(AtomicBinaryEventConsumer expect, AtomicBinaryEventConsumer set);
+            AtomicBinaryEvent swapRegister(AtomicBinaryEvent expect, AtomicBinaryEvent set);
         }
         protected static final class StateAwareBinaryConsumerRegisterImpl implements StateAwareBinaryConsumerRegister {
             private final BooleanSupplier volatileBinaryState;
@@ -205,11 +205,11 @@ public class ConsumerRegisters<T> {
             }
 
             @Override
-            public void registerDispatch(AtomicBinaryEventConsumer newConsumer) {
+            public void registerDispatch(AtomicBinaryEvent newConsumer) {
                 BinaryConsumerRegister.Atomic.BooleanSnapshot snapshot2 = binaryConsumerRegister.register(volatileBinaryState, newConsumer);
                 if (snapshot2.set) {
-                    AtomicBinaryEventConsumer prev = snapshot2.prev;
-                    if (prev != null) prev.shutDown();
+                    AtomicBinaryEvent prev = snapshot2.prev;
+                    if (prev != null) prev.shutoff();
                     if (snapshot2.snapshotValue && binaryConsumerRegister.isEqualTo(newConsumer)) {
                         newConsumer.start();
                     }
@@ -217,23 +217,23 @@ public class ConsumerRegisters<T> {
             }
 
             @Override
-            public AtomicBinaryEventConsumer unregisterDispatch() {
-                final AtomicBinaryEventConsumer prev = binaryConsumerRegister.unregister();
-                prev.shutDown();
+            public AtomicBinaryEvent unregisterDispatch() {
+                final AtomicBinaryEvent prev = binaryConsumerRegister.unregister();
+                prev.shutoff();
                 return prev;
             }
 
             @Override
-            public AtomicBinaryEventConsumer unregister() {
+            public AtomicBinaryEvent unregister() {
                 return binaryConsumerRegister.unregister();
             }
 
             @Override
-            public AtomicBinaryEventConsumer swapRegister(AtomicBinaryEventConsumer expect, AtomicBinaryEventConsumer set) {
+            public AtomicBinaryEvent swapRegister(AtomicBinaryEvent expect, AtomicBinaryEvent set) {
                 BinaryConsumerRegister.Atomic.BooleanSnapshot snapshot = binaryConsumerRegister.swap(volatileBinaryState, expect, set);
-                AtomicBinaryEventConsumer prev = snapshot.prev;
+                AtomicBinaryEvent prev = snapshot.prev;
                 if (snapshot.set) {
-                    prev.shutDown();
+                    prev.shutoff();
                     if (snapshot.snapshotValue) set.start();
                 }
                 return prev;
@@ -259,7 +259,7 @@ public class ConsumerRegisters<T> {
             private final AtomicReference<ConsumerContainer> ref2 = new AtomicReference<>(ConsumerContainer.CLEARED);
 
             @Override
-            public BooleanSnapshot register(BooleanSupplier booleanValue, AtomicBinaryEventConsumer toRegister) {
+            public BooleanSnapshot register(BooleanSupplier booleanValue, AtomicBinaryEvent toRegister) {
                 // keep spinning until match
                 ConsumerContainer prev;
                 boolean currentValue;
@@ -272,7 +272,7 @@ public class ConsumerRegisters<T> {
             }
 
             @Override
-            public BooleanSnapshot swap(BooleanSupplier booleanValue, AtomicBinaryEventConsumer expect, AtomicBinaryEventConsumer set) {
+            public BooleanSnapshot swap(BooleanSupplier booleanValue, AtomicBinaryEvent expect, AtomicBinaryEvent set) {
                 ConsumerContainer prev = ref2.get(), next;
                 boolean current = booleanValue.getAsBoolean(), same = true, shouldSet = prev.isEqualTo(expect);
                 for (
@@ -295,7 +295,7 @@ public class ConsumerRegisters<T> {
             }
 
             @Override
-            public boolean isEqualTo(AtomicBinaryEventConsumer other) {
+            public boolean isEqualTo(AtomicBinaryEvent other) {
                 return ref2.get().isEqualTo(other);
             }
 
@@ -315,14 +315,14 @@ public class ConsumerRegisters<T> {
             }
 
             @Override
-            public AtomicBinaryEventConsumer unregister() {
+            public AtomicBinaryEvent unregister() {
                 ConsumerContainer prev = ref2.getAndSet(ConsumerContainer.CLEARED);
                 return prev.consumer;
             }
 
             @Override
             public boolean isRegistered() {
-                return !ref2.get().isCleared();
+                return !ref2.get().isDefault();
             }
         }
 

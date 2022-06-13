@@ -74,16 +74,6 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
         }
 
         @Override
-        public <S, P extends BasePath<S>> void bindMap(P basePath, Function<S, T> map) {
-            baseUnbound.bindMap(basePath, map);
-        }
-
-        @Override
-        public <S, P extends BasePath<S>> void bindUpdate(P basePath, BiFunction<T, S, T> update) {
-            baseUnbound.bindUpdate(basePath, update);
-        }
-
-        @Override
         public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
             baseUnbound.switchMap(path, switchMap);
         }
@@ -93,9 +83,13 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             return baseUnbound.unbound();
         }
 
+        @Override
+        public <S, P extends BasePath<S>> Void bind(P basePath, Builders.InputMethods<T, S> inputMethod) {
+            return baseUnbound.bind(basePath, inputMethod);
+        }
+
         public static class In<T> extends Unbound<T> implements Updater<T> {
             private final Updater<T> updater = Inputs.getUpdater(this);
-//            private final Updater<T> updater = new UpdaterImpl<T>(baseTestDispatcher);
 
             public In() {
                 super();
@@ -106,8 +100,8 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             }
 
             @Override
-            public void update(UnaryOperator<T> update) {
-                updater.update(update);
+            public T updateAndGet(UnaryOperator<T> update) {
+                return updater.updateAndGet(update);
             }
 
             @Override
@@ -179,7 +173,6 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
         public static class In<T> extends Bound<T> implements Updater<T> {
 
             private final Updater<T> updater = Inputs.getUpdater(this);
-//            private final Updater<T> updater = new UpdaterImpl<T>(baseTestDispatcher);
 
             public  <S> In(
                     BasePath<S> fixedPath,
@@ -209,8 +202,8 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             }
 
             @Override
-            public void update(UnaryOperator<T> update) {
-                updater.update(update);
+            public T updateAndGet(UnaryOperator<T> update) {
+                return updater.updateAndGet(update);
             }
 
             @Override

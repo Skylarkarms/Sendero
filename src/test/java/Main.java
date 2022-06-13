@@ -84,36 +84,38 @@ public class Main {
                             System.err.println("Main: isEmpty? " + isEmpty);
                             return test2 || isEmpty.apply(strings);
                         }
+                ),
+                Merge.Entry.get(
+                        stringIO,
+                        (strings, helloString) -> {
+                            System.err.println("updating from Hello: " + stringIO +
+                                    ",\n string is: " + helloString +
+                                    ",\n main: original is: " + strings +
+                                    ",\n from: HELLO!!!");
+                            String[] clone = strings.clone();
+                            System.err.println("clone is: " + clone +
+                                    ",\n from: HELLO>>>");
+                            clone[0] = helloString;
+                            clone[2] = "DONE GREETING";
+                            return clone;
+                        }
+                ),
+                Merge.Entry.get(
+                        stringWorld,
+                        (strings, worldString) -> {
+                            System.err.println("updating from World: " + stringWorld +
+                                    ",\n string is: " + worldString +
+                                    ",\n to updater: " +
+                                    ",\n main: original is: " + strings +
+                                    ",\n from: WORLD!!!");
+                            String[] clone = strings.clone();
+                            System.err.println("clone is: " + clone +
+                                    ",\n FROM: WOLRD");
+                            clone[1] = worldString;
+                            clone[3] = "DONE WORLD";
+                            return clone;
+                        }
                 )
-        ).from(
-                stringIO,
-                (strings, helloString) -> {
-                    System.err.println("updating from Hello: " + stringIO +
-                            ",\n string is: " + helloString +
-                            ",\n main: original is: " + strings +
-                            ",\n from: HELLO!!!");
-                    String[] clone = strings.clone();
-                    System.err.println("clone is: " + clone +
-                            ",\n from: HELLO>>>");
-                    clone[0] = helloString;
-                    clone[2] = "DONE GREETING";
-                    return clone;
-                }
-        ).from(
-                stringWorld,
-                (strings, worldString) -> {
-                    System.err.println("updating from World: " + stringWorld +
-                            ",\n string is: " + worldString +
-                            ",\n to updater: " +
-                            ",\n main: original is: " + strings +
-                            ",\n from: WORLD!!!");
-                    String[] clone = strings.clone();
-                    System.err.println("clone is: " + clone +
-                            ",\n FROM: WOLRD");
-                    clone[1] = worldString;
-                    clone[3] = "DONE WORLD";
-                    return clone;
-                }
         );
 
         Gate.Out.Many<String> resOut = merge.out(Gate.Out.Many.class, strings -> {
@@ -140,7 +142,7 @@ public class Main {
         resOut.register(obs2);
 
         System.err.println("updating...");
-        stringIO.update(
+        stringIO.updateAndGet(
                 s -> "Good bye!"
         );
 
@@ -153,7 +155,7 @@ public class Main {
                     try {
                         Thread.sleep(500);
                         System.err.println("updating 2...");
-                        stringIO.update(
+                        stringIO.updateAndGet(
                                 s -> "Good bye FOREVER!"
                         );
                         System.err.println("Registering again...");
@@ -205,29 +207,51 @@ public class Main {
         };
         System.err.println("Expect out is: " + expectOut);
         Merge<String[]> helloWorld = new Merge<>(
-                holderBuilder -> holderBuilder.withInitial(og).expectOut(expectOut)
+                holderBuilder -> holderBuilder.withInitial(og).expectOut(expectOut),
+                Merge.Entry.get(
+                        hello,
+                        (strings, helloString) -> {
+                            System.err.println("updating... for string: " + helloString);
+                            String[] newRes = strings.clone();
+                            newRes[0] = helloString;
+                            System.err.println("Hello string is: " + helloString);
+                            return newRes;
+                        }
+                ),
+                Merge.Entry.get(
+                        world,
+                        (strings, worldString) -> {
+                            System.err.println("updating... for string: " + worldString);
+                            String[] newRes = strings.clone();
+                            newRes[1] = worldString;
+                            System.err.println("World string is: " + worldString);
+                            return newRes;
+                        }
+                )
         );
         System.err.println("Hello is: " + hello);
         System.err.println("World is: " + world);
         System.err.println("HelloWorld is: " + helloWorld);
-        helloWorld.from(hello,
-                (strings, helloString) -> {
-                    System.err.println("updating... for string: " + helloString);
-                    String[] newRes = strings.clone();
-                    newRes[0] = helloString;
-                    System.err.println("Hello string is: " + helloString);
-                    return newRes;
-                }
-                );
-        helloWorld.from(world,
-                (strings, worldString) -> {
-                    System.err.println("updating... for string: " + worldString);
-                    String[] newRes = strings.clone();
-                    newRes[1] = worldString;
-                    System.err.println("World string is: " + worldString);
-                    return newRes;
-                }
-                );
+//        helloWorld.from(
+//                hello,
+//                (strings, helloString) -> {
+//                    System.err.println("updating... for string: " + helloString);
+//                    String[] newRes = strings.clone();
+//                    newRes[0] = helloString;
+//                    System.err.println("Hello string is: " + helloString);
+//                    return newRes;
+//                }
+//                );
+//        helloWorld.from(
+//                world,
+//                (strings, worldString) -> {
+//                    System.err.println("updating... for string: " + worldString);
+//                    String[] newRes = strings.clone();
+//                    newRes[1] = worldString;
+//                    System.err.println("World string is: " + worldString);
+//                    return newRes;
+//                }
+//                );
 
         Gate.Out.Single<String> result = helloWorld.forkMap(
                 strings -> {
