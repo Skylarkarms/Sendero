@@ -31,6 +31,8 @@ public class SimpleLists {
         boolean removeIf(Predicate<E> removeIf);
         boolean isEmpty();
         E[] copy();
+
+        E[] clear();
         interface Snapshooter<E, Snapshot> extends LockFree<E> {
             /**returns true if this is the first item to be added*/
             Pair.Immutables.Bool<Snapshot> snapshotAdd(E element);
@@ -183,6 +185,15 @@ public class SimpleLists {
             return prev.size == 0;
         }
 
+        private static<E> E[] clear(AtomicReference<Snapshot<E>> atomicReference, E[] emptyArray) {
+            Snapshot<E> prev, next;
+            do {
+                prev = atomicReference.get();
+                next = new Snapshot<>(emptyArray, prev.version + 1, 0);
+            } while (!atomicReference.compareAndSet(prev, next));
+            return prev.copy;
+        }
+
         private static<T> Snapshot<T> add(T e, Snapshot<T> snapshot, T[] componentArr) {
             T[] nextArray, prevArray = snapshot.copy;
             int nextSize, prevSize = snapshot.size, prevLength = prevArray.length, nextVersion = snapshot.version + 1;
@@ -266,6 +277,11 @@ public class SimpleLists {
             SimpleLists.Snapshot<E> snapshot = core.get();
             E[] res = snapshot.copy;
             return res == DEFAULT_CAPACITY_EMPTY_ELEMENT_DATA ? EMPTY_ELEMENT_ARRAY : trimToSize(snapshot);
+        }
+
+        @Override
+        public E[] clear() {
+            return Snapshot.clear(core, EMPTY_ELEMENT_ARRAY);
         }
 
         public E[] trimToSize(SimpleLists.Snapshot<E> snap) {

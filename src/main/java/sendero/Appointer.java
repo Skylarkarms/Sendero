@@ -1,5 +1,12 @@
 package sendero;
 
+
+import sendero.lists.SimpleLists;
+import sendero.pairs.Pair;
+
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
+
 class Appointer<A> extends AtomicBinaryEventConsumer {
     public static final Appointer<?> CLEARED_APPOINTER = new Appointer<Object>(null, null) {
 
@@ -48,15 +55,9 @@ class Appointer<A> extends AtomicBinaryEventConsumer {
         producer.demotionOverride(receptor);
     }
 
-    @Override
-    public <P, R> boolean equalTo(P producer, R receptor) {
-        return producer instanceof BasePath<?> && producer.equals(this.producer)
-                && receptor instanceof InputMethod.Type<?, ?> && this.receptor.equalTo((InputMethod.Type<?, ?>) receptor);
-    }
-
-    @Override
-    <P> boolean equalTo(P producer) {
-        return producer instanceof BasePath<?> && producer.equals(this.producer);
+    public boolean equalTo(BasePath<?> producer, InputMethod.Type<?, ?> receptor) {
+        return this.producer.equals(producer)
+                && this.receptor.equalTo(receptor);
     }
 
     @Override
@@ -65,5 +66,76 @@ class Appointer<A> extends AtomicBinaryEventConsumer {
                 "\n producer=" + producer +
                 ",\n consumer=" + receptor +
                 "} \n this is: Appointer" + "@" + hashCode();
+    }
+
+    /**This To-Many Appointer has Autonomy from Producer's activation state*/
+    static class ConcurrentList<S> extends AtomicBinaryEventConsumer {
+
+        final BooleanSupplier stateSupplier;
+
+        final SimpleLists.LockFree.Snapshooter<AtomicBinaryEvent, Boolean> receptors;
+
+        public ConcurrentList() {
+            stateSupplier = this::isActive;
+            receptors = SimpleLists.getSnapshotting(
+                    AtomicBinaryEvent.class,
+                    stateSupplier::getAsBoolean
+            );
+        }
+
+        ConcurrentList(BooleanSupplier stateSupplier, AtomicBinaryEvent ... binaryEvents) {
+            this.stateSupplier = stateSupplier;
+            this.receptors = SimpleLists.getSnapshotting(
+                    AtomicBinaryEvent.class,
+                    stateSupplier::getAsBoolean
+            );
+            for (AtomicBinaryEvent e:binaryEvents) this.receptors.add(e);
+        }
+
+        ConcurrentList(BooleanSupplier stateSupplier, AtomicBinaryEvent first) {
+            this.stateSupplier = stateSupplier;
+            this.receptors = SimpleLists.getSnapshotting(
+                    AtomicBinaryEvent.class,
+                    stateSupplier::getAsBoolean
+            );
+            this.receptors.add(first);
+        }
+
+        @Override
+        protected void onStateChange(boolean isActive) {
+            if (isActive) set(AtomicBinaryEvent::on);
+            else set(AtomicBinaryEvent::off);
+        }
+
+        @Override
+        void onStart() {
+            set(AtomicBinaryEvent::start);
+        }
+
+        @Override
+        void onDestroyed() {
+            set(AtomicBinaryEvent::shutoff);
+        }
+
+        private void set(Consumer<AtomicBinaryEvent> eventConsumer) {
+            for (AtomicBinaryEvent r:receptors.copy()) eventConsumer.accept(r);
+        }
+
+        public void add(AtomicBinaryEvent receptor) {
+            Pair.Immutables.Bool<Boolean> snap = receptors.snapshotAdd(receptor);
+            receptor.shutoff();
+            if (snap.value) receptor.start();
+        }
+
+        /**Returns true if last*/
+        public boolean remove(AtomicBinaryEvent receptor) {
+            boolean last = receptors.remove(receptor);
+            receptor.shutoff();
+            return last;
+        }
+
+        public void clear() {
+            for (AtomicBinaryEvent e:receptors.clear()) e.shutoff();
+        }
     }
 }

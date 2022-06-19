@@ -49,7 +49,7 @@ public class Link<T> extends Path<T> implements BaseLink {
     }
 
     @Override
-    protected void setOnStateChangeListener(AtomicBinaryEventConsumer listener) {
+    protected void setOnStateChangeListener(AtomicBinaryEvent listener) {
         throwIllegalAccess("setOnStateChangeListener");
     }
 

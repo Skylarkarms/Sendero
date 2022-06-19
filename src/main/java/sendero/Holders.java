@@ -25,20 +25,77 @@ final class Holders {
     }
 
     @FunctionalInterface
-    interface ColdConsumer<T> extends Consumer<Immutable<T>> {
+    interface ColdConsumer<T> extends Consumer<Immutable<T>>, SynthEqual {
+        default boolean equalTo(InputMethod.Type<?, ?> other) {
+            return SynthEqual.super.equalTo(0, other);
+        }
     }
-    interface ColdHolder<T> extends Supplier<T>, ColdConsumer<T> {
+
+    private static Object paramAt(SynthEqual self, int at) {
+        try {
+            return self.getClass().getDeclaredFields()[at].get(self);
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    interface SynthEqual {
+        static int hashCodeOf(int... hashCodes) {
+            if (hashCodes == null)
+                return 0;
+
+            int result = 1;
+
+            for (int hashes : hashCodes)
+                result = 31 * result + hashes;
+
+            return result;
+        }
+
+        default <S> boolean equalTo(int at, S arg) {
+            return paramAt(this, at).equals(arg);
+        }
+
+        default<S> boolean equalTo(int at, SynthEqual that) {
+            return that != null && paramAt(this, at).equals(paramAt(that, at));
+        }
+
+        default int hashAt(int at) {
+            return paramAt(this, at).hashCode();
+        }
     }
 
     @FunctionalInterface
-    interface SwapBroadcast<T> {
+    interface SwapBroadcast<T> extends SynthEqual {
         long NO_DELAY = -1, HOT = 0;
         void onSwapped(T prev, Immutable<T> next, long delay);
         default void onSwapped(T prev, Immutable<T> next) {
             onSwapped(prev, next, NO_DELAY);
         }
-    }
 
+        static<S> SwapBroadcast<S> fromConsumer(Consumer<? super S> consumer) {
+            return (prev, next, delay) -> consumer.accept(next.get());
+        }
+
+        static <S> SwapBroadcast<S> fromBinaryConsumer(BinaryConsumer<? super S> binaryConsumer) {
+            return (prev, next, delay) -> binaryConsumer.accept(prev, next.get());
+        }
+
+        default boolean equalTo(SwapBroadcast<?> other) {
+            return equalTo(0, other);
+        }
+    }
+    abstract static class ImmutableRead<T> {
+        abstract Immutable<T> getSnapshot();
+        protected T get() {return getSnapshot().get();}
+        boolean isEqual(Immutable<T> other) {
+            return other != null && other == getSnapshot();
+        }
+        Immutable.Values localSerialValues() {
+            return getSnapshot().local;
+        }
+
+    }
     abstract static class ImmutableReadWrite<T> extends ImmutableRead<T> implements ImmutableWrite<T> {
     }
 
@@ -54,12 +111,55 @@ final class Holders {
         static<S> StreamManager<S> baseManager(SwapBroadcast<S> broadcast) {
             return new ColdReceptorManager<>(broadcast);
         }
-        static<S> StreamManager<S> baseManager(BinaryConsumer<S> broadcast) {
+        static<T, S> StreamManager<S> baseManager(
+                BiFunction<T,S, T> updatingFun,
+                Updater<T> updater) {
             return new ColdReceptorManager<>(
-                    (prev, next, delay) -> broadcast.accept(prev, next.get())
+                    (prev, next, delay) -> updater.updateAndGet(
+                            t -> updatingFun.apply(t, next.get())
+                    )
             );
         }
+
+        static <S> StreamManager<S> getManagerFor(
+                Consumer<Runnable> executor,
+                SwapBroadcast<S> consumer
+        ) {
+            return new StreamManagerExecutor<>(executor, consumer);
+        }
     }
+
+    private static final class StreamManagerExecutor<T> implements Holders.StreamManager<T> {
+        private final Consumer<Runnable> executor;
+        private final Holders.StreamManager<T> manager;
+        private final BiFunction<Immutable.Values, UnaryOperator<T>, Runnable> runnableFactory;
+
+        private StreamManagerExecutor(
+                Consumer<Runnable> executor,
+                SwapBroadcast<T> coreConsumer
+        ) {
+            this.executor = executor;
+            manager = Holders.StreamManager.baseManager(
+                    coreConsumer
+            );
+            runnableFactory = (topValues, tInt) -> () -> manager.filterAccept(topValues, tInt);
+        }
+
+        @Override
+        /**Consumes on Executor thread*/
+        public void filterAccept(Immutable.Values topValues, UnaryOperator<T> topData) {
+            executor.accept(
+                    runnableFactory.apply(topValues, topData)
+            );
+        }
+
+        @Override
+        /**Invalidates atomically*/
+        public void invalidate() {
+            manager.invalidate();
+        }
+    }
+
 
     static final class ColdReceptorManager<T> implements StreamManager<T> {
 
@@ -137,9 +237,8 @@ final class Holders {
         private final AtomicReference<Immutable<T>> reference;
         private final SwapBroadcast<T> broadcaster;
 
-            Holder(SwapBroadcast<T> broadcaster) {
-                this.reference = new AtomicReference<>(getNotSet());
-                this.broadcaster = broadcaster;
+        Holder(SwapBroadcast<T> broadcaster) {
+            this(broadcaster, getNotSet());
         }
 
         Holder(
@@ -288,6 +387,7 @@ final class Holders {
         /**dispatch is triggered by client input*/
         void dispatch(long delay, Immutable<T> t) {}
 
+        @SuppressWarnings("EmptyMethod")
         protected void onSwapped(T prev, T next) {}
 
         private void broadcast(
@@ -307,7 +407,7 @@ final class Holders {
             return true;
         }
 
-        protected void setOnStateChangeListener(AtomicBinaryEventConsumer listener) {
+        protected void setOnStateChangeListener(AtomicBinaryEvent listener) {
             manager.setActivationListener(listener);
         }
 

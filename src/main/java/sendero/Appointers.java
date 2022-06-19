@@ -4,6 +4,10 @@ import sendero.atomics.AtomicUtils;
 import sendero.switchers.Switchers;
 
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.BiFunction;
+import java.util.function.Function;
+
+import static sendero.Appointers.ConcurrentProducerSwapper.bindStart;
 
 public class Appointers {
     static class AppointerSwapCore<T> implements Switchers.Switch {
@@ -45,7 +49,7 @@ public class Appointers {
 
     }
 
-    static class BasePathListenerImpl<T> implements Switchers.Switch, UnboundPathListener<T> {
+    static class ConcurrentProducerSwapper<T> implements Switchers.Switch, UnboundPathListener<T> {
 
         final AppointerSwapCore<T> appointerSwapCore;
 
@@ -54,10 +58,10 @@ public class Appointers {
         }
 
 
-        BasePathListenerImpl(
-                Holders.StreamManager<T> manager
+        ConcurrentProducerSwapper(
+                Holders.StreamManager<T> recipient
         ) {
-            appointerSwapCore = new AppointerSwapCore<>(manager);
+            appointerSwapCore = new AppointerSwapCore<>(recipient);
         }
 
         @Override
@@ -75,12 +79,17 @@ public class Appointers {
             return appointerSwapCore.isActive();
         }
 
+        static<T, S, P extends BasePath<S>> boolean bindStart(InputMethodSwapper<T, AtomicBinaryEvent> swapper, P basePath, Builders.InputMethods<T, S> inputMethod) {
+            AtomicBinaryEvent event = swapper.bind(basePath, inputMethod);
+            return event != null && event.start();
+        }
+
         @Override
         public <S, P extends BasePath<S>> AtomicBinaryEvent bind(P basePath, Builders.InputMethods<T, S> inputMethod) {
             final AtomicUtils.Witness<AtomicBinaryEvent> witness = AtomicUtils.contentiousCAS(
                     appointerSwapCore.witnessAtomicReference,
-                    prev -> !prev.equalTo(basePath, inputMethod),
-                    appointer -> Builders.BinaryEventConsumers.producerConnector(
+                    prev -> prev == AtomicBinaryEvent.DEFAULT || !((Appointer<?>)prev).equalTo(basePath, inputMethod.type),
+                    appointer -> Builders.BinaryEventConsumers.producerListener(
                             basePath,
                             appointerSwapCore.holder,
                             inputMethod.type)
@@ -98,21 +107,20 @@ public class Appointers {
 
     /**We could exchange 2 methods for a single one with Builders.InputMethod*/
     interface UnboundPathListener<T> extends InputMethodSwapper<T, AtomicBinaryEvent> {
-        default <S, P extends BasePath<S>> void setAndStart(P basePath, Builders.InputMethods<T, S> inputMethod) {
-            AtomicBinaryEvent next = bind(basePath, inputMethod);
-            if (next != null) next.start();
+        default <P extends BasePath<T>> boolean setAndStart(P basePath) {
+            return bindStart(this, basePath, Builders.InputMethods.identity());
         }
-        default <P extends BasePath<T>> void setAndStart(P basePath) {
-            AtomicBinaryEvent next = bind(basePath, Builders.InputMethods.identity());
-            if (next != null) next.start();
+        default <S, P extends BasePath<S>> boolean setAndStart(P basePath, Function<S, T> map) {
+            return bindStart(this, basePath, Builders.InputMethods.map(map));
+        }
+        default <S, P extends BasePath<S>> boolean setAndStart(P basePath, BiFunction<T, S, T> update) {
+            return bindStart(this, basePath, Builders.InputMethods.update(update));
         }
     }
 
     /**Used by Path, this one is for client usage, and can emulate the behaviour of Unbound Link classes*/
     public interface PathListener<T> extends UnboundPathListener<T>, Switchers.Switch {
         void stopAndClearPath();
-
-
         boolean isCleared();
 
         static<T> PathListener<T> getInstance(BasePath<T> basePath) {
@@ -120,7 +128,7 @@ public class Appointers {
        }
     }
 
-    static class PathListenerImpl<T> extends BasePathListenerImpl<T> implements PathListener<T> {
+    static class PathListenerImpl<T> extends ConcurrentProducerSwapper<T> implements PathListener<T> {
 
         PathListenerImpl(Holders.StreamManager<T> manager) {
             super(manager);

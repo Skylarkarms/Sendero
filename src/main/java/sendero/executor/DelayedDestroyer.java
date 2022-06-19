@@ -1,13 +1,13 @@
 package sendero.executor;
 
-import sendero.AtomicBinaryEventConsumer;
+import sendero.AtomicBinaryEvent;
 import sendero.atomics.AtomicUtils;
 
 class DelayedDestroyer {
-    private final AtomicBinaryEventConsumer consumer;
+    private final AtomicBinaryEvent consumer;
     private final AtomicUtils.SwapScheduler.Long delayer;
 
-    DelayedDestroyer(long millis, AtomicBinaryEventConsumer consumer) {
+    DelayedDestroyer(long millis, AtomicBinaryEvent consumer) {
         this.delayer = new AtomicUtils.SwapScheduler.Long(millis);
         this.consumer = consumer;
     }

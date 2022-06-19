@@ -18,7 +18,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         super(builderOperator,
                 Builders.withFixed(
                         (Function<Holders.StreamManager<T>, AtomicBinaryEvent>) coldHolder ->
-                                Builders.BinaryEventConsumers.producerConnector(basePath, coldHolder, map)
+                                Builders.BinaryEventConsumers.producerListener(basePath, coldHolder, map)
 
                 ));
     }
@@ -29,7 +29,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         super(builderOperator,
                 Builders.withFixed(
                         (Function<Holders.StreamManager<T>, AtomicBinaryEvent>) coldHolder ->
-                                Builders.BinaryEventConsumers.producerHolderConnector(basePath, coldHolder, updateFun)
+                                Builders.BinaryEventConsumers.producerListener(basePath, coldHolder, updateFun)
 
                 )
         );
@@ -55,7 +55,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
     protected abstract void demotionOverride(Receptor<T> intConsumer);
 
     <S> Function<Holders.StreamManager<S>, AtomicBinaryEvent> mapFunctionBuilder(Function<T, S> map) {
-        return holder -> Builders.BinaryEventConsumers.producerConnector(this,
+        return holder -> Builders.BinaryEventConsumers.producerListener(this,
                 holder, map
         );
     }
@@ -69,31 +69,30 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
     }
 
     interface Receptor<T> extends Holders.ColdConsumer<T>, Holders.Invalidator {
+
+        default AtomicBinaryEvent toBinaryEvent(BasePath<T> producer) {
+            return Builders.BinaryEventConsumers.producerListener(
+                    producer,
+                    this
+            );
+        }
+
         static<S, T> Receptor<T> withManagerInput(Holders.StreamManager<S> manager, InputMethod.Type<S, T> type) {
             return new ReceptorInputMethod<>(manager, type);
         }
-        boolean equalTo(InputMethod.Type<?, ?> other);
     }
-    static class ReceptorInputMethod<T> implements Receptor<T> {
+    static final class ReceptorInputMethod<T> implements Receptor<T> {
         private final Holders.StreamManager<?> coreReceptor;
         private final Holders.ColdConsumer<T> mapped;
-        private final InputMethod.Type<?, T> type;
 
         private <S> ReceptorInputMethod(Holders.StreamManager<S> coreReceptor, InputMethod.Type<S, T> type) {
             this.coreReceptor = coreReceptor;
-            this.type = type;
             this.mapped = tImmutable -> type.acceptorMethod(coreReceptor, tImmutable);
         }
 
         @Override
         public void accept(Immutable<T> tImmutable) {
             mapped.accept(tImmutable);
-        }
-
-        @Override
-        public boolean equalTo(InputMethod.Type<?, ?> other) {
-            return other != null
-                    && other == this.type;
         }
 
         @Override
@@ -106,6 +105,11 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         @Override
         public void invalidate() {
             coreReceptor.invalidate();
+        }
+
+        @Override
+        public boolean equalTo(InputMethod.Type<?, ?> other) {
+            return mapped.equalTo(other);
         }
     }
 

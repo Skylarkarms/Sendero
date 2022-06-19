@@ -17,11 +17,13 @@ public abstract class AtomicBinaryEventConsumer implements AtomicBinaryEvent {
     }
 
     private int setOnOff(int value) {
-        if (versionedState.get() != SHUT_DOWN) return versionedState.getAndSet(value);
-        else return SHUT_DOWN;
+        int prev;
+        do {
+            prev = versionedState.get();
+            if (prev == SHUT_DOWN) return prev;
+        } while (!versionedState.compareAndSet(prev, value));
+        return prev;
     }
-
-
 
     private boolean setOn() {
         int prev = setOnOff(ON);
@@ -54,6 +56,7 @@ public abstract class AtomicBinaryEventConsumer implements AtomicBinaryEvent {
         int prev = versionedState.getAndSet(SHUT_DOWN);
         boolean wasOn = isOn(prev);
         if (wasOn) onStateChange(false);
+        if (prev != SHUT_DOWN) onDestroyed();
         return wasOn;
     }
 
@@ -78,13 +81,8 @@ public abstract class AtomicBinaryEventConsumer implements AtomicBinaryEvent {
 
     }
 
-    @Override
-    public <P, R> boolean equalTo(P producer, R receptor) {
-        return false;
-    }
+    void onDestroyed() {
 
-    <P> boolean equalTo(P producer) {
-        return false;
     }
 
     @Override
@@ -102,9 +100,9 @@ public abstract class AtomicBinaryEventConsumer implements AtomicBinaryEvent {
             BasePath<S> source,
             Function<S, ? extends BasePath<T>> switchMap
     ) {
-        final Appointers.BasePathListenerImpl<T> pathListener = new Appointers.BasePathListenerImpl<>(target);
+        final Appointers.ConcurrentProducerSwapper<T> pathListener = new Appointers.ConcurrentProducerSwapper<>(target);
 
-        final AtomicBinaryEvent booleanConsumerAppointer = Builders.BinaryEventConsumers.producerConnector(
+        final AtomicBinaryEvent booleanConsumerAppointer = Builders.BinaryEventConsumers.producerListener(
                 source,
         Holders.StreamManager.baseManager(
                 (prev, next, delay) -> {

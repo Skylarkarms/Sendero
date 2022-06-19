@@ -44,7 +44,7 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
 
         <S>Bound(UnaryOperator<Builders.HolderBuilder<T>> holderBuilder, BasePath<S> source, Function<S, T> map) {
             super(holderBuilder,
-                    streamManager -> Builders.BinaryEventConsumers.producerConnector(source, streamManager, map)
+                    streamManager -> Builders.BinaryEventConsumers.producerListener(source, streamManager, map)
 
             );
         }
@@ -102,6 +102,7 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
         ExecutorService::shutdown
     );
 
+    @SuppressWarnings("BusyWait")
     private void deliver(long delay, Consumer<? super T> consumer) {
         if (delay == 0) {
             zeroDelay(consumer);

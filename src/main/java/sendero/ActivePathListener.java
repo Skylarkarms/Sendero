@@ -2,13 +2,13 @@ package sendero;
 
 class ActivePathListener<T> implements InputMethodBinder<T> {
     private final ActivationManager manager;
-    private final Appointers.BasePathListenerImpl<T> basePathListener;
+    private final Appointers.ConcurrentProducerSwapper<T> basePathListener;
 
     Holders.StreamManager<T> getStreamManager() {
         return basePathListener.getStreamManager();
     }
 
-    public ActivePathListener(ActivationManager manager, Appointers.BasePathListenerImpl<T> basePathListener) {
+    public ActivePathListener(ActivationManager manager, Appointers.ConcurrentProducerSwapper<T> basePathListener) {
         this.manager = manager;
         this.basePathListener = basePathListener;
     }
@@ -32,7 +32,6 @@ class ActivePathListener<T> implements InputMethodBinder<T> {
 
     protected boolean unbound() {
         final AtomicBinaryEvent binaryEventConsumer = basePathListener.getAndClear();
-        if (binaryEventConsumer != null) return manager.swapActivationListener(binaryEventConsumer, AtomicBinaryEvent.DEFAULT);
-        return false;
+        return binaryEventConsumer != null && manager.swapActivationListener(binaryEventConsumer, AtomicBinaryEvent.DEFAULT);
     }
 }

@@ -9,9 +9,11 @@ interface InputMethod<T> extends Holders.ColdConsumer<T> {
     <S> void accept(Immutable<S> immutable, Function<S, T> map);
     <S> void accept(Immutable<S> immutable, BiFunction<T, S, T> update);
 
-    /**Where S is the parameter from incoming source*/
+    /**Where S is the parameter from incoming source
+     * since a single parameter defines the function, equality can be checked directly ==
+     * as the synthetic factory will reuse the instance when the same function is passed.*/
     @FunctionalInterface
-    interface Type<M, S> {
+    interface Type<M, S> extends Holders.SynthEqual {
         void acceptorMethod(InputMethod<M> method, Immutable<S> param);
         Type<?, ?> identity = Consumer::accept;
         default boolean isIdentity() {

@@ -1,10 +1,10 @@
 package sendero;
 
 interface BaseMerge<T> {
-    <S> void from(
-            Merge.Entry<S, T> entry
+    void from(
+            Merge.Entry<T> entry
     );
-    <S> boolean drop(
-            Merge.Entry<S, T> entry
+    boolean drop(
+            Merge.Entry<T> entry
     );
 }

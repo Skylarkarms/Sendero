@@ -7,7 +7,6 @@ public interface AtomicBinaryEvent extends Switchers.Switch {
     boolean shutoff();
     boolean isOff();
 
-    <P, R> boolean equalTo(P producer, R receptor);
     AtomicBinaryEvent DEFAULT = new AtomicBinaryEvent() {
         @Override
         public boolean start() {
@@ -21,11 +20,6 @@ public interface AtomicBinaryEvent extends Switchers.Switch {
 
         @Override
         public boolean isOff() {
-            return false;
-        }
-
-        @Override
-        public <P, R> boolean equalTo(P producer, R receptor) {
             return false;
         }
 

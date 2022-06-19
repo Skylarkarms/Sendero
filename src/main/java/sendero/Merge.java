@@ -1,22 +1,18 @@
 package sendero;
 
 import sendero.interfaces.Updater;
+import sendero.lists.Removed;
 
 import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 import static sendero.functions.Functions.myIdentity;
 
 public final class Merge<T> extends Path<T> implements BaseMerge<T> {
 
-    private final List<Entry<?, T>> holders = new ArrayList<>();
-
-    /**Lock for list manipulation only.
-     * It does not involve any drawbacks to system's reactivity.*/
-    private final Object lock = new Object();
+    private final ExitAppointers<T, Entry<T>> exitAppointers;
 
     private final Updater<T> updater = Inputs.getUpdater(this);
 
@@ -25,96 +21,61 @@ public final class Merge<T> extends Path<T> implements BaseMerge<T> {
     }
 
     @SafeVarargs
-    public Merge(Entry<?, T> ...entries) {
+    public Merge(Entry<T>...entries) {
         this(myIdentity(), entries);
     }
 
     @SafeVarargs
-    public Merge(UnaryOperator<Builders.HolderBuilder<T>> operator, Entry<?, T> ...entries) {
+    public Merge(UnaryOperator<Builders.HolderBuilder<T>> operator,
+                 Entry<T>...entries
+    ) {
         super(operator);
-        for (Entry<?, T> e:entries) holders.add(e.set(updater));
+        this.exitAppointers = new ExitAppointers<T, Entry<T>>(this::isActive,
+                tEntry -> tEntry.getJointAppointer(updater),
+                entries
+        );
     }
 
-    public static final class Entry<P, T> extends AbstractMap.SimpleImmutableEntry<BasePath<P>, BiFunction<T, P, T>> {
-        private AtomicBinaryEvent consumer = AtomicBinaryEvent.DEFAULT;
+    public static final class Entry<T> extends AbstractMap.SimpleImmutableEntry<BasePath<?>, BiFunction<T, ?, T>> {
 
-        public static<P, T> Entry<P, T> get(BasePath<P> key, BiFunction<T, P, T> value) {
-            return new Entry<>(key, value);
+        public static<P, T> Entry<T> get(BasePath<P> producer, BiFunction<T, P, T> updatingFun) {
+            return new Entry<>(producer, updatingFun);
         }
-
-        Entry<P, T> set(Updater<T> updater) {
-            consumer = getJointAppointer(getKey(), getValue(), updater);
-            return this;
-        }
-
-        boolean isDefault() {
-            return consumer == AtomicBinaryEvent.DEFAULT;
-        }
-
-        void start() {
-            consumer.start();
-        }
-        void shutoff() {
-            consumer.shutoff();
-        }
-        void on() {
-            consumer.on();
-        }
-        void off() {
-            consumer.off();
-        }
-
-        Entry(BasePath<P> key, BiFunction<T, P, T> value) {
+        final Function<Updater<T>, AtomicBinaryEvent> updaterFun;
+        <P> Entry(BasePath<P> key, BiFunction<T, P, T> value) {
             super(key, value);
+            updaterFun = updater -> Builders.BinaryEventConsumers.producerListener(
+                    key,
+                    Holders.StreamManager.baseManager(
+                            value,
+                            updater
+                    )
+            );
         }
+        <S> AtomicBinaryEvent getJointAppointer(Updater<T> updater) {
+            return updaterFun.apply(updater);
+        }
+
     }
 
     @Override
-    public <S> void from(Entry<S, T> entry) {
-        synchronized (lock) {
-            if (!holders.contains(entry)) {
-                holders.add(entry.set(updater));
-                if (isActive()) entry.start();
-            } else throw new IllegalStateException("Entry already present!");
-        }
-    }
-
-    private static <S, T> AtomicBinaryEvent getJointAppointer(BasePath<S> path, BiFunction<T,S, T> update, Updater<T> updater) {
-        return Builders.BinaryEventConsumers.producerConnector(
-                path,
-                Holders.StreamManager.baseManager(
-                        (prev, next, delay) -> updater.updateAndGet(
-                                t -> update.apply(t, next.get())
-                        )
-                )
+    public void from(Entry<T> entry) {
+        exitAppointers.add(
+                entry,
+                exit -> exit.getJointAppointer(updater)
         );
     }
 
     @Override
-    public <S> boolean drop(Entry<S, T> entry) {
-        synchronized (lock) {
-            if (holders.remove(entry)) {
-                entry.shutoff();
-                return true;
-            }
-        }
-        return false;
+    protected void onStateChange(boolean isActive) {
+        if (isActive) exitAppointers.on();
+        else exitAppointers.off();
     }
 
     @Override
-    protected void onStateChange(boolean isActive) {
-        List<Entry<?, T>> entries = new ArrayList<>(holders);
-        if (isActive) {
-            for (Entry<?, T> e:entries
-                 ) {
-                e.on();
-            }
-        } else {
-            for (Entry<?, T> e:entries
-                 ) {
-                e.off();
-            }
-        }
+    public boolean drop(Entry<T> entry) {
+        return exitAppointers.remove(entry) != Removed.failed;
     }
+
 }
 

@@ -121,6 +121,7 @@ public final class AtomicUtils {
                 private static final int  AWAKEN = 0, RETRY = 1, SHOULD_SLEEP = 2, SLEEPING = 3;
                 private final AtomicInteger sleeper = new AtomicInteger(SHOULD_SLEEP);
 
+                @SuppressWarnings("BusyWait")
                 private void inferSleep() {
                     int prev = sleeper.get();
                     //Can never be sleeping while inferSleep() is active

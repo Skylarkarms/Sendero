@@ -51,7 +51,7 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
     }
 
     @Override
-    protected void setOnStateChangeListener(AtomicBinaryEventConsumer listener) {
+    protected void setOnStateChangeListener(AtomicBinaryEvent listener) {
         throwIllegalAccess("setOnStateChangeListener");
     }
 
