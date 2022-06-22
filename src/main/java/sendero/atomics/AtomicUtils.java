@@ -106,15 +106,29 @@ public final class AtomicUtils {
         }
 
         public void swap(Runnable runnable) {
-            RunnableRef newRef = new RunnableRef(CLOSE, runnable),
-                    queued = new RunnableRef(QUEUE, runnable);
+            RunnableRef newRef = new RunnableRef(CLOSE, runnable);
+            CAS(newRef, runnable);
+        }
+
+        private void CAS(RunnableRef newRef, Runnable runnable) {
             if (semaphore.compareAndSet(RunnableRef.OPENED, newRef)) {
                 localRunnable.run();
-            } else semaphore.set(queued);
+            } else {
+
+                RunnableRef queued = new RunnableRef(QUEUE, runnable);
+                if (!queued(queued)) CAS(newRef, runnable);
+            }
+        }
+
+        private boolean queued(RunnableRef queued) {
+            RunnableRef prev;
+            while ((prev = semaphore.get()) != RunnableRef.OPENED) {
+                if (semaphore.compareAndSet(prev, queued)) return true;
+            }
+            return false;
         }
 
         public static class Long {
-            private static final Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread> OPEN_THREAD = new Pair.Immutables.Int<>(OPEN, null);
             private final AtomicReference<SleeperThreadState> semaphore = new AtomicReference<>(SleeperThreadState.OPEN_THREAD);
             private static final class SleeperThreadState {
                 public static final SleeperThreadState OPEN_THREAD = new SleeperThreadState(new RunnableRef(OPEN, null), null);
@@ -212,12 +226,14 @@ public final class AtomicUtils {
 
             public void scheduleOrSwap(Runnable with) {
                 final SleeperThreadState closed = getNewClosed(with);
+                CAS(with, closed);
+            }
+
+            private void CAS(Runnable with, SleeperThreadState closed) {
                 if (semaphore.compareAndSet(SleeperThreadState.OPEN_THREAD, closed)) {
                     closed.sleeperThread.start();
                 } else {
-                    if (!semaphore.get().sleeperThread.queue(with)) {
-                        scheduleOrSwap(with);
-                    }
+                    if (!semaphore.get().sleeperThread.queue(with)) CAS(with, closed);
                 }
             }
 
