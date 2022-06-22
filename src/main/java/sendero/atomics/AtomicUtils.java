@@ -54,12 +54,10 @@ public final class AtomicUtils {
 
     /**Delays the first execution, and then blocks contention and reuses Thread.*/
     public static class OverlapDropExecutor {
-        private static final int QUEUE = -2, CLOSE = -1, OPEN = 0, BUSY = 1, FINISH = 2, INTERRUPT = 3;
+        private static final int QUEUE = -2, CLOSE = -1, OPEN = 0, BUSY = 1;
 
-        private static final class RunnableRef extends Pair.Immutables.Int<Runnable> {
+        private static final class RunnableRef extends Pair.Immutables.Int<Runnable> implements Runnable {
             public static final RunnableRef OPENED = new RunnableRef(OPEN, null);
-            public static final RunnableRef FINISHED = new RunnableRef(FINISH, null);
-            public static final RunnableRef INTERRUPTED = new RunnableRef(INTERRUPT, null);
 
             private RunnableRef(int anInt, Runnable value) {
                 super(anInt, value);
@@ -71,17 +69,15 @@ public final class AtomicUtils {
             boolean notOpen() {
                 return anInt != OPEN;
             }
-            boolean isBusy() {
-                return anInt == BUSY;
-            }
-            boolean hasQueue() {
-                return anInt < CLOSE;
-            }
 
-            RunnableRef compute() {
+            RunnableRef computing() {
                 return new RunnableRef(BUSY, value);
             }
 
+            @Override
+            public void run() {
+                value.run();
+            }
         }
 
         private final AtomicReference<RunnableRef> semaphore = new AtomicReference<>(RunnableRef.OPENED);
@@ -90,21 +86,13 @@ public final class AtomicUtils {
             @Override
             public void run() {
                 RunnableRef prev;
-                do {
-                    prev = semaphore.get();
-                    while (prev.shouldCompute()) {
-                        if (semaphore.compareAndSet(prev, prev.compute())) {
-                            if (semaphore.get().isBusy()) { // Last check, it may have changed to QUEUE
-                                runnableConsumer.accept(prev.value);
-                                semaphore.set(RunnableRef.FINISHED);
-                            }
-                        }
-                        prev = semaphore.get(); //re-check FINISH (may change to QUEUE)
-                        // || failure if compareAndSet failed (May have been a CLOSE but now is a QUEUE).
+                while ((prev = semaphore.get()).shouldCompute()) {
+                    RunnableRef computing = prev.computing();
+                    if (semaphore.compareAndSet(prev, computing)) {
+                        runnableConsumer.accept(computing);
+                        semaphore.compareAndSet(computing, RunnableRef.OPENED);
                     }
-                    //Only QUEUE || INTERRUPT can come after finish, redo If NOT FINISH || INTERRUPT
-                    //last finish check, redo If false.
-                } while (prev.hasQueue() || !semaphore.compareAndSet(prev, RunnableRef.OPENED));
+                }
             }
         };
 
@@ -114,33 +102,52 @@ public final class AtomicUtils {
 
         public boolean interrupt() {
             RunnableRef prev = semaphore.get();
-            return prev.notOpen() && semaphore.compareAndSet(prev, RunnableRef.INTERRUPTED);
+            return prev.notOpen() && semaphore.compareAndSet(prev, RunnableRef.OPENED);
         }
 
         public void swap(Runnable runnable) {
-            RunnableRef newRef = new RunnableRef(CLOSE, runnable);
+            RunnableRef newRef = new RunnableRef(CLOSE, runnable),
+                    queued = new RunnableRef(QUEUE, runnable);
             if (semaphore.compareAndSet(RunnableRef.OPENED, newRef)) {
                 localRunnable.run();
-            } else semaphore.set(new RunnableRef(QUEUE, runnable));
+            } else semaphore.set(queued);
         }
-
 
         public static class Long {
             private static final Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread> OPEN_THREAD = new Pair.Immutables.Int<>(OPEN, null);
-            private final AtomicReference<Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread>> semaphore = new AtomicReference<>(OPEN_THREAD);
-            private volatile Runnable runnable;
+            private final AtomicReference<SleeperThreadState> semaphore = new AtomicReference<>(SleeperThreadState.OPEN_THREAD);
+            private static final class SleeperThreadState {
+                public static final SleeperThreadState OPEN_THREAD = new SleeperThreadState(new RunnableRef(OPEN, null), null);
+
+                private final SleeperThread sleeperThread;
+                private final RunnableRef reference;
+                SleeperThreadState(RunnableRef top, SleeperThread sleeperThread) {
+                    reference = top;
+                    this.sleeperThread = sleeperThread;
+                }
+                boolean shouldCompute() {
+                    return reference.shouldCompute();
+                }
+                SleeperThreadState computing(){
+                    return new SleeperThreadState(reference.computing(), sleeperThread);
+                }
+                boolean notOpen() {
+                    return reference.notOpen();
+                }
+            }
+
             private final long millis;
             public Long(long millis) {
                 this.millis = millis;
             }
 
             public boolean interrupt() {
-                final Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread> prev = semaphore.get();
-                return prev != OPEN_THREAD && semaphore.compareAndSet(prev, new Pair.Immutables.Int<>(INTERRUPT, prev.value));
+                final SleeperThreadState prev = semaphore.get();
+                return prev.notOpen() && semaphore.compareAndSet(prev, SleeperThreadState.OPEN_THREAD);
             }
 
-            private Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread> getClosed() {
-                return new Pair.Immutables.Int<>(CLOSE, new OverlapDropExecutor.Long.SleeperThread());
+            private SleeperThreadState getNewClosed(Runnable newRun) {
+                return new SleeperThreadState(new RunnableRef(CLOSE, newRun), new OverlapDropExecutor.Long.SleeperThread());
             }
 
             private class SleeperThread extends Thread {
@@ -174,47 +181,44 @@ public final class AtomicUtils {
 
                 @Override
                 public void run() {
-                    Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread> prev, busy;
-                    do {
-                        prev = semaphore.get();
-                        while (prev.anInt < OPEN) {
-                            busy = new Pair.Immutables.Int<>(BUSY, prev.value);
-                            if (semaphore.compareAndSet(prev, busy)) {
-                                if (semaphore.get().anInt == BUSY) {
-                                    inferSleep();
-                                    if (semaphore.get().anInt == BUSY) { // Last check, it may have changed to QUEUE
-                                        runnable.run();
-                                        semaphore.set(new Pair.Immutables.Int<>(FINISH, prev.value));
-                                    }
-                                }
+                    SleeperThreadState prev, busy;
+                    while ((prev = semaphore.get()).shouldCompute()) {
+                        busy = prev.computing();
+                        if (semaphore.compareAndSet(prev, busy)) {
+                            inferSleep();
+                            if (semaphore.get() == busy) { // Last check, it may have changed to QUEUE
+                                busy.reference.run();
+                                semaphore.compareAndSet(busy, SleeperThreadState.OPEN_THREAD);
                             }
-                            prev = semaphore.get(); //re-check FINISH (may change to QUEUE)
-                            // || failure if compareAndSet failed (May have been a CLOSE but now is a QUEUE).
                         }
-                        //Only QUEUE || INTERRUPT can come after finish, redo If NOT FINISH || INTERRUPT
-                        //last finish check, redo If false.
-                    } while (prev.anInt < FINISH || !semaphore.compareAndSet(prev, OPEN_THREAD));
+                    }
                 }
 
-                void queue() {
-                    Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread> queued = new Pair.Immutables.Int<>(QUEUE, this);
-                    semaphore.set(queued);
-                    if (semaphore.get() == queued && isAlive()) {
-                        trySleep();
+                /**@return true when successful, false when failed*/
+                boolean queue(Runnable newRun) {
+                    SleeperThreadState prev, queued;
+                    RunnableRef next = new RunnableRef(QUEUE, newRun);
+                    queued = new SleeperThreadState(next, this);
+                    while ((prev = semaphore.get()) != SleeperThreadState.OPEN_THREAD) {
+                        if (semaphore.compareAndSet(prev, queued)) {
+                            trySleep();
+                            return true;
+                        }
                     }
+                    return false;
                 }
             }
 
 
             public void scheduleOrSwap(Runnable with) {
-                this.runnable = with;
-                final Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread> prev = semaphore.get();
-                final boolean open = prev == OPEN_THREAD;
-                final Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread> closed = open ? getClosed() : null;
-
-                if (open && semaphore.compareAndSet(prev, closed)) {
-                    closed.value.start();
-                } else semaphore.get().value.queue();
+                final SleeperThreadState closed = getNewClosed(with);
+                if (semaphore.compareAndSet(SleeperThreadState.OPEN_THREAD, closed)) {
+                    closed.sleeperThread.start();
+                } else {
+                    if (!semaphore.get().sleeperThread.queue(with)) {
+                        scheduleOrSwap(with);
+                    }
+                }
             }
 
         }
