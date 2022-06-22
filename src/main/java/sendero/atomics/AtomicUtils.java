@@ -53,23 +53,50 @@ public final class AtomicUtils {
     }
 
     /**Delays the first execution, and then blocks contention and reuses Thread.*/
-    public static class SwapScheduler {
+    public static class OverlapDropExecutor {
         private static final int QUEUE = -2, CLOSE = -1, OPEN = 0, BUSY = 1, FINISH = 2, INTERRUPT = 3;
 
-        private final AtomicInteger semaphore = new AtomicInteger();
-        private volatile Runnable runnable;
+        private static final class RunnableRef extends Pair.Immutables.Int<Runnable> {
+            public static final RunnableRef OPENED = new RunnableRef(OPEN, null);
+            public static final RunnableRef FINISHED = new RunnableRef(FINISH, null);
+            public static final RunnableRef INTERRUPTED = new RunnableRef(INTERRUPT, null);
+
+            private RunnableRef(int anInt, Runnable value) {
+                super(anInt, value);
+            }
+
+            boolean shouldCompute() {
+                return anInt < OPEN;
+            }
+            boolean notOpen() {
+                return anInt != OPEN;
+            }
+            boolean isBusy() {
+                return anInt == BUSY;
+            }
+            boolean hasQueue() {
+                return anInt < CLOSE;
+            }
+
+            RunnableRef compute() {
+                return new RunnableRef(BUSY, value);
+            }
+
+        }
+
+        private final AtomicReference<RunnableRef> semaphore = new AtomicReference<>(RunnableRef.OPENED);
         private final Consumer<Runnable> runnableConsumer;
         private final Runnable localRunnable = new Runnable() {
             @Override
             public void run() {
-                int prev;
+                RunnableRef prev;
                 do {
                     prev = semaphore.get();
-                    while (prev < OPEN) {
-                        if (semaphore.compareAndSet(prev, BUSY)) {
-                            if (semaphore.get() == BUSY) { // Last check, it may have changed to QUEUE
-                                runnable.run();
-                                semaphore.set(FINISH);
+                    while (prev.shouldCompute()) {
+                        if (semaphore.compareAndSet(prev, prev.compute())) {
+                            if (semaphore.get().isBusy()) { // Last check, it may have changed to QUEUE
+                                runnableConsumer.accept(prev.value);
+                                semaphore.set(RunnableRef.FINISHED);
                             }
                         }
                         prev = semaphore.get(); //re-check FINISH (may change to QUEUE)
@@ -77,31 +104,30 @@ public final class AtomicUtils {
                     }
                     //Only QUEUE || INTERRUPT can come after finish, redo If NOT FINISH || INTERRUPT
                     //last finish check, redo If false.
-                } while (prev < FINISH || !semaphore.compareAndSet(prev, OPEN));
+                } while (prev.hasQueue() || !semaphore.compareAndSet(prev, RunnableRef.OPENED));
             }
         };
 
-        public SwapScheduler(Consumer<Runnable> runnableConsumer) {
+        public OverlapDropExecutor(Consumer<Runnable> runnableConsumer) {
             this.runnableConsumer = runnableConsumer;
         }
 
         public boolean interrupt() {
-            int prev = semaphore.get();
-            return prev != OPEN && semaphore.compareAndSet(prev, INTERRUPT);
+            RunnableRef prev = semaphore.get();
+            return prev.notOpen() && semaphore.compareAndSet(prev, RunnableRef.INTERRUPTED);
         }
 
-        public void delay(Runnable runnable) {
-            this.runnable = runnable;
-            if (semaphore.compareAndSet(OPEN, CLOSE)) {
-                runnableConsumer.accept(localRunnable
-                );
-            } else semaphore.set(QUEUE);
+        public void swap(Runnable runnable) {
+            RunnableRef newRef = new RunnableRef(CLOSE, runnable);
+            if (semaphore.compareAndSet(RunnableRef.OPENED, newRef)) {
+                localRunnable.run();
+            } else semaphore.set(new RunnableRef(QUEUE, runnable));
         }
 
 
         public static class Long {
-            private static final Pair.Immutables.Int<SwapScheduler.Long.SleeperThread> OPEN_THREAD = new Pair.Immutables.Int<>(OPEN, null);
-            private final AtomicReference<Pair.Immutables.Int<SwapScheduler.Long.SleeperThread>> semaphore = new AtomicReference<>(OPEN_THREAD);
+            private static final Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread> OPEN_THREAD = new Pair.Immutables.Int<>(OPEN, null);
+            private final AtomicReference<Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread>> semaphore = new AtomicReference<>(OPEN_THREAD);
             private volatile Runnable runnable;
             private final long millis;
             public Long(long millis) {
@@ -109,12 +135,12 @@ public final class AtomicUtils {
             }
 
             public boolean interrupt() {
-                final Pair.Immutables.Int<SwapScheduler.Long.SleeperThread> prev = semaphore.get();
-                return prev != OPEN_THREAD && semaphore.compareAndSet(prev, new Pair.Immutables.Int<>(INTERRUPT, prev.getValue()));
+                final Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread> prev = semaphore.get();
+                return prev != OPEN_THREAD && semaphore.compareAndSet(prev, new Pair.Immutables.Int<>(INTERRUPT, prev.value));
             }
 
-            private Pair.Immutables.Int<SwapScheduler.Long.SleeperThread> getClosed() {
-                return new Pair.Immutables.Int<>(CLOSE, new SwapScheduler.Long.SleeperThread());
+            private Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread> getClosed() {
+                return new Pair.Immutables.Int<>(CLOSE, new OverlapDropExecutor.Long.SleeperThread());
             }
 
             private class SleeperThread extends Thread {
@@ -148,17 +174,17 @@ public final class AtomicUtils {
 
                 @Override
                 public void run() {
-                    Pair.Immutables.Int<SwapScheduler.Long.SleeperThread> prev, busy;
+                    Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread> prev, busy;
                     do {
                         prev = semaphore.get();
-                        while (prev.getInt() < OPEN) {
-                            busy = new Pair.Immutables.Int<>(BUSY, prev.getValue());
+                        while (prev.anInt < OPEN) {
+                            busy = new Pair.Immutables.Int<>(BUSY, prev.value);
                             if (semaphore.compareAndSet(prev, busy)) {
-                                if (semaphore.get().getInt() == BUSY) {
+                                if (semaphore.get().anInt == BUSY) {
                                     inferSleep();
-                                    if (semaphore.get().getInt() == BUSY) { // Last check, it may have changed to QUEUE
+                                    if (semaphore.get().anInt == BUSY) { // Last check, it may have changed to QUEUE
                                         runnable.run();
-                                        semaphore.set(new Pair.Immutables.Int<>(FINISH, prev.getValue()));
+                                        semaphore.set(new Pair.Immutables.Int<>(FINISH, prev.value));
                                     }
                                 }
                             }
@@ -167,11 +193,11 @@ public final class AtomicUtils {
                         }
                         //Only QUEUE || INTERRUPT can come after finish, redo If NOT FINISH || INTERRUPT
                         //last finish check, redo If false.
-                    } while (prev.getInt() < FINISH || !semaphore.compareAndSet(prev, OPEN_THREAD));
+                    } while (prev.anInt < FINISH || !semaphore.compareAndSet(prev, OPEN_THREAD));
                 }
 
                 void queue() {
-                    Pair.Immutables.Int<SwapScheduler.Long.SleeperThread> queued = new Pair.Immutables.Int<>(QUEUE, this);
+                    Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread> queued = new Pair.Immutables.Int<>(QUEUE, this);
                     semaphore.set(queued);
                     if (semaphore.get() == queued && isAlive()) {
                         trySleep();
@@ -182,13 +208,13 @@ public final class AtomicUtils {
 
             public void scheduleOrSwap(Runnable with) {
                 this.runnable = with;
-                final Pair.Immutables.Int<SwapScheduler.Long.SleeperThread> prev = semaphore.get();
+                final Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread> prev = semaphore.get();
                 final boolean open = prev == OPEN_THREAD;
-                final Pair.Immutables.Int<SwapScheduler.Long.SleeperThread> closed = open ? getClosed() : null;
+                final Pair.Immutables.Int<OverlapDropExecutor.Long.SleeperThread> closed = open ? getClosed() : null;
 
                 if (open && semaphore.compareAndSet(prev, closed)) {
-                    closed.getValue().start();
-                } else semaphore.get().getValue().queue();
+                    closed.value.start();
+                } else semaphore.get().value.queue();
             }
 
         }

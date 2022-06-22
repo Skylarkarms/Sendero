@@ -30,8 +30,8 @@ public final class Pair {
         }
 
         public static class Int<T> {
-            private final int anInt;
-            private final T value;
+            public final int anInt;
+            public final T value;
 
             public Int(int anInt, T value) {
                 this.anInt = anInt;
@@ -42,14 +42,6 @@ public final class Pair {
                 assert  other != null;
                 this.anInt = other.anInt;
                 this.value = other.value;
-            }
-
-            public int getInt() {
-                return anInt;
-            }
-
-            public T getValue() {
-                return value;
             }
 
             /**0 if equal, < 0 if other is greater, > 0 if other is lesser*/

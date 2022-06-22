@@ -5,6 +5,7 @@ import sendero.interfaces.BinaryConsumer;
 import sendero.interfaces.BinaryPredicate;
 
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
 import static sendero.Holders.SynthEqual.hashCodeOf;
@@ -38,7 +39,7 @@ public final class Builders {
     }
 
     public static class HolderBuilder<T> {
-        Immutable<T> value = Immutable.getNotSet();
+        AtomicReference<Immutable<T>> value = new AtomicReference<>(Immutable.getNotSet());
         Predicate<T> expectOut;
         BinaryPredicate<T> expectInput;
 
@@ -48,7 +49,12 @@ public final class Builders {
         }
 
         public HolderBuilder<T> withInitial(T value) {
-            this.value = Immutable.forFirstValue(value);
+            this.value = new AtomicReference<>(Immutable.forFirstValue(value));
+            return this;
+        }
+
+        public HolderBuilder<T> withContainer(Container<T> container) {
+            this.value = container.getRef();
             return this;
         }
 
@@ -83,7 +89,9 @@ public final class Builders {
         }
 
         Holders.Holder<T> buildHolder(Holders.SwapBroadcast<T> owner) {
-            return new Holders.Holder<>(owner, value);
+            return new Holders.Holder<>(owner,
+                    value
+            );
         }
     }
 

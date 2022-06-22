@@ -115,5 +115,9 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
         return (Path<S>) super.forkSwitch(switchMap);
     }
 
+    @Override
+    public Path<T> store(String TAG) {
+        return (Path<T>) super.store(TAG);
+    }
 }
 

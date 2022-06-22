@@ -5,10 +5,10 @@ import sendero.atomics.AtomicUtils;
 
 class DelayedDestroyer {
     private final AtomicBinaryEvent consumer;
-    private final AtomicUtils.SwapScheduler.Long delayer;
+    private final AtomicUtils.OverlapDropExecutor.Long delayer;
 
     DelayedDestroyer(long millis, AtomicBinaryEvent consumer) {
-        this.delayer = new AtomicUtils.SwapScheduler.Long(millis);
+        this.delayer = new AtomicUtils.OverlapDropExecutor.Long(millis);
         this.consumer = consumer;
     }
 

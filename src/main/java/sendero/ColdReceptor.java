@@ -8,7 +8,10 @@ import java.util.function.UnaryOperator;
 @FunctionalInterface
 interface ColdReceptor<T> extends InputMethod<T> {
 
-    /**Base Cold Stream receptive function*/
+    /**Base Cold Stream receptive function<P>
+     * If contention misses immediately retries.<P>
+     * If Serial values are proved to be lesser than current, then it drops the thread <P>
+     * and the spin lock is released.*/
     void filterAccept(Immutable.Values topValues, UnaryOperator<T> topData);
 
     @Override

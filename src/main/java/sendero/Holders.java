@@ -1,6 +1,7 @@
 package sendero;
 
 import sendero.atomics.AtomicScheduler;
+import sendero.atomics.AtomicUtils;
 import sendero.executor.DelayedServiceExecutor;
 import sendero.interfaces.BinaryConsumer;
 import sendero.interfaces.BinaryPredicate;
@@ -130,7 +131,8 @@ final class Holders {
     }
 
     private static final class StreamManagerExecutor<T> implements Holders.StreamManager<T> {
-        private final Consumer<Runnable> executor;
+        private final AtomicUtils.OverlapDropExecutor executor;
+//        private final Consumer<Runnable> executor;
         private final Holders.StreamManager<T> manager;
         private final BiFunction<Immutable.Values, UnaryOperator<T>, Runnable> runnableFactory;
 
@@ -138,17 +140,20 @@ final class Holders {
                 Consumer<Runnable> executor,
                 SwapBroadcast<T> coreConsumer
         ) {
-            this.executor = executor;
+            this.executor = new AtomicUtils.OverlapDropExecutor(executor);
             manager = Holders.StreamManager.baseManager(
                     coreConsumer
             );
+            /**Manager captured by the Thread instance,
+             * fields bound to Thread */
             runnableFactory = (topValues, tInt) -> () -> manager.filterAccept(topValues, tInt);
         }
 
         @Override
         /**Consumes on Executor thread*/
         public void filterAccept(Immutable.Values topValues, UnaryOperator<T> topData) {
-            executor.accept(
+            executor.swap(
+//            executor.accept(
                     runnableFactory.apply(topValues, topData)
             );
         }

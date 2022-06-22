@@ -107,5 +107,10 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
     public <S> SinglePath<S> forkSwitch(Function<T, BasePath<S>> switchMap) {
         return (SinglePath<S>) super.forkSwitch(switchMap);
     }
+
+    @Override
+    public SinglePath<T> store(String TAG) {
+        return (SinglePath<T>) super.store(TAG);
+    }
 }
 

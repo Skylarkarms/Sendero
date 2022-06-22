@@ -4,12 +4,52 @@ import sendero.event_registers.ConsumerRegisters;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;
 
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements Forkable<T> {
+
+    public enum Storage {
+        INSTANCE;
+        final Map<String, BasePath<?>> basePathMap = new ConcurrentHashMap<>();
+        @SuppressWarnings("unchecked")
+        public <T, P extends BasePath<T>> P get(String TAG, Class<? super T> componentType) {
+            assertNonNull(TAG);
+            return (P) basePathMap.get(TAG);
+        }
+
+        private void assertNonNull(String TAG) {
+            assert TAG != null;
+        }
+
+        private <P extends BasePath<?>> void put(String TAG, P basePath) {
+            assertNonNull(TAG);
+            BasePath<?> prev = basePathMap.putIfAbsent(TAG, basePath);
+            if (prev != null) throw new IllegalStateException("TAG: " + TAG + ", already present in storage for BasePath: " + prev);
+        }
+
+        @SuppressWarnings("unchecked")
+        <P extends BasePath<?>> P remove(String TAG) {
+            BasePath<?> removed = getRemove(TAG);
+            if (removed != null) removed.tag.set(null);
+            return (P) removed;
+        }
+
+        private BasePath<?> getRemove(String TAG) {
+            return basePathMap.remove(TAG);
+        }
+
+        public void clear() {
+            int size = basePathMap.size();
+            String[] tags = basePathMap.keySet().toArray(new String[size]);
+            for (int i = size - 1; i >= 0; i--) remove(tags[i]);
+        }
+    }
 
     <S> BasePath(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
@@ -265,6 +305,26 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
             return !remote.isRegistered();
         }
 
+    }
+
+    private static final Storage storage = Storage.INSTANCE;
+
+    public static Storage getStore() {
+        return storage;
+    }
+
+    private final AtomicReference<String> tag = new AtomicReference<>();
+
+    public BasePath<T> store(String TAG) {
+        String prev = tag.getAndSet(TAG);
+        if (prev == null) {
+            storage.put(TAG, this);
+        } else throw new IllegalStateException("This BasePath: " + this +", already in store with TAG: " + prev);
+        return this;
+    }
+
+    public boolean removeFromStore() {
+        return storage.getRemove(tag.getAndSet(null)) != null;
     }
 
     @Override

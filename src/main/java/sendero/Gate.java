@@ -94,6 +94,11 @@ public final class Gate {
         }
 
         @Override
+        public In<T> store(String TAG) {
+            return (In<T>) super.store(TAG);
+        }
+
+        @Override
         public T updateAndGet(UnaryOperator<T> update) {
             return consumerUpdater.updateAndGet(update);
         }
