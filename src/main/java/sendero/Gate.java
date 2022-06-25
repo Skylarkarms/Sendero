@@ -286,7 +286,7 @@ public final class Gate {
             ) {
                 super(
                         myIdentity(),
-                        Builders.withFixed(selfMap)
+                        Builders.ManagerBuilder.withFixed(selfMap)
                 );
             }
 
@@ -351,7 +351,7 @@ public final class Gate {
             ) {
                 super(
                         myIdentity(),
-                        Builders.withFixed(selfMap)
+                        Builders.ManagerBuilder.withFixed(selfMap)
                 );
             }
 

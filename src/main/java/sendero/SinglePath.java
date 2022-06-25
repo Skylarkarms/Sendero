@@ -24,10 +24,20 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
     }
 
     protected SinglePath(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
-        this(builderOperator, myIdentity());
+        this(builderOperator, (Builders.ManagerBuilder) null);
     }
 
-    protected SinglePath(UnaryOperator<Builders.HolderBuilder<T>> builderOperator, UnaryOperator<Builders.ManagerBuilder> actMgmtBuilder) {
+
+    protected SinglePath(Builders.ManagerBuilder mngrBuilder) {
+        this(myIdentity(),
+                mngrBuilder
+        );
+    }
+
+    protected SinglePath(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            Builders.ManagerBuilder actMgmtBuilder
+    ) {
         super(builderOperator, actMgmtBuilder);
     }
 

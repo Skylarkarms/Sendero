@@ -18,7 +18,8 @@ import java.util.function.*;
 
 import static sendero.Holders.SwapBroadcast.NO_DELAY;
 import static sendero.Immutable.getNotSet;
-import static sendero.functions.Functions.*;
+import static sendero.functions.Functions.alwaysTrue;
+import static sendero.functions.Functions.binaryAlwaysTrue;
 
 final class Holders {
 
@@ -132,7 +133,6 @@ final class Holders {
 
     private static final class StreamManagerExecutor<T> implements Holders.StreamManager<T> {
         private final AtomicUtils.OverlapDropExecutor executor;
-//        private final Consumer<Runnable> executor;
         private final Holders.StreamManager<T> manager;
         private final BiFunction<Immutable.Values, UnaryOperator<T>, Runnable> runnableFactory;
 
@@ -153,7 +153,6 @@ final class Holders {
         /**Consumes on Executor thread*/
         public void filterAccept(Immutable.Values topValues, UnaryOperator<T> topData) {
             executor.swap(
-//            executor.accept(
                     runnableFactory.apply(topValues, topData)
             );
         }
@@ -298,10 +297,10 @@ final class Holders {
      * consecutive "losing" threads that got pass this check might get a boost, so we should prevent the override of lesser versions on the other end.
      And the safety measure will end with subscriber's own version of dispatch();*/
     abstract static class DispatcherReader<T> extends ImmutableRead<T> {
-        boolean inferColdDispatch(Immutable<T> t, Consumer<Immutable<T>> acceptor) {
+
+        <S> void inferColdDispatch(Immutable<T> t, S mapped, Consumer<S> acceptor) {
             boolean dispatch = isEqual(t);
-            if (dispatch) acceptor.accept(t);
-            return dispatch;
+            if (dispatch) acceptor.accept(mapped);
         }
 
         boolean inferDispatch(Immutable<T> t, Consumer<? super T> acceptor) {
@@ -317,6 +316,7 @@ final class Holders {
         final Holder<T> holder;
         final BinaryPredicate<T> expectInput;
         final StreamManager<T> streamManager;
+        private boolean inputSet;
 
         @Override
         Immutable<T> getSnapshot() {
@@ -342,6 +342,13 @@ final class Holders {
         }
 
         private final SnapConsumer<T> consumingFunction;
+
+        void inputSet() {
+            if (!inputSet) {
+                inputSet = true;
+            } else throw new IllegalStateException("This BasePath already has an Input source attached.");
+        }
+
         @FunctionalInterface
         private interface SnapConsumer<T> {
             void accept(Immutable<T> current, Immutable.Values values, ColdConsumer<T> consumer);
@@ -425,8 +432,8 @@ final class Holders {
             return manager.activationListenerIsSet();
         }
 
-        private ActivationManager buildManager(StreamManager<T> baseTestDispatcher, UnaryOperator<Builders.ManagerBuilder> operator) {
-            return isIdentity(operator) ? buildManager() : operator.apply(Builders.getManagerBuild()).build(baseTestDispatcher, this::deactivationRequirements);
+        private ActivationManager buildManager(BaseBroadcaster<T> broadcaster, Builders.ManagerBuilder operator) {
+            return operator == null ? buildManager() : operator.build(broadcaster, this::deactivationRequirements);
         }
 
         private ActivationManager buildManager() {
@@ -441,10 +448,10 @@ final class Holders {
 
         ActivationHolder(
                 UnaryOperator<Builders.HolderBuilder<T>> holderBuilder,
-                UnaryOperator<Builders.ManagerBuilder> mngrBuilderOperator
+                Builders.ManagerBuilder mngrBuilderOperator
         ) {
             super(holderBuilder);
-            this.manager = buildManager(streamManager, mngrBuilderOperator);
+            this.manager = buildManager(this, mngrBuilderOperator);
         }
 
         void onRegistered(
@@ -490,13 +497,13 @@ final class Holders {
 
         ExecutorHolder(
                 UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
-                UnaryOperator<Builders.ManagerBuilder> mngrBuilderOperator
+                Builders.ManagerBuilder mngrBuilderOperator
         ) {
             super(builderOperator, mngrBuilderOperator);
         }
 
         ExecutorHolder(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
-            this(builderOperator, myIdentity());
+            this(builderOperator, null);
         }
 
         @Override
@@ -515,11 +522,12 @@ final class Holders {
         }
 
         <S> void parallelDispatch(int beginAt, Consumer<? super S>[] subs, Immutable<T> t, Function<Immutable<T>, S> map) {
+            S mapped = map.apply(t);
             fastExecute(
                     () -> {
                         int length = subs.length;
                         for (int i = beginAt; i < length; i++) {
-                            inferColdDispatch(t, t1 -> subs[1].accept(map.apply(t1)));
+                            inferColdDispatch(t, mapped, subs[1]);
                         }
                     }
             );

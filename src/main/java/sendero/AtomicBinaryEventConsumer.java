@@ -1,5 +1,7 @@
 package sendero;
 
+import sendero.interfaces.ActivationListener;
+
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -7,6 +9,15 @@ import java.util.function.Function;
  * Once a SHUT_DOWN stage has been achieved there is no turning back and a new allocation needs to be assigned.
  * */
 public abstract class AtomicBinaryEventConsumer implements AtomicBinaryEvent {
+
+    public static AtomicBinaryEvent base(ActivationListener listener) {
+        return new AtomicBinaryEventConsumer() {
+            @Override
+            protected void onStateChange(boolean isActive) {
+                listener.onStateChange(isActive);
+            }
+        };
+    }
 
     private static final int NOT_SET = -2, SHUT_DOWN = -1, ON = 1, OFF = 0;
     private final AtomicInteger versionedState = new AtomicInteger(NOT_SET);

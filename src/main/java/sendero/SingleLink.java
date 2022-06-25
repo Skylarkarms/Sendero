@@ -16,7 +16,7 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
 
     public SingleLink(UnaryOperator<Builders.HolderBuilder<T>> builderOperator, boolean mutableManager) {
         super(builderOperator,
-                Builders.mutabilityAllowed(mutableManager)
+                Builders.ManagerBuilder.isMutable(mutableManager)
         );
     }
 

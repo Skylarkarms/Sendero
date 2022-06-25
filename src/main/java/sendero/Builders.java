@@ -1,14 +1,14 @@
 package sendero;
 
 import sendero.functions.Functions;
+import sendero.interfaces.ActivationListener;
 import sendero.interfaces.BinaryConsumer;
 import sendero.interfaces.BinaryPredicate;
+import sendero.interfaces.ConsumerUpdater;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
-
-import static sendero.Holders.SynthEqual.hashCodeOf;
 
 public final class Builders {
 
@@ -18,24 +18,9 @@ public final class Builders {
     public static<S> UnaryOperator<HolderBuilder<S>> withInitial(S value) {
         return sHolderBuilder -> sHolderBuilder.withInitial(value);
     }
-    public static <S> UnaryOperator<ManagerBuilder> withFixed(
-            Function<Holders.StreamManager<S>, AtomicBinaryEvent> activationListenerFun
-    ) {
-        return managerBuilder -> managerBuilder.withFixedFun(activationListenerFun);
-    }
-    public static UnaryOperator<ManagerBuilder> mutabilityAllowed() {
-        return managerBuilder -> managerBuilder.withMutable(true);
-    }
-    public static UnaryOperator<ManagerBuilder> mutabilityAllowed(boolean value) {
-        return managerBuilder -> managerBuilder.withMutable(value);
-    }
 
     static <T> HolderBuilder<T> getHolderBuild2() {
         return new HolderBuilder<>();
-    }
-
-    static ManagerBuilder getManagerBuild() {
-        return new ManagerBuilder();
     }
 
     public static class HolderBuilder<T> {
@@ -96,31 +81,80 @@ public final class Builders {
     }
 
     public static class ManagerBuilder {
-        private Function<Holders.StreamManager<?>, AtomicBinaryEvent> activationListenerFun;
-        private boolean mutableActivationListener;
+        private final Function<Holders.BaseBroadcaster<?>, AtomicBinaryEvent> activationListenerBroadcast;
+        private final boolean mutableActivationListener;
 
         @SuppressWarnings("unchecked")
-        public<S> ManagerBuilder withFixedFun(
+        public static<S> ManagerBuilder withFixed(
                 Function<Holders.StreamManager<S>, AtomicBinaryEvent> activationListenerFun
+
         ) {
-            if (mutableActivationListener) throwException();
-            this.activationListenerFun = coldHolder -> activationListenerFun.apply((Holders.StreamManager<S>) coldHolder);
-            this.mutableActivationListener = false;
-            return this;
+            return new ManagerBuilder(
+                    coldHolder -> activationListenerFun.apply((Holders.StreamManager<S>) coldHolder.streamManager),
+                    false);
+        }
+
+        public static ManagerBuilder withEvent(
+                AtomicBinaryEvent event
+
+        ) {
+            return new ManagerBuilder(
+                    baseBroadcaster -> event,
+                    false);
+        }
+
+        public static ManagerBuilder isMutable(
+                boolean isMutable
+
+        ) {
+            return new ManagerBuilder(
+                    null,
+                    isMutable);
+        }
+
+        public static ManagerBuilder mutable() {
+            return new ManagerBuilder(
+                    null,
+                    true);
+        }
+
+        @SuppressWarnings("unchecked")
+        public static<S> ManagerBuilder onActive(
+                Function<ConsumerUpdater<S>, ActivationListener> activationListenerFun
+
+        ) {
+            return new ManagerBuilder(
+                    broadcaster -> BinaryEventConsumers.producerListener(
+                            activationListenerFun.apply(
+                                    (ConsumerUpdater<S>) Inputs.getConsumerUpdater(broadcaster)
+                            )
+                    ),
+                    false);
+        }
+
+        ManagerBuilder(Function<Holders.BaseBroadcaster<?>, AtomicBinaryEvent> activationListenerBroadcast, boolean mutableActivationListener) {
+            this.activationListenerBroadcast = activationListenerBroadcast;
+            this.mutableActivationListener = mutableActivationListener;
+        }
+
+        private boolean broadcastIsSet() {
+            return this.activationListenerBroadcast != null;
+        }
+
+        private void inferThrow() {
+            if (alreadySet()) throwException();
+        }
+
+        private boolean alreadySet() {
+            return mutableActivationListener && broadcastIsSet();
         }
 
         void throwException() {
             throw new IllegalStateException("Only one at a time.");
         }
 
-        public ManagerBuilder withMutable(boolean activationListener) {
-            if (this.activationListenerFun != null) throwException();
-            this.mutableActivationListener = activationListener;
-            return this;
-        }
-
-        protected ActivationManager build(Holders.StreamManager<?> coldHolder, BooleanSupplier deactivation) {
-            final AtomicBinaryEvent finalConsumer = activationListenerFun != null ? activationListenerFun.apply(coldHolder) : null;
+        protected ActivationManager build(Holders.BaseBroadcaster<?> broadcaster, BooleanSupplier deactivation) {
+            final AtomicBinaryEvent finalConsumer = activationListenerBroadcast != null ? activationListenerBroadcast.apply(broadcaster) : null;
             return new ActivationManager(finalConsumer, mutableActivationListener) {
                 @Override
                 protected boolean deactivationRequirements() {
@@ -177,7 +211,7 @@ public final class Builders {
 
         @Override
         public int hashCode() {
-            return hashCodeOf(broadcast.hashAt(0), inputMethods.hashCode());
+            return Holders.SynthEqual.hashCodeOf(broadcast.hashAt(0), inputMethods.hashCode());
         }
 
         public static<T> ReceptorBuilder<T, T> exit(Consumer<? super T> consumer) {
@@ -232,12 +266,7 @@ public final class Builders {
                     inputMethods.type
             );
         }
-        BasePath.Receptor<S> build() {
-            return BasePath.Receptor.withManagerInput(
-                    Holders.StreamManager.baseManager(broadcast),
-                    inputMethods.type
-            );
-        }
+
         static <S, T> BasePath.Receptor<S> getReceptor(
                 InputMethods<T, S> inputMethod,
                 BinaryPredicate<T> expectIn,
@@ -263,6 +292,12 @@ public final class Builders {
                     target,
                     consumer
             );
+        }
+
+        static<T> AtomicBinaryEvent producerListener(
+                ActivationListener listener
+        ) {
+            return AtomicBinaryEventConsumer.base(listener);
         }
 
         public static<S, T> AtomicBinaryEvent producerListener(

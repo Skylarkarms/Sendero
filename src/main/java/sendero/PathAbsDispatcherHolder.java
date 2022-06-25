@@ -16,14 +16,14 @@ public abstract class PathAbsDispatcherHolder<T> extends BasePath<T> {
     }
 
     protected PathAbsDispatcherHolder() {
-        super(myIdentity(), myIdentity());
+        super(myIdentity(), null);
         pathDispatcher = pathDispatcherBuild();
     }
 
     protected PathAbsDispatcherHolder(boolean mutable) {
         super(
                 myIdentity(),
-                Builders.mutabilityAllowed(mutable)
+                Builders.ManagerBuilder.isMutable(mutable)
         );
         pathDispatcher = pathDispatcherBuild();
     }
@@ -45,7 +45,7 @@ public abstract class PathAbsDispatcherHolder<T> extends BasePath<T> {
 
     protected PathAbsDispatcherHolder(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
-            UnaryOperator<Builders.ManagerBuilder> mngrBuilderOperator
+            Builders.ManagerBuilder mngrBuilderOperator
     ) {
         super(builderOperator, mngrBuilderOperator);
         pathDispatcher = pathDispatcherBuild();
@@ -56,7 +56,7 @@ public abstract class PathAbsDispatcherHolder<T> extends BasePath<T> {
             Function<Holders.StreamManager<T>, AtomicBinaryEvent> selfMap
     ) {
         super(builderOperator,
-                Builders.withFixed(
+                Builders.ManagerBuilder.withFixed(
                         selfMap
                 )
         );

@@ -38,7 +38,7 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
         return bound(myIdentity(), source, myIdentity());
     }
 
-    private static final UnaryOperator<Builders.ManagerBuilder> mutabilityAllowedOperator = Builders.mutabilityAllowed();
+    private static final Builders.ManagerBuilder mutabilityAllowedOperator = Builders.ManagerBuilder.mutable();
 
     public static class Bound<T> extends ActiveSuppliers<T> {
 
@@ -82,7 +82,7 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
             UnaryOperator<Builders.HolderBuilder<T>> holderBuilder,
             Function<Holders.StreamManager<T>, AtomicBinaryEvent> function
     ) {
-        final UnaryOperator<Builders.ManagerBuilder> finalOp = function == null ? mutabilityAllowedOperator : Builders.withFixed(function);
+        final Builders.ManagerBuilder finalOp = function == null ? mutabilityAllowedOperator : Builders.ManagerBuilder.withFixed(function);
         activationHolder = new Holders.ActivationHolder<>(holderBuilder, finalOp);
         on();
     }

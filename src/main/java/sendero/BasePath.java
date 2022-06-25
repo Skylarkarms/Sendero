@@ -56,7 +56,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
             BasePath<S> basePath, Function<S, T> map
     ) {
         super(builderOperator,
-                Builders.withFixed(
+                Builders.ManagerBuilder.withFixed(
                         (Function<Holders.StreamManager<T>, AtomicBinaryEvent>) coldHolder ->
                                 Builders.BinaryEventConsumers.producerListener(basePath, coldHolder, map)
 
@@ -67,7 +67,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
             BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
         super(builderOperator,
-                Builders.withFixed(
+                Builders.ManagerBuilder.withFixed(
                         (Function<Holders.StreamManager<T>, AtomicBinaryEvent>) coldHolder ->
                                 Builders.BinaryEventConsumers.producerListener(basePath, coldHolder, updateFun)
 
@@ -77,7 +77,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
 
     BasePath(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
-            UnaryOperator<Builders.ManagerBuilder> mngrBuilderOperator
+            Builders.ManagerBuilder mngrBuilderOperator
     ) {
         super(builderOperator, mngrBuilderOperator);
     }
@@ -284,7 +284,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         @Override
         public void pathDispatch(boolean fullyParallel, Immutable<T> t) {
             if (remote.isRegistered()) {
-                inferColdDispatch(t, remote);
+                inferColdDispatch(t, t, remote);
             }
             if (fullyParallel) throw new IllegalStateException("Injective.class dispatch cannot be parallel.");
         }

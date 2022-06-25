@@ -36,11 +36,14 @@ public class Container<T> implements Supplier<T> {
 
     public final T updateAndGet(UnaryOperator<T> updateFunction) {
         Immutable<T> prev, next;
+        T prevT, nextT;
         do {
             prev = getImm();
-            next = prev.newValue(updateFunction.apply(prev.get()));
-        } while (!reference.compareAndSet(prev, next));
-        return next.get();
+            prevT = prev.get();
+            nextT = updateFunction.apply(prevT);
+            next = prev.newValue(nextT);
+        } while ((prevT != nextT) && !reference.compareAndSet(prev, next));
+        return nextT;
     }
 
     @Override

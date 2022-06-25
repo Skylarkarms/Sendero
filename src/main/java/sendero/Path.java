@@ -6,8 +6,6 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
-import static sendero.functions.Functions.myIdentity;
-
 public class Path<T> extends PathAbsDispatcherHolder<T> {
 
     @Override
@@ -48,13 +46,13 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
         this(Builders.withInitial(initialValue));
     }
 
-    Path(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
-        this(builderOperator, myIdentity());
+    protected Path(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+        this(builderOperator, (Builders.ManagerBuilder) null);
     }
 
     protected Path(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
-            UnaryOperator<Builders.ManagerBuilder> mngrBuilderOperator
+            Builders.ManagerBuilder mngrBuilderOperator
 
     ) {
         super(builderOperator, mngrBuilderOperator);

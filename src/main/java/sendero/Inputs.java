@@ -17,6 +17,7 @@ public class Inputs<T> {
 
     Inputs(Holders.BaseBroadcaster<T> broadcaster) {
         this(broadcaster.holder, broadcaster.expectInput);
+        broadcaster.inputSet();
     }
 
     private Inputs(Holders.Holder<T> baseColdHolderBroadcaster, BinaryPredicate<T> testIn) {

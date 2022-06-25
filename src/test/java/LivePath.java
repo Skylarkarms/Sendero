@@ -19,7 +19,8 @@ public class LivePath extends Path<Map<String, ?>> {
                             Map::equals).negate()
                     )
                     ,
-                    Builders.mutabilityAllowed()
+                    Builders.ManagerBuilder.mutable()
+//                    Builders.mutabilityAllowed()
             );
         }
 

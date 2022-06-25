@@ -16,7 +16,7 @@ public class Link<T> extends Path<T> implements BaseLink {
 
     private Link(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
         super(builderOperator,
-                Builders.mutabilityAllowed()
+                Builders.ManagerBuilder.mutable()
         );
     }
 
