@@ -11,6 +11,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class ConsumerRegisters<T> {
+
     public static<S, T> SnapshottingConsumerRegister<S, T> getSnapshotting(Supplier<S> stateSupplier) {
         return new SnapshottingConsumerRegisterImpl<>(stateSupplier);
     }
