@@ -2,36 +2,30 @@ package sendero;
 
 import sendero.lists.Removed;
 
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**The nature of an exit is for an input to be stable.
- * Since there may be multiple ways in which this class may be used, lets create a fixed and final Input Producer, and build
+ * Since there may be multiple ways in which this class may be used, lets create a fixed and final Input Producer, and lets build
  * upon this base principle.*/
-public final class ExecutorExit<S> implements AtomicBinaryEvent{
-    final Consumer<Runnable> executor;
-    final ExitAppointers<S, Builders.ReceptorBuilder<S, ?>> exitAppointers;
-    private final Function<Builders.ReceptorBuilder<S, ?>, AtomicBinaryEvent> eventFunction;
+public final class AppointerMap<K, V> implements AtomicBinaryEvent{
+    final ExitAppointers<K, V> exitAppointers;
+    private final Function<V, AtomicBinaryEvent> eventFunction;
 
-    public ExecutorExit(
-            BasePath<S> producer,
-            Consumer<Runnable> executor
+    public AppointerMap(
+            Function<V, AtomicBinaryEvent> eventFunction
     ) {
-        this.executor = executor;
-        eventFunction = sExit -> sExit.build(executor).toBinaryEvent(producer);
+        this.eventFunction = eventFunction;
         exitAppointers = new ExitAppointers<>(
                 this::isActive
         );
     }
 
     @SafeVarargs
-    public ExecutorExit(
-            BasePath<S> producer,
-            Consumer<Runnable> executor,
-            Builders.ReceptorBuilder<S, ?> ... exits
+    public AppointerMap(
+            Function<V, AtomicBinaryEvent> eventFunction,
+            V ... exits
     ) {
-        this.executor = executor;
-        eventFunction = sExit -> sExit.build(executor).toBinaryEvent(producer);
+        this.eventFunction = eventFunction;
         exitAppointers = new ExitAppointers<>(
                 this::isActive,
                 eventFunction,
@@ -39,13 +33,11 @@ public final class ExecutorExit<S> implements AtomicBinaryEvent{
         );
     }
 
-    public ExecutorExit(
-            BasePath<S> producer,
-            Consumer<Runnable> executor,
-            Builders.ReceptorBuilder<S, ?> first
+    public AppointerMap(
+            Function<V, AtomicBinaryEvent> eventFunction,
+            V first
     ) {
-        this.executor = executor;
-        eventFunction = sExit -> sExit.build(executor).toBinaryEvent(producer);
+        this.eventFunction = eventFunction;
         exitAppointers = new ExitAppointers<>(
                 this::isActive,
                 eventFunction,
@@ -54,14 +46,14 @@ public final class ExecutorExit<S> implements AtomicBinaryEvent{
     }
 
     public<T> Removed remove(
-            Builders.ReceptorBuilder<S, T> exit
+            V exit
     ) {
         assert exit != null;
         return exitAppointers.remove(exit);
     }
 
     public<T> boolean add(
-            Builders.ReceptorBuilder<S, T> exit
+            V exit
     ) {
         assert exit != null;
         return exitAppointers.add(exit,
@@ -71,7 +63,7 @@ public final class ExecutorExit<S> implements AtomicBinaryEvent{
 
     @SafeVarargs
     public final void addAll(
-            Builders.ReceptorBuilder<S, ?>... exits
+            V... exits
     ) {
         assert exits != null;
         exitAppointers.addAll(eventFunction, exits);
