@@ -13,19 +13,19 @@ public class Appointers {
     static class AppointerSwapCore<T> implements Switchers.Switch {
         /**Accessed via side effects, ignore warnings*/
         final AtomicReference<AtomicBinaryEvent> witnessAtomicReference;
-        final Holders.StreamManager<T> holder;
+        final Holders.StreamManager<T> streamManager;
 
         AppointerSwapCore(
-                Holders.StreamManager<T> holder
+                Holders.StreamManager<T> streamManager
         ) {
-            this(holder, AtomicBinaryEvent.DEFAULT);
+            this(streamManager, AtomicBinaryEvent.DEFAULT);
         }
 
         AppointerSwapCore(
-                Holders.StreamManager<T> holder,
+                Holders.StreamManager<T> streamManager,
                 AtomicBinaryEvent fixedAppointer) {
             this.witnessAtomicReference = new AtomicReference<>(fixedAppointer);
-            this.holder = holder;
+            this.streamManager = streamManager;
         }
 
         private AtomicBinaryEvent get() {
@@ -54,7 +54,7 @@ public class Appointers {
         final AppointerSwapCore<T> appointerSwapCore;
 
         Holders.StreamManager<T> getStreamManager() {
-            return appointerSwapCore.holder;
+            return appointerSwapCore.streamManager;
         }
 
 
@@ -91,7 +91,7 @@ public class Appointers {
                     prev -> prev == AtomicBinaryEvent.DEFAULT || !((Appointer<?>)prev).equalTo(basePath, inputMethod.type),
                     appointer -> Builders.BinaryEventConsumers.producerListener(
                             basePath,
-                            appointerSwapCore.holder,
+                            appointerSwapCore.streamManager,
                             inputMethod.type)
             );
             final AtomicBinaryEvent next = witness.next;
@@ -123,8 +123,9 @@ public class Appointers {
         void stopAndClearPath();
         boolean isCleared();
 
-        static<T> PathListener<T> getInstance(BasePath<T> basePath) {
-            return new PathListenerImpl<>(basePath.streamManager);
+        static<T> PathListener<T> getInstance(BasePath<T> consumer) {
+            return new PathListenerImpl<>(consumer.getManager());
+//            return new PathListenerImpl<>(basePath.streamManager);
        }
     }
 
@@ -136,7 +137,8 @@ public class Appointers {
 
         @Override
         public void stopAndClearPath() {
-            appointerSwapCore.witnessAtomicReference.getAndSet(Appointer.CLEARED_APPOINTER).shutoff();
+            appointerSwapCore.witnessAtomicReference.getAndSet(AtomicBinaryEvent.DEFAULT).shutoff();
+//            appointerSwapCore.witnessAtomicReference.getAndSet(Appointer.CLEARED_APPOINTER).shutoff();
         }
 
         @Override

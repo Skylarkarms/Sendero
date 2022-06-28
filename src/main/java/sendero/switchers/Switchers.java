@@ -11,9 +11,11 @@ public class Switchers {
         boolean on();
         boolean off();
         boolean isActive();
+
     }
 
     private static class Atomic implements Switch {
+
         private final AtomicBoolean state = new AtomicBoolean();
         @Override
         public boolean on() {

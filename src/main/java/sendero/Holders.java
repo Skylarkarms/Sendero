@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
@@ -315,7 +316,20 @@ final class Holders {
 
         final Holder<T> holder;
         final BinaryPredicate<T> expectInput;
-        final StreamManager<T> streamManager;
+        private final StreamManager<T> streamManager;
+
+        private final AtomicBoolean managerHeld = new AtomicBoolean();
+        StreamManager<T> getManager() {
+            if (managerHeld.compareAndSet(false, true)) {
+                return streamManager;
+            } else throw new IllegalStateException("Manager already held");
+        }
+        StreamManager<T> dropManager() {
+            if (managerHeld.compareAndSet(true, false))
+            return streamManager;
+            else return null;
+        }
+
         private boolean inputSet;
 
         @Override
@@ -413,23 +427,23 @@ final class Holders {
 
     static class ActivationHolder<T> extends BaseBroadcaster<T> {
 
-        final ActivationManager manager;
+        final ActivationManager activationManager;
 
         boolean deactivationRequirements() {
             return true;
         }
 
         protected void setOnStateChangeListener(AtomicBinaryEvent listener) {
-            manager.setActivationListener(listener);
+            activationManager.setActivationListener(listener);
         }
 
         protected boolean clearOnStateChangeListener() {
-            return manager.clearActivationListener();
+            return activationManager.clearActivationListener();
         }
 
         /**For LinkHolder*/
         boolean activationListenerIsSet() {
-            return manager.activationListenerIsSet();
+            return activationManager.activationListenerIsSet();
         }
 
         private ActivationManager buildManager(BaseBroadcaster<T> broadcaster, Builders.ManagerBuilder operator) {
@@ -451,7 +465,7 @@ final class Holders {
                 Builders.ManagerBuilder mngrBuilderOperator
         ) {
             super(holderBuilder);
-            this.manager = buildManager(this, mngrBuilderOperator);
+            this.activationManager = buildManager(this, mngrBuilderOperator);
         }
 
         void onRegistered(
@@ -470,7 +484,7 @@ final class Holders {
         }
 
         boolean tryActivate() {
-            boolean active = manager.on();
+            boolean active = activationManager.on();
             if (active) onStateChange(true);
             return active;
         }
@@ -479,11 +493,11 @@ final class Holders {
         protected void onStateChange(boolean isActive) {}
 
         protected boolean isActive() {
-            return manager.isActive();
+            return activationManager.isActive();
         }
 
         boolean tryDeactivate() {
-            boolean deactive = manager.off();
+            boolean deactive = activationManager.off();
             if (deactive) onStateChange(false);
             return deactive;
         }

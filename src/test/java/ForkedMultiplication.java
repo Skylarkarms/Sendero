@@ -6,7 +6,7 @@ public class ForkedMultiplication {
     private final Gate.In<Integer> in = new Gate.In<>(2);
     private final Gate.Out.Single<Integer> resultOutput;
 
-    private final ActiveSuppliers.Unbound<Integer> activeSupplier = ActiveSuppliers.unbound();
+    private final ProactiveSuppliers.Unbound<Integer> activeSupplier = ProactiveSuppliers.unbound();
     public ForkedMultiplication() {
         Path<Integer> firstFork = in.forkMap(
                 (UnaryOperator<Integer>) integer -> {

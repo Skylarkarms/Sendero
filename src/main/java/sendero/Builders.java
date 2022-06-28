@@ -90,7 +90,8 @@ public final class Builders {
 
         ) {
             return new ManagerBuilder(
-                    coldHolder -> activationListenerFun.apply((Holders.StreamManager<S>) coldHolder.streamManager),
+                    coldHolder -> activationListenerFun.apply((Holders.StreamManager<S>) coldHolder.getManager()),
+//                    coldHolder -> activationListenerFun.apply((Holders.StreamManager<S>) coldHolder.streamManager),
                     false);
         }
 
@@ -405,6 +406,19 @@ public final class Builders {
                     consumer,
                     inputMethod
             ));
+        }
+
+        static<S, T> AtomicBinaryEvent producerListener(
+                BasePath<S> producer,
+                BasePath<T> consumer,
+                InputMethod.Type<T, S> inputMethod
+        ) {
+            return new Appointer<>(
+                    producer,
+                    BasePath.Receptor.withManagerInput(consumer.getManager(), inputMethod)
+//                    BasePath.Receptor.withManagerInput(consumer.streamManager, inputMethod)
+            );
+//            return ;
         }
 
         static<S, T> AtomicBinaryEvent producerListener(

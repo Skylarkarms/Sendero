@@ -6,10 +6,14 @@ import sendero.switchers.Switchers;
 
 abstract class ActivationManager implements Switchers.Switch {
 
-    private final Switchers.Switch switchRegister;
+    /**BinaryEventRegisters handle both the onStart and onShutdown states of each AtomicEventListener.
+     * Each of which should only be handled during swap concurrent operations.
+     * The user should only care of both "on" and "off" operations, both which override onStart, but are overridden by shutdown
+     * If this state register is required by and external dependecy it could in theory be chacked as instanceof AtomicEventListener and gain access to it's inner functions*/
+    private final Switchers.Switch stateRegister;
 
     protected ActivationManager() {
-        switchRegister = Switchers.getAtomic();
+        stateRegister = Switchers.getAtomic();
         thrower = createThrower();
     }
 
@@ -24,7 +28,7 @@ abstract class ActivationManager implements Switchers.Switch {
     private static final Runnable ON_MUTABLE = Functions.emptyRunnable();
 
     ActivationManager(AtomicBinaryEvent fixedActivationListener, boolean mutableActivationListener) {
-        this.switchRegister = fixedActivationListener != null ?
+        this.stateRegister = fixedActivationListener != null ?
                 BinaryEventRegisters.getAtomicWith(fixedActivationListener)
                 :
                 mutableActivationListener ?
@@ -38,38 +42,38 @@ abstract class ActivationManager implements Switchers.Switch {
 
     @Override
     public boolean on() {
-        return switchRegister.on();
+        return stateRegister.on();
     }
 
     @Override
     public boolean off() {
         if (deactivationRequirements()) {
-            return switchRegister.off();
+            return stateRegister.off();
         }
         return false;
     }
 
     protected void setActivationListener(AtomicBinaryEvent listener) {
         thrower.run();
-        ((BinaryEventRegisters.BinaryEventRegister)switchRegister).register(listener);
+        ((BinaryEventRegisters.BinaryEventRegister) stateRegister).register(listener);
     }
 
     protected boolean swapActivationListener(AtomicBinaryEvent expect, AtomicBinaryEvent set) {
         thrower.run();
-        return ((BinaryEventRegisters.BinaryEventRegister.Atomic)switchRegister).swapRegister(expect, set) == expect;
+        return ((BinaryEventRegisters.BinaryEventRegister.Atomic) stateRegister).swapRegister(expect, set) == expect;
     }
 
     protected boolean activationListenerIsSet() {
-        return ((BinaryEventRegisters.BinaryEventRegister)switchRegister).isRegistered();
+        return ((BinaryEventRegisters.BinaryEventRegister) stateRegister).isRegistered();
     }
 
     protected boolean clearActivationListener() {
-        return !((BinaryEventRegisters.BinaryEventRegister.Atomic)switchRegister).unregister().isDefault();
+        return !((BinaryEventRegisters.BinaryEventRegister.Atomic) stateRegister).unregister().isDefault();
     }
 
     @Override
     public boolean isActive() {
-        return switchRegister.isActive();
+        return stateRegister.isActive();
     }
 
 }

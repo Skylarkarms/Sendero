@@ -10,7 +10,7 @@ import java.util.function.UnaryOperator;
 
 import static sendero.functions.Functions.myIdentity;
 
-public class ActiveSuppliers<T> implements ActiveSupplier<T> {
+public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
 
     final Holders.ActivationHolder<T> activationHolder;
 
@@ -40,7 +40,7 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
 
     private static final Builders.ManagerBuilder mutabilityAllowedOperator = Builders.ManagerBuilder.mutable();
 
-    public static class Bound<T> extends ActiveSuppliers<T> {
+    public static class Bound<T> extends ProactiveSuppliers<T> {
 
         <S>Bound(UnaryOperator<Builders.HolderBuilder<T>> holderBuilder, BasePath<S> source, Function<S, T> map) {
             super(holderBuilder,
@@ -50,14 +50,16 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
         }
     }
 
-    public static class Unbound<T> extends ActiveSuppliers<T> implements UnboundLink<T> {
+    public static class Unbound<T> extends ProactiveSuppliers<T> implements UnboundLink<T> {
 
+//        private final Appointers.PathListener<T> baseUnbound;
         private final BaseUnbound<T> baseUnbound;
 
         Unbound(
                 UnaryOperator<Builders.HolderBuilder<T>> holderBuilder
         ) {
             super(holderBuilder, null);
+//            baseUnbound = new Appointers.PathListenerImpl<>(activationHolder.getManager());
             baseUnbound = new BaseUnbound<>(activationHolder);
         }
 
@@ -70,6 +72,7 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
         public <S, P extends BasePath<S>> Void bind(P basePath, Builders.InputMethods<T, S> inputMethod) {
             return baseUnbound.bind(basePath, inputMethod);
         }
+
     }
 
 
@@ -78,7 +81,7 @@ public class ActiveSuppliers<T> implements ActiveSupplier<T> {
             System.err.println("This Supplier has not been activated yet!!");
     }
     
-    ActiveSuppliers(
+    ProactiveSuppliers(
             UnaryOperator<Builders.HolderBuilder<T>> holderBuilder,
             Function<Holders.StreamManager<T>, AtomicBinaryEvent> function
     ) {

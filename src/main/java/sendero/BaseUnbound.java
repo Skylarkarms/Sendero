@@ -7,8 +7,8 @@ public class BaseUnbound<T> implements BaseLink, InputMethodBinder<T> {
     final ActivePathListener<T> activePathListener;
 
     BaseUnbound(Holders.ActivationHolder<T> activationHolder) {
-        final Appointers.ConcurrentProducerSwapper<T> pathListener = new Appointers.ConcurrentProducerSwapper<>(activationHolder.streamManager);
-        activePathListener = new ActivePathListener<>(activationHolder.manager, pathListener);
+        final Appointers.ConcurrentProducerSwapper<T> pathListener = new Appointers.ConcurrentProducerSwapper<>(activationHolder.getManager());
+        activePathListener = new ActivePathListener<>(activationHolder.activationManager, pathListener);
     }
 
     @Override

@@ -4,19 +4,41 @@ import sendero.AtomicBinaryEvent;
 import sendero.switchers.Switchers;
 
 public final class BinaryEventRegisters {
-    public static BinaryEventRegister getAtomicRegister() {
+    public static Switchers.Switch getAtomicRegister() {
+//    public static BinaryEventRegister getAtomicRegister() {
         return new AtomicBinaryEventRegisterImpl();
     }
-    public static BinaryEventRegister getAtomicWith(AtomicBinaryEvent fixed) {
+    public static Switchers.Switch getAtomicWith(AtomicBinaryEvent fixed) {
+//    public static BinaryEventRegister getAtomicWith(AtomicBinaryEvent fixed) {
         return new AtomicWithFixed(fixed);
     }
-    public interface BinaryEventRegister extends Switchers.Switch {
+    public interface BinaryEventRegister /*extends Switchers.Switch*/ {
         void register(AtomicBinaryEvent booleanConsumer);
         AtomicBinaryEvent unregister();
         boolean isRegistered();
         interface Atomic extends BinaryEventRegister {
             /**@return prev, which is the same as expect if successful*/
             AtomicBinaryEvent swapRegister(AtomicBinaryEvent expect, AtomicBinaryEvent set);
+        }
+    }
+
+    /**Keeps the BasePath's state alive while swapping event listeners*/
+    static class BaseEvent implements Switchers.Switch {
+        final Switchers.Switch mainState = Switchers.getAtomic();
+
+        @Override
+        public boolean on() {
+            return mainState.on();
+        }
+
+        @Override
+        public boolean off() {
+            return mainState.off();
+        }
+
+        @Override
+        public boolean isActive() {
+            return mainState.isActive();
         }
     }
 
@@ -29,26 +51,24 @@ public final class BinaryEventRegisters {
      *
      * If both were heavily related, contention between boolean changes and consumer changes both with heavy traffic would be required to access a single atomic pipeline.
      * By using a loose relation between both, the only requirement is a volatile read of the current boolean state at the moment of new registration, with minor drawbacks explained*/
-    private static class AtomicBinaryEventRegisterImpl implements BinaryEventRegister.Atomic {
-        private final Switchers.Switch state = Switchers.getAtomic();
-        private final ConsumerRegisters.StateAwareBinaryConsumerRegister register = ConsumerRegisters.getStateAware(state::isActive);
+    private static class AtomicBinaryEventRegisterImpl extends BaseEvent implements BinaryEventRegister.Atomic {
+//        private final Switchers.Switch state = Switchers.getAtomic();
+        private final ConsumerRegisters.StateAwareBinaryConsumerRegister register = ConsumerRegisters.getStateAware(this::isActive);
+//        private final ConsumerRegisters.StateAwareBinaryConsumerRegister register = ConsumerRegisters.getStateAware(state::isActive);
         @Override
         public boolean on() {
-            boolean isOn = state.on();
+            boolean isOn = super.on();
+//            boolean isOn = state.on();
             if (isOn) register.on();
             return isOn;
         }
 
         @Override
         public boolean off() {
-            boolean isOff = state.off();
+            boolean isOff = super.off();
+//            boolean isOff = state.off();
             if (isOff) register.off();
             return isOff;
-        }
-
-        @Override
-        public boolean isActive() {
-            return state.isActive();
         }
 
         @Override
@@ -72,8 +92,7 @@ public final class BinaryEventRegisters {
         }
     }
 
-    private static class AtomicWithFixed implements BinaryEventRegister {
-        private final Switchers.Switch state = Switchers.getAtomic();
+    private static class AtomicWithFixed extends BaseEvent implements BinaryEventRegister {
 
         private final AtomicBinaryEvent fixed;
 
@@ -83,21 +102,18 @@ public final class BinaryEventRegisters {
 
         @Override
         public boolean on() {
-            boolean on = state.on();
+            boolean on = super.on();
+//            boolean on = state.on();
             if (on) fixed.on();
             return on;
         }
 
         @Override
         public boolean off() {
-            boolean off = state.off();
+            boolean off = super.off();
+//            boolean off = state.off();
             if (off) fixed.off();
             return off;
-        }
-
-        @Override
-        public boolean isActive() {
-            return state.isActive();
         }
 
         @Override
