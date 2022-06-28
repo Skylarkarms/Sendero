@@ -232,26 +232,6 @@ public class Main {
         System.err.println("Hello is: " + hello);
         System.err.println("World is: " + world);
         System.err.println("HelloWorld is: " + helloWorld);
-//        helloWorld.from(
-//                hello,
-//                (strings, helloString) -> {
-//                    System.err.println("updating... for string: " + helloString);
-//                    String[] newRes = strings.clone();
-//                    newRes[0] = helloString;
-//                    System.err.println("Hello string is: " + helloString);
-//                    return newRes;
-//                }
-//                );
-//        helloWorld.from(
-//                world,
-//                (strings, worldString) -> {
-//                    System.err.println("updating... for string: " + worldString);
-//                    String[] newRes = strings.clone();
-//                    newRes[1] = worldString;
-//                    System.err.println("World string is: " + worldString);
-//                    return newRes;
-//                }
-//                );
 
         Gate.Out.Single<String> result = helloWorld.forkMap(
                 strings -> {
@@ -265,7 +245,7 @@ public class Main {
                     @Override
                     public void accept(String s) {
                         System.err.println("result s is: " + s + ", from observer: " + this);
-                        System.out.println(s);
+                        System.out.println("Result from Merge is: " + s);
                         System.err.println("Unregistering.....");
                         result.unregister();
                     }

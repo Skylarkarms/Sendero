@@ -174,8 +174,8 @@ public final class SingleGate {
 
             protected static class Single<T> extends OutBaseSinglePath<T> implements Out.Single<T> {
 
-                private final ConsumerRegisters.IConsumerRegister.SnapshottingConsumerRegister<Immutable.Values, T>
-                        locale = ConsumerRegisters.IConsumerRegister.getInstance(this::localSerialValues);
+                private final ConsumerRegisters.SnapshottingConsumerRegister<Immutable.Values, T>
+                        locale = ConsumerRegisters.getSnapshotting(this::localSerialValues);
 
                 public Single() {
                 }

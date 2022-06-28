@@ -263,12 +263,12 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
 
     static final class InjectivePathAbsDispatcher<T> extends PathAbsDispatcher<T> {
 
-        private final ConsumerRegisters.IConsumerRegister.SnapshottingConsumerRegister<Immutable.Values, Immutable<T>>
+        private final ConsumerRegisters.SnapshottingConsumerRegister<Immutable.Values, Immutable<T>>
                 remote;
 
         InjectivePathAbsDispatcher(Holders.ExecutorHolder<T> executorHolder) {
             super(executorHolder);
-            remote = ConsumerRegisters.IConsumerRegister.getInstance(this::localSerialValues);
+            remote = ConsumerRegisters.getSnapshotting(this::localSerialValues);
         }
 
         @Override

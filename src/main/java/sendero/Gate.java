@@ -213,8 +213,8 @@ public final class Gate {
 
             protected static class Single<T> extends OutBasePath<T> implements Out.Single<T> {
 
-                private final ConsumerRegisters.IConsumerRegister.SnapshottingConsumerRegister<Immutable.Values, T>
-                        locale = ConsumerRegisters.IConsumerRegister.getInstance(this::localSerialValues);
+                private final ConsumerRegisters.SnapshottingConsumerRegister<Immutable.Values, T>
+                        locale = ConsumerRegisters.getSnapshotting(this::localSerialValues);
 
                 private Runnable dispatchCommandFunction(Immutable<T> t) {
                     return () -> {
@@ -343,8 +343,8 @@ public final class Gate {
 
         static class SingleImpl<T> extends Holders.ActivationHolder<T> implements Out.Single<T> {
 
-            private final ConsumerRegisters.IConsumerRegister.SnapshottingConsumerRegister<Immutable.Values, T>
-                    locale = ConsumerRegisters.IConsumerRegister.getInstance(this::localSerialValues);
+            private final ConsumerRegisters.SnapshottingConsumerRegister<Immutable.Values, T>
+                    locale = ConsumerRegisters.getSnapshotting(this::localSerialValues);
 
             protected SingleImpl(
                     Function<Holders.StreamManager<T>, AtomicBinaryEvent> selfMap

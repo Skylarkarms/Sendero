@@ -31,7 +31,7 @@ public final class BinaryEventRegisters {
      * By using a loose relation between both, the only requirement is a volatile read of the current boolean state at the moment of new registration, with minor drawbacks explained*/
     private static class AtomicBinaryEventRegisterImpl implements BinaryEventRegister.Atomic {
         private final Switchers.Switch state = Switchers.getAtomic();
-        private final ConsumerRegisters.BinaryRegisters.StateAwareBinaryConsumerRegister register = ConsumerRegisters.BinaryRegisters.getStateAware(state::isActive);
+        private final ConsumerRegisters.StateAwareBinaryConsumerRegister register = ConsumerRegisters.getStateAware(state::isActive);
         @Override
         public boolean on() {
             boolean isOn = state.on();
