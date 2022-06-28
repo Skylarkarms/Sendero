@@ -32,9 +32,6 @@ public final class ThresholdListeners {
             private final AtomicInteger count;
             private final Switchers.Switch aSwitch = Switchers.getAtomic();
             private final int initialCount;
-
-
-
             protected AbsThresholdListener(int initialCount) {
                 this.initialCount = initialCount;
                 count = new AtomicInteger(initialCount);
