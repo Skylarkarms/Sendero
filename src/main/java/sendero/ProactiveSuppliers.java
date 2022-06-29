@@ -52,14 +52,12 @@ public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
 
     public static class Unbound<T> extends ProactiveSuppliers<T> implements UnboundLink<T> {
 
-//        private final Appointers.PathListener<T> baseUnbound;
         private final BaseUnbound<T> baseUnbound;
 
         Unbound(
                 UnaryOperator<Builders.HolderBuilder<T>> holderBuilder
         ) {
             super(holderBuilder, null);
-//            baseUnbound = new Appointers.PathListenerImpl<>(activationHolder.getManager());
             baseUnbound = new BaseUnbound<>(activationHolder);
         }
 
@@ -72,7 +70,6 @@ public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
         public <S, P extends BasePath<S>> Void bind(P basePath, Builders.InputMethods<T, S> inputMethod) {
             return baseUnbound.bind(basePath, inputMethod);
         }
-
     }
 
 
@@ -95,7 +92,9 @@ public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
     @Override
     public T get() {
         NOT_ACTIVE_WARNING();
-        return activationHolder.getSnapshot().get();
+        Immutable<T> imm = activationHolder.getSnapshot();
+        assert imm != NOT_SET;
+        return imm.get();
     }
     private static final int max_tries = 3;
 
@@ -175,4 +174,19 @@ public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
         return activationHolder.isActive();
     }
 
+
+    @Override
+    public boolean start() {
+        return on();
+    }
+
+    @Override
+    public boolean shutoff() {
+        return off();
+    }
+
+    @Override
+    public boolean isOff() {
+        return !isActive();
+    }
 }

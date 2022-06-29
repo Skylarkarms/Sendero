@@ -1,7 +1,8 @@
 package sendero;
 
 import sendero.switchers.Switchers;
-
+/**AtomicBinaryEvent is intended as a binary regressive event mediator between nodes within the reactive system,
+ * a system which is inherently concurrent in nature.*/
 public interface AtomicBinaryEvent extends Switchers.Switch {
     boolean start();
     boolean shutoff();
