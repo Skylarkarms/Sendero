@@ -132,6 +132,7 @@ final class Holders {
     }
 
     private static final class StreamManagerExecutor<T> implements Holders.StreamManager<T> {
+
         private final AtomicUtils.OverlapDropExecutor executor;
         private final Holders.StreamManager<T> manager;
         private final BiFunction<Immutable.Values, UnaryOperator<T>, Runnable> runnableFactory;
