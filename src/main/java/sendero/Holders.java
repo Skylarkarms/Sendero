@@ -441,6 +441,13 @@ final class Holders {
 
         final ActivationManager activationManager;
 
+        @Override
+        public String toString() {
+            return "ActivationHolder{" +
+                    "activationManager=" + activationManager +
+                    '}';
+        }
+
         boolean deactivationRequirements() {
             return true;
         }

@@ -189,4 +189,11 @@ public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
     public boolean isOff() {
         return !isActive();
     }
+
+    @Override
+    public String toString() {
+        return "ProactiveSuppliers{" +
+                "activationHolder=" + activationHolder +
+                '}';
+    }
 }
