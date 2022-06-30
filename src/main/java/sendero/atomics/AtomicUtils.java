@@ -33,8 +33,6 @@ public final class AtomicUtils {
      * <br>
      * @return next == null if:
      * <li> A) update == false;
-     *
-     *
      * */
     public static<T> Witness<T> contentiousCAS(
             AtomicReference<T> ref,
@@ -223,7 +221,6 @@ public final class AtomicUtils {
                 }
             }
 
-
             public void scheduleOrSwap(Runnable with) {
                 final SleeperThreadState closed = getNewClosed(with);
                 CAS(with, closed);
@@ -236,8 +233,6 @@ public final class AtomicUtils {
                     if (!semaphore.get().sleeperThread.queue(with)) CAS(with, closed);
                 }
             }
-
         }
     }
-
 }

@@ -125,7 +125,6 @@ public class Appointers {
 
         static<T> PathListener<T> getInstance(BasePath<T> consumer) {
             return new PathListenerImpl<>(consumer.getManager());
-//            return new PathListenerImpl<>(basePath.streamManager);
        }
     }
 
@@ -138,7 +137,6 @@ public class Appointers {
         @Override
         public void stopAndClearPath() {
             appointerSwapCore.witnessAtomicReference.getAndSet(AtomicBinaryEvent.DEFAULT).shutoff();
-//            appointerSwapCore.witnessAtomicReference.getAndSet(Appointer.CLEARED_APPOINTER).shutoff();
         }
 
         @Override

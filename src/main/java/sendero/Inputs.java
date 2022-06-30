@@ -188,7 +188,6 @@ public class Inputs<T> {
                 if (newVal != INVALID) {
                     next = prev.newValue(newVal);
                     if (compareAndSet(prev, next, delay)) return newVal;
-//                    if (compareAndSet(prev, next, delay)) break;
                 }
             }
             return null;

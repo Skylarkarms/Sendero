@@ -416,9 +416,7 @@ public final class Builders {
             return new Appointer<>(
                     producer,
                     BasePath.Receptor.withManagerInput(consumer.getManager(), inputMethod)
-//                    BasePath.Receptor.withManagerInput(consumer.streamManager, inputMethod)
             );
-//            return ;
         }
 
         static<S, T> AtomicBinaryEvent producerListener(

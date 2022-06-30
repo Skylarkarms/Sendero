@@ -83,7 +83,7 @@ public class SimpleLists {
             //When a rapid succession of actions are executed, where an "add" followed by a "remove" is performed && the Collection has 0 items
             //The remove may arrive before the add,
             // And the final state will result in an item being added and size being 1, when it should have been 0.
-            // to prevent a wrong final state we must retry until the add arrives.
+            // to prevent a wrong final state we must retry until the add arrives or retry 3 times.
 
             int i = 0;
 

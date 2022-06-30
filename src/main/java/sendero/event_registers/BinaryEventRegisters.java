@@ -5,14 +5,12 @@ import sendero.switchers.Switchers;
 
 public final class BinaryEventRegisters {
     public static Switchers.Switch getAtomicRegister() {
-//    public static BinaryEventRegister getAtomicRegister() {
         return new AtomicBinaryEventRegisterImpl();
     }
     public static Switchers.Switch getAtomicWith(AtomicBinaryEvent fixed) {
-//    public static BinaryEventRegister getAtomicWith(AtomicBinaryEvent fixed) {
         return new AtomicWithFixed(fixed);
     }
-    public interface BinaryEventRegister /*extends Switchers.Switch*/ {
+    public interface BinaryEventRegister {
         void register(AtomicBinaryEvent booleanConsumer);
         AtomicBinaryEvent unregister();
         boolean isRegistered();
@@ -52,13 +50,10 @@ public final class BinaryEventRegisters {
      * If both were heavily related, contention between boolean changes and consumer changes both with heavy traffic would be required to access a single atomic pipeline.
      * By using a loose relation between both, the only requirement is a volatile read of the current boolean state at the moment of new registration, with minor drawbacks explained*/
     private static class AtomicBinaryEventRegisterImpl extends BaseEvent implements BinaryEventRegister.Atomic {
-//        private final Switchers.Switch state = Switchers.getAtomic();
         private final ConsumerRegisters.StateAwareBinaryConsumerRegister register = ConsumerRegisters.getStateAware(this::isActive);
-//        private final ConsumerRegisters.StateAwareBinaryConsumerRegister register = ConsumerRegisters.getStateAware(state::isActive);
         @Override
         public boolean on() {
             boolean isOn = super.on();
-//            boolean isOn = state.on();
             if (isOn) register.on();
             return isOn;
         }
@@ -66,7 +61,6 @@ public final class BinaryEventRegisters {
         @Override
         public boolean off() {
             boolean isOff = super.off();
-//            boolean isOff = state.off();
             if (isOff) register.off();
             return isOff;
         }
@@ -103,7 +97,6 @@ public final class BinaryEventRegisters {
         @Override
         public boolean on() {
             boolean on = super.on();
-//            boolean on = state.on();
             if (on) fixed.on();
             return on;
         }
@@ -111,7 +104,6 @@ public final class BinaryEventRegisters {
         @Override
         public boolean off() {
             boolean off = super.off();
-//            boolean off = state.off();
             if (off) fixed.off();
             return off;
         }
