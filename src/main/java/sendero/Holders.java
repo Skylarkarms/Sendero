@@ -9,6 +9,7 @@ import sendero.interfaces.Updater;
 import sendero.pairs.Pair;
 import sendero.threshold_listener.ThresholdListeners;
 
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -97,10 +98,8 @@ final class Holders {
         Immutable.Values localSerialValues() {
             return getSnapshot().local;
         }
-
     }
-    abstract static class ImmutableReadWrite<T> extends ImmutableRead<T> implements ImmutableWrite<T> {
-    }
+    abstract static class ImmutableReadWrite<T> extends ImmutableRead<T> implements ImmutableWrite<T> {}
 
     @FunctionalInterface
     interface Invalidator {
@@ -247,7 +246,7 @@ final class Holders {
 
         void setTag(String tag) {
             String prev = TAGRef.getAndSet(tag);
-            if (prev != null) throw new IllegalStateException("This holder already has a TAG: " + prev);
+            if (!Objects.equals(prev, DEFAULT_TAG)) throw new IllegalStateException("This holder already has a TAG: " + prev);
         }
 
         String getAndClearTag() {
@@ -325,17 +324,17 @@ final class Holders {
 
     abstract static class BaseBroadcaster<T> extends DispatcherReader<T> {
         public final SwapBroadcast<T> core;
-
         final Holder<T> holder;
         final BinaryPredicate<T> expectInput;
         private final StreamManager<T> streamManager;
-
         private final AtomicBoolean managerHeld = new AtomicBoolean();
+
         StreamManager<T> getManager() {
             if (managerHeld.compareAndSet(false, true)) {
                 return streamManager;
             } else throw new IllegalStateException("Manager already held");
         }
+
         StreamManager<T> dropManager() {
             if (managerHeld.compareAndSet(true, false))
             return streamManager;
