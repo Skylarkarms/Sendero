@@ -12,6 +12,13 @@ abstract class ActivationManager implements Switchers.Switch {
      * If this state register is required by and external dependecy it could in theory be chacked as instanceof AtomicEventListener and gain access to it's inner functions*/
     private final Switchers.Switch stateRegister;
 
+    @Override
+    public String toString() {
+        return "ActivationManager{" +
+                "stateRegister=" + stateRegister +
+                '}';
+    }
+
     protected ActivationManager() {
         stateRegister = Switchers.getAtomic();
         thrower = createThrower();

@@ -258,6 +258,12 @@ public final class Builders {
             this.inputMethods = inputMethods;
         }
 
+        public AtomicBinaryEvent asEvent(
+                Consumer<Runnable> executor,
+                BasePath<S> producer
+        ) {
+            return build(executor).toBinaryEvent(producer);
+        }
         BasePath.Receptor<S> build(Consumer<Runnable> executor) {
             return build(executor, broadcast, inputMethods);
         }

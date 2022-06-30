@@ -36,7 +36,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         @SuppressWarnings("unchecked")
         <P extends BasePath<?>> P remove(String TAG) {
             BasePath<?> removed = getRemove(TAG);
-            if (removed != null) removed.tag.set(null);
+            if (removed != null) removed.getClearTag();
             return (P) removed;
         }
 
@@ -313,24 +313,26 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         return storage;
     }
 
-    private final AtomicReference<String> tag = new AtomicReference<>();
-
     public BasePath<T> store(String TAG) {
-        String prev = tag.getAndSet(TAG);
-        if (prev == null) {
-            storage.put(TAG, this);
-        } else throw new IllegalStateException("This BasePath: " + this +", already in store with TAG: " + prev);
+        holder.setTag(TAG);
+        storage.put(TAG, this);
         return this;
     }
 
     public boolean removeFromStore() {
-        return storage.getRemove(tag.getAndSet(null)) != null;
+        return storage.getRemove(getClearTag()) != null;
+    }
+
+    private String getClearTag() {
+        return holder.getAndClearTag();
     }
 
     @Override
     public String toString() {
         return super.toString() +
-                "\n baseTestDispatcher: " + holder;
+                "\n baseTestDispatcher: " + holder +
+                ",\n ActivationManager is: " + activationManager.toString()
+                ;
     }
 }
 

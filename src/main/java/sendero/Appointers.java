@@ -12,7 +12,7 @@ import static sendero.Appointers.ConcurrentProducerSwapper.bindStart;
 public class Appointers {
     static class AppointerSwapCore<T> implements Switchers.Switch {
         /**Accessed via side effects, ignore warnings*/
-        final AtomicReference<AtomicBinaryEvent> witnessAtomicReference;
+        final AtomicReference<AtomicBinaryEvent> swappableAppointer;
         final Holders.StreamManager<T> streamManager;
 
         AppointerSwapCore(
@@ -24,12 +24,12 @@ public class Appointers {
         AppointerSwapCore(
                 Holders.StreamManager<T> streamManager,
                 AtomicBinaryEvent fixedAppointer) {
-            this.witnessAtomicReference = new AtomicReference<>(fixedAppointer);
+            this.swappableAppointer = new AtomicReference<>(fixedAppointer);
             this.streamManager = streamManager;
         }
 
         private AtomicBinaryEvent get() {
-            return witnessAtomicReference.get();
+            return swappableAppointer.get();
         }
 
         @Override
@@ -47,6 +47,13 @@ public class Appointers {
             return get().off();
         }
 
+        @Override
+        public String toString() {
+            return "AppointerSwapCore{" +
+                    "swappableProducer=" + swappableAppointer +
+                    ", streamManager=" + streamManager +
+                    '}';
+        }
     }
 
     static class ConcurrentProducerSwapper<T> implements Switchers.Switch, UnboundPathListener<T> {
@@ -87,7 +94,7 @@ public class Appointers {
         @Override
         public <S, P extends BasePath<S>> AtomicBinaryEvent bind(P basePath, Builders.InputMethods<T, S> inputMethod) {
             final AtomicUtils.Witness<AtomicBinaryEvent> witness = AtomicUtils.contentiousCAS(
-                    appointerSwapCore.witnessAtomicReference,
+                    appointerSwapCore.swappableAppointer,
                     prev -> prev == AtomicBinaryEvent.DEFAULT || !((Appointer<?>)prev).equalTo(basePath, inputMethod.type),
                     appointer -> Builders.BinaryEventConsumers.producerListener(
                             basePath,
@@ -100,9 +107,15 @@ public class Appointers {
         }
 
         public AtomicBinaryEvent getAndClear() {
-            return appointerSwapCore.witnessAtomicReference.getAndSet(AtomicBinaryEvent.DEFAULT);
+            return appointerSwapCore.swappableAppointer.getAndSet(AtomicBinaryEvent.DEFAULT);
         }
 
+        @Override
+        public String toString() {
+            return "ConcurrentProducerSwapper{" +
+                    "appointerSwapCore=" + appointerSwapCore +
+                    '}';
+        }
     }
 
     /**We could exchange 2 methods for a single one with Builders.InputMethod*/
@@ -136,7 +149,7 @@ public class Appointers {
 
         @Override
         public void stopAndClearPath() {
-            appointerSwapCore.witnessAtomicReference.getAndSet(AtomicBinaryEvent.DEFAULT).shutoff();
+            appointerSwapCore.swappableAppointer.getAndSet(AtomicBinaryEvent.DEFAULT).shutoff();
         }
 
         @Override

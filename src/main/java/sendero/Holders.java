@@ -168,14 +168,14 @@ final class Holders {
 
     static final class ColdReceptorManager<T> implements StreamManager<T> {
 
-        private final ImmutableReadWrite<T> immutableRead;
+        private final ImmutableReadWrite<T> immutableWrite;
         final ColdReceptor<T> receptor;
 
         ColdReceptorManager(SwapBroadcast<T> swapBroadcast) {
             this(new Holder<>(swapBroadcast), BinaryPredicate.always(true));
         }
         ColdReceptorManager(Holder<T> holder, BinaryPredicate<T> test) {
-            this.immutableRead = holder;
+            this.immutableWrite = holder;
             receptor = test != binaryAlwaysTrue ?
                     (topValues, topData) -> {
                         Immutable<T> prev;
@@ -218,29 +218,41 @@ final class Holders {
         }
 
         private Immutable<T> getSnapshot() {
-            return immutableRead.getSnapshot();
+            return immutableWrite.getSnapshot();
         }
 
         private boolean compareAndSet(Immutable<T> prev, Immutable<T> next) {
-            return immutableRead.compareAndSet(prev, next);
+            return immutableWrite.compareAndSet(prev, next);
         }
 
         @Override
         public void invalidate() {
-            immutableRead.invalidate();
+            immutableWrite.invalidate();
         }
 
         @Override
         public String toString() {
             return "ColdReceptorImpl{" +
-                    "\n immutableRead=" + immutableRead +
+                    "\n immutableRead=" + immutableWrite +
                     '}';
         }
     }
 
+    private static final String DEFAULT_TAG = "DEFAULT_TAG";
+
     static final class Holder<T> extends ImmutableReadWrite<T> implements Supplier<T> {
         private final AtomicReference<Immutable<T>> reference;
         private final SwapBroadcast<T> broadcaster;
+        private final AtomicReference<String> TAGRef = new AtomicReference<>(DEFAULT_TAG);
+
+        void setTag(String tag) {
+            String prev = TAGRef.getAndSet(tag);
+            if (prev != null) throw new IllegalStateException("This holder already has a TAG: " + prev);
+        }
+
+        String getAndClearTag() {
+            return TAGRef.getAndSet(DEFAULT_TAG);
+        }
 
         Holder(SwapBroadcast<T> broadcaster) {
             this(broadcaster, getNotSet());
@@ -250,8 +262,7 @@ final class Holders {
                 SwapBroadcast<T> broadcaster,
                 Immutable<T> firstValue
         ) {
-            this.broadcaster = broadcaster;
-            this.reference = new AtomicReference<>(firstValue);
+            this(broadcaster, new AtomicReference<>(firstValue));
         }
 
         Holder(
@@ -289,6 +300,7 @@ final class Holders {
         public String toString() {
             return "BaseColdHolder{" +
                     "\n reference=" + reference.get().toString() +
+                    "\n TAG=" + TAGRef.get() +
                     "\n}: This is: " + getClass().getSimpleName() + "@" + hashCode();
         }
     }

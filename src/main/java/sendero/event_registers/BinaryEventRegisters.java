@@ -122,5 +122,13 @@ public final class BinaryEventRegisters {
         public boolean isRegistered() {
             return true;
         }
+
+        @Override
+        public String toString() {
+            return "AtomicWithFixed{" +
+                    "mainState=" + mainState +
+                    ", fixed=" + fixed +
+                    '}';
+        }
     }
 }

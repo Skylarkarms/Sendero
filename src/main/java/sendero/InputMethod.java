@@ -1,6 +1,8 @@
 package sendero;
 
 
+import sendero.functions.Functions;
+
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -23,7 +25,9 @@ interface InputMethod<T> extends Holders.ColdConsumer<T> {
         static <S> Type<S, S> identity() {
             return (Type<S, S>) identity;
         }
+        @SuppressWarnings("unchecked")
         static<S, R> Type<S, R> map(Function<R, S> map) {
+            if (Functions.isIdentity(map)) return (Type<S, R>) identity;
             return (method, param) -> method.accept(param, map);
         }
         static <S, R> Type<S, R> update(BiFunction<S, R, S> update) {
