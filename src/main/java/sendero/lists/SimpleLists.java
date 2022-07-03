@@ -45,6 +45,15 @@ public class SimpleLists {
         final int version;
         final int size;
 
+        @Override
+        public String toString() {
+            return "Snapshot{" +
+                    "\n copy=" + Arrays.toString(copy) +
+                    ",\n version=" + version +
+                    ",\n size=" + size +
+                    '}';
+        }
+
         private static<T> Snapshot<T> initialize(T[] EMPTY_ARRAY) {
             return new Snapshot<>(EMPTY_ARRAY, 0, 0);
         }
@@ -242,29 +251,35 @@ public class SimpleLists {
 
     private static class LockFreeImpl<E> implements LockFree<E> {
          final E[] EMPTY_ELEMENT_ARRAY;
-         final AtomicReference<SimpleLists.Snapshot<E>> core;
+         final AtomicReference<Snapshot<E>> core;
 
+        @Override
+        public String toString() {
+            return "LockFreeImpl{" +
+                    "\n core=" + core.get() +
+                    '}';
+        }
 
         @SuppressWarnings("unchecked")
         private LockFreeImpl(Class<? super E> componentType) {
             this.EMPTY_ELEMENT_ARRAY = (E[]) Array.newInstance(componentType, 0);
-            SimpleLists.Snapshot<E> FIRST = SimpleLists.Snapshot.initialize((E[])DEFAULT_CAPACITY_EMPTY_ELEMENT_DATA);
+            Snapshot<E> FIRST = SimpleLists.Snapshot.initialize((E[])DEFAULT_CAPACITY_EMPTY_ELEMENT_DATA);
             this.core = new AtomicReference<>(FIRST);
         }
 
         @Override
         public boolean add(E element) {
-            return SimpleLists.Snapshot.add(core, element, EMPTY_ELEMENT_ARRAY);
+            return Snapshot.add(core, element, EMPTY_ELEMENT_ARRAY);
         }
 
         @Override
         public boolean remove(E element) {
-            return SimpleLists.Snapshot.remove(core, element);
+            return Snapshot.remove(core, element);
         }
 
         @Override
         public boolean removeIf(Predicate<E> removeIf) {
-            return SimpleLists.Snapshot.removeIf(core, removeIf);
+            return Snapshot.removeIf(core, removeIf);
         }
 
         @Override

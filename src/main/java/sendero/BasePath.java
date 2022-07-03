@@ -259,6 +259,12 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
             return remote.isEmpty();
         }
 
+        @Override
+        public String toString() {
+            return "ToManyPathsAbsDispatcher{" +
+                    "remote=" + remote +
+                    '}';
+        }
     }
 
     static final class InjectivePathAbsDispatcher<T> extends PathAbsDispatcher<T> {
@@ -329,10 +335,15 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
 
     @Override
     public String toString() {
-        return super.toString() +
-                "\n baseTestDispatcher: " + holder +
-                ",\n ActivationManager is: " + activationManager.toString()
+//        return super.toString() +
+        return " baseTestDispatcher: " + holder +
+                ",\n " + super.toString()
+//                ",\n ActivationManager is: " + activationManager.toString()
                 ;
+    }
+
+    public String toStringDetailed() {
+        throw new IllegalStateException("Overridden by PathAbsDispatcherHolder!");
     }
 }
 

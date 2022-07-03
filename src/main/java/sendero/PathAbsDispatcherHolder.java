@@ -107,5 +107,11 @@ public abstract class PathAbsDispatcherHolder<T> extends BasePath<T> {
         }
         throw new IllegalStateException("invalid class: " + outputType);
     }
+
+    @Override
+    public String toStringDetailed() {
+        return super.toString() +
+                ",\n remote: " + pathDispatcher;
+    }
 }
 

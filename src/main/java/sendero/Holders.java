@@ -444,7 +444,7 @@ final class Holders {
         @Override
         public String toString() {
             return "ActivationHolder{" +
-                    "activationManager=" + activationManager +
+                    "\n activationManager=" + activationManager +
                     '}';
         }
 
@@ -460,8 +460,10 @@ final class Holders {
             return activationManager.clearActivationListener();
         }
 
-        /**For LinkHolder*/
-        boolean activationListenerIsSet() {
+        /**Handy for debugging:
+         * When a BasePath becomes active, we could infer whether a source is
+         * being listened or not and throw and exception*/
+        protected boolean activationListenerIsSet() {
             return activationManager.activationListenerIsSet();
         }
 
@@ -560,7 +562,7 @@ final class Holders {
                     () -> {
                         int length = subs.length;
                         for (int i = beginAt; i < length; i++) {
-                            inferColdDispatch(t, mapped, subs[1]);
+                            inferColdDispatch(t, mapped, subs[i]);
                         }
                     }
             );

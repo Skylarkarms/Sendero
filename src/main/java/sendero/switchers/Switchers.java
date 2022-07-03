@@ -32,6 +32,12 @@ public class Switchers {
             return state.get();
         }
 
+        @Override
+        public String toString() {
+            return "Atomic{" +
+                    ",\n state=" + state.get() +
+                    '}';
+        }
     }
 
 }

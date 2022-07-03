@@ -193,7 +193,7 @@ public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
     @Override
     public String toString() {
         return "ProactiveSuppliers{" +
-                "activationHolder=" + activationHolder +
+                ",\n activationHolder=" + activationHolder +
                 '}';
     }
 }

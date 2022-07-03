@@ -126,9 +126,9 @@ public final class BinaryEventRegisters {
         @Override
         public String toString() {
             return "AtomicWithFixed{" +
-                    "mainState=" + mainState +
-                    ", fixed=" + fixed +
-                    '}';
+                    "\n mainState=" + mainState +
+                    ",\n fixed=" + fixed +
+                    "}@" + hashCode();
         }
     }
 }
