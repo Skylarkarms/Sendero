@@ -35,7 +35,7 @@ public class Switchers {
         @Override
         public String toString() {
             return "Atomic{" +
-                    ",\n state=" + state.get() +
+                    "\n state=" + state.get() +
                     '}';
         }
     }

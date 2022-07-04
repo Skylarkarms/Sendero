@@ -15,6 +15,9 @@ public final class Builders {
     public static<S> UnaryOperator<HolderBuilder<S>> excludeIn(BinaryPredicate<S> excludeInput) {
         return sHolderBuilder -> sHolderBuilder.excludeIn(excludeInput);
     }
+    public static<S> UnaryOperator<HolderBuilder<S>> excludeOut(Predicate<S> excludeOut) {
+        return sHolderBuilder -> sHolderBuilder.excludeOut(excludeOut);
+    }
     public static<S> UnaryOperator<HolderBuilder<S>> withInitial(S value) {
         return sHolderBuilder -> sHolderBuilder.withInitial(value);
     }
@@ -91,7 +94,6 @@ public final class Builders {
         ) {
             return new ManagerBuilder(
                     coldHolder -> activationListenerFun.apply((Holders.StreamManager<S>) coldHolder.getManager()),
-//                    coldHolder -> activationListenerFun.apply((Holders.StreamManager<S>) coldHolder.streamManager),
                     false);
         }
 

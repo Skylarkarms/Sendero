@@ -15,7 +15,7 @@ abstract class ActivationManager implements Switchers.Switch {
     @Override
     public String toString() {
         return "ActivationManager{" +
-                ",\n stateRegister=" + stateRegister +
+                "\n stateRegister=" + stateRegister +
                 '}';
     }
 
