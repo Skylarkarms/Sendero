@@ -328,16 +328,16 @@ final class Holders {
         final Holder<T> holder;
         final BinaryPredicate<T> expectInput;
         private final StreamManager<T> streamManager;
-        private final AtomicBoolean managerHeld = new AtomicBoolean();
+        private final AtomicBoolean holderHeld = new AtomicBoolean();
 
         StreamManager<T> getManager() {
-            if (managerHeld.compareAndSet(false, true)) {
+            if (holderHeld.compareAndSet(false, true)) {
                 return streamManager;
             } else throw new IllegalStateException("Manager already held");
         }
 
         StreamManager<T> dropManager() {
-            if (managerHeld.compareAndSet(true, false))
+            if (holderHeld.compareAndSet(true, false))
             return streamManager;
             else return null;
         }
@@ -357,24 +357,35 @@ final class Holders {
             return expectOut == alwaysTrue ?
                     (prev, next, delay) -> {
                         onSwapped(prev, next.get());
-                        broadcast(prev, next, delay);
+                        broadcast(next, delay);
                     }
                     :
                     (prevVal, next, delay) -> {
                         T nextData = next.get();
                         onSwapped(prevVal, nextData);
-                        if (expectOut.test(nextData)) broadcast( prevVal, next, delay);
+                        if (expectOut.test(nextData)) broadcast(next, delay);
                     };
         }
 
         private final SnapConsumer<T> consumingFunction;
 
-        void inputSet() {
+        void updaterSet() {
             if (!inputSet) {
                 inputSet = true;
             } else throw new IllegalStateException("This BasePath already has an Input source attached.");
         }
 
+        void acceptorSet() {
+            if (!holderHeld.compareAndSet(false, true))
+                throw new IllegalStateException("This BasePath already has an Input source attached.");
+        }
+
+//        void inputSet() {
+//            if (!inputSet) {
+//                inputSet = true;
+//            } else throw new IllegalStateException("This BasePath already has an Input source attached.");
+//        }
+//
         @FunctionalInterface
         private interface SnapConsumer<T> {
             void accept(Immutable<T> current, Immutable.Values values, ColdConsumer<T> consumer);
@@ -429,9 +440,8 @@ final class Holders {
         protected void onSwapped(T prev, T next) {}
 
         private void broadcast(
-                T prevVal, Immutable<T> next, long delay
+                Immutable<T> next, long delay
         ) {
-            onSwapped(prevVal, next.get());
             if (delay == NO_DELAY) coldDispatch(next);
             else dispatch(delay, next);
         }

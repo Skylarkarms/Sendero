@@ -170,6 +170,10 @@ public final class Builders {
     public static class InputMethods<M, T> {
         final InputMethod.Type<M, T> type;
 
+        public boolean equalTo(Object function) {
+            return type.equalTo(0, function);
+        }
+
         public static<S, T> InputMethods<S, T> map(Function<T, S> map) {
             return new InputMethods<>(InputMethod.Type.map(map));
         }
@@ -203,6 +207,12 @@ public final class Builders {
     public static final class ReceptorBuilder<S, T> {
         final Holders.SwapBroadcast<T> broadcast;
         final InputMethods<T, S> inputMethods;
+
+        public boolean equalTo(Object consumer, Object function) {
+            if (consumer == null || function == null) return false;
+            return broadcast.equalTo(0, consumer)
+                    && inputMethods.equalTo(function);
+        }
 
         @Override
         public boolean equals(Object o) {

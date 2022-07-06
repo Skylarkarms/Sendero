@@ -17,7 +17,7 @@ public class Inputs<T> {
 
     Inputs(Holders.BaseBroadcaster<T> broadcaster) {
         this(broadcaster.holder, broadcaster.expectInput);
-        broadcaster.inputSet();
+//        broadcaster.updaterSet();
     }
 
     private Inputs(Holders.Holder<T> baseColdHolderBroadcaster, BinaryPredicate<T> testIn) {
@@ -26,15 +26,22 @@ public class Inputs<T> {
     }
 
     public static<S> Consumer<S> getConsumer(Holders.BaseBroadcaster<S> broadcaster) {
-        return new Inputs<S>(broadcaster).getConsumer();
+        Consumer<S> res = new Inputs<S>(broadcaster).getConsumer();
+        broadcaster.acceptorSet();
+        return res;
     }
 
     public static<S> Updater<S> getUpdater(Holders.BaseBroadcaster<S> broadcaster) {
-        return new Inputs<S>(broadcaster).getUpdater();
+        Updater<S> res = new Inputs<S>(broadcaster).getUpdater();
+        broadcaster.updaterSet();
+        return res;
     }
 
     public static <S> ConsumerUpdater<S> getConsumerUpdater(Holders.BaseBroadcaster<S> broadcaster) {
-        return new Inputs<S>(broadcaster).getConsumerUpdater();
+        ConsumerUpdater<S> res = new Inputs<S>(broadcaster).getConsumerUpdater();
+        broadcaster.acceptorSet();
+        broadcaster.updaterSet();
+        return res;
     }
 
     Consumer<T> getConsumer() {

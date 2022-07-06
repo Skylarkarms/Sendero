@@ -42,6 +42,9 @@ public final class Gate {
     public static class Acceptor<T> extends Path<T> implements Consumer<T> {
         private final Consumer<T> scoped = Inputs.getConsumer(this);
 
+        public Acceptor() {
+        }
+
         public Acceptor(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
             super(builderOperator);
         }
