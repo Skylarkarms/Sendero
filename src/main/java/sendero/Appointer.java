@@ -8,23 +8,23 @@ import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 class Appointer<A> extends AtomicBinaryEventConsumer {
-    public static final Appointer<?> CLEARED_APPOINTER = new Appointer<Object>(null, null) {
-
-        @Override
-        public boolean on() {
-            return false;
-        }
-
-        @Override
-        public boolean start() {
-            return false;
-        }
-
-        @Override
-        public boolean isDefault() {
-            return true;
-        }
-    };
+//    public static final Appointer<?> CLEARED_APPOINTER = new Appointer<Object>(null, null) {
+//
+//        @Override
+//        public boolean on() {
+//            return false;
+//        }
+//
+//        @Override
+//        public boolean start() {
+//            return false;
+//        }
+//
+//        @Override
+//        public boolean isDefault() {
+//            return true;
+//        }
+//    };
 
     final BasePath<A> producer;
     final BasePath.Receptor<A> receptor;
@@ -136,6 +136,13 @@ class Appointer<A> extends AtomicBinaryEventConsumer {
 
         public void clear() {
             for (AtomicBinaryEvent e:receptors.clear()) e.shutoff();
+        }
+
+        @Override
+        public String toString() {
+            return "ConcurrentList{" +
+                    "\n receptors=" + receptors +
+                    "\n }";
         }
     }
 }

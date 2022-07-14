@@ -1,10 +1,7 @@
 package sendero;
 
 import sendero.functions.Functions;
-import sendero.interfaces.ActivationListener;
-import sendero.interfaces.BinaryConsumer;
-import sendero.interfaces.BinaryPredicate;
-import sendero.interfaces.ConsumerUpdater;
+import sendero.interfaces.*;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
@@ -224,7 +221,7 @@ public final class Builders {
 
         @Override
         public int hashCode() {
-            return Holders.SynthEqual.hashCodeOf(broadcast.hashAt(0), inputMethods.hashCode());
+            return SynthEqual.hashCodeOf(broadcast.hashAt(0), inputMethods.hashCode());
         }
 
         public static<T> ReceptorBuilder<T, T> exit(Consumer<? super T> consumer) {
@@ -297,6 +294,26 @@ public final class Builders {
                     inputMethod.type
             );
         }
+        static <S, T> BasePath.Receptor<S> getReceptor(
+                InputMethods<T, S> inputMethod,
+                BinaryPredicate<T> expectIn,
+                BinaryConsumer<T> consumer
+        ) {
+            return BasePath.Receptor.withManagerInput(
+                    BinaryEventConsumers.getManagerFor(expectIn, consumer),
+                    inputMethod.type
+            );
+        }
+        static <S, T> BasePath.Receptor<S> getReceptor(
+                InputMethods<T, S> inputMethod,
+                BinaryPredicate<T> expectIn,
+                Consumer<? super T> consumer
+        ) {
+            return BasePath.Receptor.withManagerInput(
+                    BinaryEventConsumers.getManagerFor(expectIn, consumer),
+                    inputMethod.type
+            );
+        }
     }
 
     public static class BinaryEventConsumers {
@@ -335,6 +352,19 @@ public final class Builders {
 
         public static<S, T> AtomicBinaryEvent producerListener(
                 BasePath<S> producer,
+                InputMethods<T, S> inputMethod,
+                Consumer<? super T> consumer
+        ) {
+            return producerListener(
+                    producer,
+                    inputMethod,
+                    BinaryPredicate.always(true),
+                    consumer
+            );
+        }
+
+        static<S, T> AtomicBinaryEvent producerListener(
+                BasePath<S> producer,
                 BasePath.Receptor<S> receptor
         ) {
             return new Appointer<>(producer,
@@ -354,11 +384,61 @@ public final class Builders {
             );
         }
 
-        static <T> Holders.StreamManager<T> getManagerFor(BinaryPredicate<T> expectIn, Container<T> target, BinaryConsumer<? super T> consumer) {
+        public static<S, T> AtomicBinaryEvent producerListener(
+                BasePath<S> producer,
+                InputMethods<T, S> inputMethod,
+                BinaryPredicate<T> expectIn,
+                BinaryConsumer<T> consumer
+        ) {
+            return new Appointer<>(producer,
+                    ReceptorBuilder.getReceptor(inputMethod, expectIn, consumer)
+            );
+        }
+
+        public static<S, T> AtomicBinaryEvent producerListener(
+                BasePath<S> producer,
+                InputMethods<T, S> inputMethod,
+                BinaryPredicate<T> expectIn,
+                Consumer<? super T> consumer
+        ) {
+            return new Appointer<>(producer,
+                    ReceptorBuilder.getReceptor(inputMethod, expectIn, consumer)
+            );
+        }
+
+        static <T> Holders.StreamManager<T> getManagerFor(
+                BinaryPredicate<T> expectIn,
+                Container<T> target,
+                BinaryConsumer<? super T> consumer
+        ) {
             return Holders.StreamManager.getManagerFor(
                     new Holders.Holder<>(
                             Holders.SwapBroadcast.fromBinaryConsumer(consumer),
                             target.getRef()
+                    ),
+                    expectIn
+            );
+        }
+
+        static <T> Holders.StreamManager<T> getManagerFor(
+                BinaryPredicate<T> expectIn,
+                BinaryConsumer<? super T> consumer
+        ) {
+            return Holders.StreamManager.getManagerFor(
+                    new Holders.Holder<>(
+                            Holders.SwapBroadcast.fromBinaryConsumer(consumer)
+                    ),
+                    expectIn
+            );
+        }
+
+        static <T> Holders.StreamManager<T> getManagerFor(
+                BinaryPredicate<T> expectIn,
+                Consumer<? super T> consumer
+        ) {
+            return Holders.StreamManager.getManagerFor(
+                    new Holders.Holder<>(
+                            Holders.SwapBroadcast.fromConsumer(consumer)
                     ),
                     expectIn
             );
@@ -372,6 +452,20 @@ public final class Builders {
                     BasePath.Receptor.withManagerInput(
                             Holders.StreamManager.baseManager(
                                     Holders.SwapBroadcast.fromBinaryConsumer(consumer)
+                            ),
+                            InputMethod.Type.identity()
+                    )
+            );
+        }
+
+        public static<T> AtomicBinaryEvent producerListener(
+                BasePath<T> producer,
+                Consumer<? super T> consumer
+        ) {
+            return new Appointer<>(producer,
+                    BasePath.Receptor.withManagerInput(
+                            Holders.StreamManager.baseManager(
+                                    Holders.SwapBroadcast.fromConsumer(consumer)
                             ),
                             InputMethod.Type.identity()
                     )
@@ -426,14 +520,14 @@ public final class Builders {
             ));
         }
 
-        static<S, T> AtomicBinaryEvent producerListener(
+        public static<S, T> AtomicBinaryEvent producerListener(
                 BasePath<S> producer,
-                BasePath<T> consumer,
-                InputMethod.Type<T, S> inputMethod
+                Holders.BaseBroadcaster<T> consumer,
+                InputMethods<T, S> inputMethod
         ) {
             return new Appointer<>(
                     producer,
-                    BasePath.Receptor.withManagerInput(consumer.getManager(), inputMethod)
+                    BasePath.Receptor.withManagerInput(consumer.getManager(), inputMethod.type)
             );
         }
 

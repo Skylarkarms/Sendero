@@ -13,6 +13,10 @@ public interface BinaryPredicate<T> extends BiPredicate<T, T> {
         return (next, prev) -> !test(next, prev);
     }
 
+    default boolean alwaysTrue() {
+        return this == Functions.binaryAlwaysTrue;
+    }
+
     static<T> BinaryPredicate<T> always(boolean value) {
         return Functions.binaryAlways(value);
     }

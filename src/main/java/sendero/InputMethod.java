@@ -2,6 +2,7 @@ package sendero;
 
 
 import sendero.functions.Functions;
+import sendero.interfaces.SynthEqual;
 
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -15,7 +16,7 @@ interface InputMethod<T> extends Holders.ColdConsumer<T> {
      * since a single parameter defines the function, equality can be checked directly ==
      * as the synthetic factory will reuse the instance when the same function is passed.*/
     @FunctionalInterface
-    interface Type<M, S> extends Holders.SynthEqual {
+    interface Type<M, S> extends SynthEqual {
         void acceptorMethod(InputMethod<M> method, Immutable<S> param);
         Type<?, ?> identity = Consumer::accept;
         default boolean isIdentity() {

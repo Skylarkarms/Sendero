@@ -15,6 +15,8 @@ public final class Merge<T> extends Path<T> implements BaseMerge<T> {
     private final ExitAppointers<T, Entry<T>> exitAppointers;
 
     private final Updater<T> updater = Inputs.getUpdater(this);
+    private final Function<Entry<T>, AtomicBinaryEvent> entryAtomicBinaryEventFunction
+            = tEntry -> tEntry.getJointAppointer(updater);
 
     public Merge() {
         this(myIdentity());
@@ -30,8 +32,8 @@ public final class Merge<T> extends Path<T> implements BaseMerge<T> {
                  Entry<T>...entries
     ) {
         super(operator);
-        this.exitAppointers = new ExitAppointers<T, Entry<T>>(this::isActive,
-                tEntry -> tEntry.getJointAppointer(updater),
+        this.exitAppointers = new ExitAppointers<>(this::isActive,
+                entryAtomicBinaryEventFunction,
                 entries
         );
     }
@@ -62,7 +64,7 @@ public final class Merge<T> extends Path<T> implements BaseMerge<T> {
     public void from(Entry<T> entry) {
         exitAppointers.add(
                 entry,
-                exit -> exit.getJointAppointer(updater)
+                entryAtomicBinaryEventFunction
         );
     }
 
@@ -77,5 +79,13 @@ public final class Merge<T> extends Path<T> implements BaseMerge<T> {
         return exitAppointers.remove(entry) != Removed.failed;
     }
 
+    @Override
+    public String toString() {
+        return "Merge{" +
+                "\n exitAppointers=" + exitAppointers +
+                ",\n super{" + super.toString() +
+                "\n   }" +
+                "\n }@" + hashCode();
+    }
 }
 

@@ -121,4 +121,11 @@ final class ExitAppointers<S, Entry> implements AtomicBinaryEvent{
     public void clear() {
         appointers.clear();
     }
+
+    @Override
+    public String toString() {
+        return "ExitAppointers{" +
+                "\n appointers=" + appointers +
+                "\n }";
+    }
 }

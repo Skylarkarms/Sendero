@@ -158,6 +158,27 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             );
         }
 
+        public Bound(
+                BasePath<T> fixedPath
+        ) {
+            this(
+                    myIdentity(),
+                    fixedPath,
+                    myIdentity()
+            );
+        }
+
+        public Bound(
+                UnaryOperator<Builders.HolderBuilder<T>> builder,
+                BasePath<T> fixedPath
+        ) {
+            this(
+                    builder,
+                    fixedPath,
+                    myIdentity()
+            );
+        }
+
         public <S> Bound(
                 UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
                 BasePath<S> fixedPath,

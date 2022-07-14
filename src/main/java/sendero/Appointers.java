@@ -93,7 +93,7 @@ public class Appointers {
 
         @Override
         public <S, P extends BasePath<S>> AtomicBinaryEvent bind(P basePath, Builders.InputMethods<T, S> inputMethod) {
-            final AtomicUtils.Witness<AtomicBinaryEvent> witness = AtomicUtils.contentiousCAS(
+            final AtomicUtils.Witness<AtomicBinaryEvent> witness = AtomicUtils.setIf(
                     appointerSwapCore.swappableAppointer,
                     prev -> prev == AtomicBinaryEvent.DEFAULT || !((Appointer<?>)prev).equalTo(basePath, inputMethod.type),
                     appointer -> Builders.BinaryEventConsumers.producerListener(

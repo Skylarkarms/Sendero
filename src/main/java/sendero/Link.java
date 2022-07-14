@@ -6,6 +6,8 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
+import static sendero.functions.Functions.myIdentity;
+
 public class Link<T> extends Path<T> implements BaseLink {
 
     private <S> Link(
@@ -127,7 +129,7 @@ public class Link<T> extends Path<T> implements BaseLink {
                 BiFunction<T, S, T> update
         ) {
             this(
-                    UnaryOperator.identity(),
+                    myIdentity(),
                     fixedPath,
                     update
             );
@@ -162,9 +164,30 @@ public class Link<T> extends Path<T> implements BaseLink {
                 Function<S, T> map
         ) {
             this(
-                    UnaryOperator.identity(),
+                    myIdentity(),
                     fixedPath,
                     map
+            );
+        }
+
+        public Bound(
+                BasePath<T> fixedPath
+        ) {
+            this(
+                    myIdentity(),
+                    fixedPath,
+                    myIdentity()
+            );
+        }
+
+        public Bound(
+                UnaryOperator<Builders.HolderBuilder<T>> builder,
+                BasePath<T> fixedPath
+        ) {
+            this(
+                    builder,
+                    fixedPath,
+                    myIdentity()
             );
         }
 

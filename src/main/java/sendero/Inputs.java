@@ -12,6 +12,14 @@ import static sendero.functions.Functions.binaryAlwaysTrue;
 
 public class Inputs<T> {
     private final Holders.Holder<T> baseColdHolderBroadcaster;
+
+    @Override
+    public String toString() {
+        return "Inputs{" +
+                "\n baseColdHolderBroadcaster=" + baseColdHolderBroadcaster +
+                "\n }";
+    }
+
     private final BinaryPredicate<T> testIn;
     private static final Object INVALID = new Object();
 

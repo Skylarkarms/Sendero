@@ -28,20 +28,28 @@ public final class AtomicUtils {
         }
     }
 
-    /**
-     * Will retry until match.
-     * <br>
-     * @return next == null if:
-     * <li> A) update == false;
+    private static final Object VOID = new Object();
+    @SuppressWarnings("unchecked")
+    private static<S> S getVoid() {
+        return (S) VOID;
+    }
+
+    /**If test == true, attempts to set: <p>
+     *   If set fails returns (null, null)<p>
+     *   if set succeeds returns (prev, next)<p>
+     *if test == false, checks contention: <p>
+     *     if contention met, retries.<p>
+     *     if no contention met returns(prev, null)
      * */
-    public static<T> Witness<T> contentiousCAS(
+    public static<T> Witness<T> setIf(
             AtomicReference<T> ref,
-            Predicate<T> updateIf,
+            Predicate<T> test,
             UnaryOperator<T> nextMap
     ) {
-        T prev = null, next;
+        T prev = getVoid(), next;
+//        T prev = null, next;
         while (prev != (prev = ref.get())) {
-            if (updateIf.test(prev)) {
+            if (test.test(prev)) {
                 next = nextMap.apply(prev);
                 if (ref.compareAndSet(prev, next)) return new Witness<>(prev, next);
                 else return new Witness<>(null, null);

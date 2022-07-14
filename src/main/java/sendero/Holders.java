@@ -3,8 +3,10 @@ package sendero;
 import sendero.atomics.AtomicScheduler;
 import sendero.atomics.AtomicUtils;
 import sendero.executor.DelayedServiceExecutor;
+import sendero.functions.Functions;
 import sendero.interfaces.BinaryConsumer;
 import sendero.interfaces.BinaryPredicate;
+import sendero.interfaces.SynthEqual;
 import sendero.interfaces.Updater;
 import sendero.pairs.Pair;
 import sendero.threshold_listener.ThresholdListeners;
@@ -20,8 +22,6 @@ import java.util.function.*;
 
 import static sendero.Holders.SwapBroadcast.NO_DELAY;
 import static sendero.Immutable.getNotSet;
-import static sendero.functions.Functions.alwaysTrue;
-import static sendero.functions.Functions.binaryAlwaysTrue;
 
 final class Holders {
 
@@ -35,39 +35,39 @@ final class Holders {
         }
     }
 
-    private static Object paramAt(SynthEqual self, int at) {
-        try {
-            return self.getClass().getDeclaredFields()[at].get(self);
-        } catch (IllegalAccessException e) {
-            throw new IllegalStateException(e);
-        }
-    }
+//    private static Object paramAt(SynthEqual self, int at) {
+//        try {
+//            return self.getClass().getDeclaredFields()[at].get(self);
+//        } catch (IllegalAccessException e) {
+//            throw new IllegalStateException(e);
+//        }
+//    }
 
-    interface SynthEqual {
-        static int hashCodeOf(int... hashCodes) {
-            if (hashCodes == null)
-                return 0;
-
-            int result = 1;
-
-            for (int hashes : hashCodes)
-                result = 31 * result + hashes;
-
-            return result;
-        }
-
-        default <S> boolean equalTo(int at, S arg) {
-            return paramAt(this, at).equals(arg);
-        }
-
-        default<S> boolean equalTo(int at, SynthEqual that) {
-            return that != null && paramAt(this, at).equals(paramAt(that, at));
-        }
-
-        default int hashAt(int at) {
-            return paramAt(this, at).hashCode();
-        }
-    }
+//    interface SynthEqual {
+//        static int hashCodeOf(int... hashCodes) {
+//            if (hashCodes == null)
+//                return 0;
+//
+//            int result = 1;
+//
+//            for (int hashes : hashCodes)
+//                result = 31 * result + hashes;
+//
+//            return result;
+//        }
+//
+//        default <S> boolean equalTo(int at, S arg) {
+//            return paramAt(this, at).equals(arg);
+//        }
+//
+//        default<S> boolean equalTo(int at, SynthEqual that) {
+//            return that != null && paramAt(this, at).equals(paramAt(that, at));
+//        }
+//
+//        default int hashAt(int at) {
+//            return paramAt(this, at).hashCode();
+//        }
+//    }
 
     @FunctionalInterface
     interface SwapBroadcast<T> extends SynthEqual {
@@ -176,7 +176,8 @@ final class Holders {
         }
         ColdReceptorManager(Holder<T> holder, BinaryPredicate<T> test) {
             this.immutableWrite = holder;
-            receptor = test != binaryAlwaysTrue ?
+            receptor = test.alwaysTrue() ?
+//            receptor = test != binaryAlwaysTrue ?
                     (topValues, topData) -> {
                         Immutable<T> prev;
                         Immutable.Values.LesserThan res;
@@ -250,6 +251,10 @@ final class Holders {
             if (!Objects.equals(prev, DEFAULT_TAG)) throw new IllegalStateException("This holder already has a TAG: " + prev);
         }
 
+        String getTag() {
+            return TAGRef.get();
+        }
+
         String getAndClearTag() {
             return TAGRef.getAndSet(DEFAULT_TAG);
         }
@@ -301,7 +306,7 @@ final class Holders {
             return "BaseColdHolder{" +
                     "\n reference=" + reference.get().toString() +
                     "\n TAG=" + TAGRef.get() +
-                    "\n}: This is: " + getClass().getSimpleName() + "@" + hashCode();
+                    "\n}@" + hashCode();
         }
     }
 
@@ -354,7 +359,8 @@ final class Holders {
         }
 
         private SwapBroadcast<T> build(Predicate<T> expectOut) {
-            return expectOut == alwaysTrue ?
+            return Functions.truePredicate(expectOut) ?
+//            return expectOut == alwaysTrue ?
                     (prev, next, delay) -> {
                         onSwapped(prev, next.get());
                         broadcast(next, delay);
@@ -372,20 +378,14 @@ final class Holders {
         void updaterSet() {
             if (!inputSet) {
                 inputSet = true;
-            } else throw new IllegalStateException("This BasePath already has an Input source attached.");
+            } else throw new IllegalStateException("This BasePath already has an Updater source attached to this: " + this);
         }
 
         void acceptorSet() {
             if (!holderHeld.compareAndSet(false, true))
-                throw new IllegalStateException("This BasePath already has an Input source attached.");
+                throw new IllegalStateException("This BasePath already has a source of type Consumer (StreamManager OR Consumer) attached to this: " + this);
         }
 
-//        void inputSet() {
-//            if (!inputSet) {
-//                inputSet = true;
-//            } else throw new IllegalStateException("This BasePath already has an Input source attached.");
-//        }
-//
         @FunctionalInterface
         private interface SnapConsumer<T> {
             void accept(Immutable<T> current, Immutable.Values values, ColdConsumer<T> consumer);
@@ -404,7 +404,8 @@ final class Holders {
         }
 
         private SnapConsumer<T> builder(Predicate<T> expectOut) {
-            return expectOut == alwaysTrue ?
+            return Functions.truePredicate(expectOut) ?
+//            return expectOut == alwaysTrue ?
                     (currentSnap, values, consumer) -> {
                         if (currentSnap.isSet() && currentSnap.match(values)) {
                             consumer.accept(currentSnap);
@@ -445,6 +446,13 @@ final class Holders {
             if (delay == NO_DELAY) coldDispatch(next);
             else dispatch(delay, next);
         }
+
+        @Override
+        public String toString() {
+            return "BaseBroadcaster{" +
+                    "\n   holder=" + holder +
+                    "\n }";
+        }
     }
 
     static class ActivationHolder<T> extends BaseBroadcaster<T> {
@@ -453,9 +461,10 @@ final class Holders {
 
         @Override
         public String toString() {
-            return "ActivationHolder{" +
-                    "\n activationManager=" + activationManager +
-                    '}';
+            return super.toString() +
+                    "\n ActivationHolder{" +
+                    "\n   activationManager=" + activationManager +
+                    "\n }";
         }
 
         boolean deactivationRequirements() {

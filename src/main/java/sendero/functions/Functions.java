@@ -81,7 +81,7 @@ public final class Functions {
     public static Runnable emptyRunnable() {
         return emptyRunnable;
     }
-    public static final Predicate<?> alwaysTrue = new Predicate<Object>() {
+    private static final Predicate<?> alwaysTrue = new Predicate<Object>() {
         @Override
         public boolean test(Object next) {
             return true;
@@ -97,6 +97,10 @@ public final class Functions {
     @SuppressWarnings("unchecked")
     public static<T> Predicate<T> always(boolean fixed) {
         return fixed ? (Predicate<T>) alwaysTrue : t -> false;
+    }
+
+    public static boolean truePredicate(Predicate<?> predicate) {
+        return predicate == alwaysTrue;
     }
 
 }
