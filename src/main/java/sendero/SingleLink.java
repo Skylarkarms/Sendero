@@ -1,7 +1,9 @@
 package sendero;
 
+import sendero.functions.Functions;
 import sendero.interfaces.Updater;
 
+import java.lang.reflect.Array;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -194,32 +196,47 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
         public static class In<T> extends Bound<T> implements Updater<T> {
 
             private final Updater<T> updater = Inputs.getUpdater(this);
+            private final Runnable defaulter;
 
-            public  <S> In(
+            public void setDefault() {
+                defaulter.run();
+            }
+
+            public static <S, T> In<T> get(
                     BasePath<S> fixedPath,
                     BiFunction<T, S, T> update
             ) {
-                this(
-                        myIdentity(),
-                        fixedPath,
-                        update
-                );
+                return get(myIdentity(), fixedPath, update);
             }
 
-            public  <S> In(
+            @SuppressWarnings("unchecked")
+            public static <S, T> In<T> get(
                     UnaryOperator<Builders.HolderBuilder<T>> operator,
                     BasePath<S> fixedPath,
                     BiFunction<T, S, T> update
             ) {
+                final Runnable[] defaulter = new Runnable[]{
+                        Functions.emptyRunnable()
+                };
+                final Updater<T>[] res = (Updater<T>[]) new Updater[1];
+                final BiFunction<T, S, T> mediator = (t, s) -> {
+                    T next = update.apply(t, s);
+                    defaulter[0] = () -> res[0].update(0, t1 -> next);
+                    return next;
+                };
+                final In<T> reif = new In<T>(operator, fixedPath, mediator, defaulter[0]);
+                res[0] = reif;
+                return reif;
+            }
+
+            private <S> In(
+                    UnaryOperator<Builders.HolderBuilder<T>> operator,
+                    BasePath<S> fixedPath,
+                    BiFunction<T, S, T> update,
+                    Runnable defaulter
+            ) {
                 super(operator, fixedPath, update);
-            }
-
-            public <S> In(BasePath<S> fixedPath, Function<S, T> map) {
-                this(myIdentity(), fixedPath, map);
-            }
-
-            public <S> In(UnaryOperator<Builders.HolderBuilder<T>> operator, BasePath<S> fixedPath, Function<S, T> map) {
-                super(operator, fixedPath, map);
+                this.defaulter = defaulter;
             }
 
             @Override
