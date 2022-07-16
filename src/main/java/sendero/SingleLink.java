@@ -1,11 +1,8 @@
 package sendero;
 
-import sendero.functions.Functions;
-import sendero.interfaces.Updater;
-
-import java.lang.reflect.Array;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
 import static sendero.functions.Functions.myIdentity;
@@ -75,6 +72,11 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             super(operator, true);
         }
 
+        private <S> Unbound(UnaryOperator<Builders.HolderBuilder<T>> builderOperator, BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
+            super(builderOperator, basePath, updateFun);
+        }
+
+
         @Override
         public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
             baseUnbound.switchMap(path, switchMap);
@@ -90,25 +92,53 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             return baseUnbound.bind(basePath, inputMethod);
         }
 
-        public static class In<T> extends Unbound<T> implements Updater<T> {
-            private final Updater<T> updater = Inputs.getUpdater(this);
+        public static class In<T> extends Unbound<T> implements sendero.interfaces.In<T> {
 
-            public In() {
-                super();
+            private final InImpl<T> impl;
+
+            @Override
+            public void setDefault() {
+                impl.setDefault();
             }
 
-            public In(UnaryOperator<Builders.HolderBuilder<T>> operator) {
-                super(operator);
+            public static <S, T> SingleLink.Unbound.In<T> get(
+                    BasePath<S> fixedPath,
+                    BiFunction<T, S, T> update
+            ) {
+                return get(myIdentity(), fixedPath, update);
+            }
+
+            public static <S, T> SingleLink.Unbound.In<T> get(
+                    UnaryOperator<Builders.HolderBuilder<T>> operator,
+                    BasePath<S> fixedPath,
+                    BiFunction<T, S, T> update
+            ) {
+                return (SingleLink.Unbound.In<T>) InImpl.factory(
+                        update,
+                        (BiFunction<BiFunction<T, S, T>, Supplier<Runnable>, sendero.interfaces.In<T>>)
+                                (tstBiFunction, runnableSupplier) ->
+                                        new SingleLink.Unbound.In<>(operator, fixedPath, tstBiFunction, runnableSupplier)
+                );
+            }
+
+            private <S> In(
+                    UnaryOperator<Builders.HolderBuilder<T>> operator,
+                    BasePath<S> fixedPath,
+                    BiFunction<T, S, T> update,
+                    Supplier<Runnable> defaulter
+            ) {
+                super(operator, fixedPath, update);
+                impl = new InImpl<>(this, defaulter);
             }
 
             @Override
             public T updateAndGet(UnaryOperator<T> update) {
-                return updater.updateAndGet(update);
+                return impl.updateAndGet(update);
             }
 
             @Override
             public void update(long delay, UnaryOperator<T> update) {
-                updater.update(delay, update);
+                impl.update(delay, update);
             }
         }
     }
@@ -193,13 +223,13 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
             );
         }
 
-        public static class In<T> extends Bound<T> implements Updater<T> {
+        public static class In<T> extends Bound<T> implements sendero.interfaces.In<T> {
 
-            private final Updater<T> updater = Inputs.getUpdater(this);
-            private final Runnable defaulter;
+            private final InImpl<T> impl;
 
+            @Override
             public void setDefault() {
-                defaulter.run();
+                impl.setDefault();
             }
 
             public static <S, T> In<T> get(
@@ -209,44 +239,37 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
                 return get(myIdentity(), fixedPath, update);
             }
 
-            @SuppressWarnings("unchecked")
             public static <S, T> In<T> get(
                     UnaryOperator<Builders.HolderBuilder<T>> operator,
                     BasePath<S> fixedPath,
                     BiFunction<T, S, T> update
             ) {
-                final Runnable[] defaulter = new Runnable[]{
-                        Functions.emptyRunnable()
-                };
-                final Updater<T>[] res = (Updater<T>[]) new Updater[1];
-                final BiFunction<T, S, T> mediator = (t, s) -> {
-                    T next = update.apply(t, s);
-                    defaulter[0] = () -> res[0].update(0, t1 -> next);
-                    return next;
-                };
-                final In<T> reif = new In<T>(operator, fixedPath, mediator, defaulter[0]);
-                res[0] = reif;
-                return reif;
+                return (In<T>) InImpl.factory(
+                        update,
+                        (BiFunction<BiFunction<T, S, T>, Supplier<Runnable>, sendero.interfaces.In<T>>)
+                                (tstBiFunction, runnableSupplier) ->
+                                        new In<>(operator, fixedPath, tstBiFunction, runnableSupplier)
+                );
             }
 
             private <S> In(
                     UnaryOperator<Builders.HolderBuilder<T>> operator,
                     BasePath<S> fixedPath,
                     BiFunction<T, S, T> update,
-                    Runnable defaulter
+                    Supplier<Runnable> defaulter
             ) {
                 super(operator, fixedPath, update);
-                this.defaulter = defaulter;
+                impl = new InImpl<>(this, defaulter);
             }
 
             @Override
             public T updateAndGet(UnaryOperator<T> update) {
-                return updater.updateAndGet(update);
+                return impl.updateAndGet(update);
             }
 
             @Override
             public void update(long delay, UnaryOperator<T> update) {
-                updater.update(delay, update);
+                impl.update(delay, update);
             }
         }
     }
