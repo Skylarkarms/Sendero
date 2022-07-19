@@ -119,6 +119,10 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         static<S, T> Receptor<T> withManagerInput(Holders.StreamManager<S> manager, InputMethod.Type<S, T> type) {
             return new ReceptorInputMethod<>(manager, type);
         }
+
+        static<T> Receptor<T> withManagerInput(Holders.StreamManager<T> manager) {
+            return new ReceptorInputMethod<>(manager, InputMethod.Type.identity());
+        }
     }
     static final class ReceptorInputMethod<T> implements Receptor<T> {
         private final Holders.StreamManager<?> coreReceptor;

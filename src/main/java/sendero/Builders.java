@@ -458,8 +458,22 @@ public final class Builders {
                     BasePath.Receptor.withManagerInput(
                             Holders.StreamManager.baseManager(
                                     Holders.SwapBroadcast.fromBinaryConsumer(consumer)
-                            ),
-                            InputMethod.Type.identity()
+                            )
+                    )
+            );
+        }
+
+        public static<T> AtomicBinaryEvent producerListener(
+                BasePath<T> producer,
+                Consumer<Runnable> executor,
+                BinaryConsumer<? super T> consumer
+        ) {
+            return new Appointer<>(producer,
+                    BasePath.Receptor.withManagerInput(
+                            Holders.StreamManager.getManagerFor(
+                                    executor,
+                                    Holders.SwapBroadcast.fromBinaryConsumer(consumer)
+                            )
                     )
             );
         }
@@ -472,8 +486,7 @@ public final class Builders {
                     BasePath.Receptor.withManagerInput(
                             Holders.StreamManager.baseManager(
                                     Holders.SwapBroadcast.fromConsumer(consumer)
-                            ),
-                            InputMethod.Type.identity()
+                            )
                     )
             );
         }
