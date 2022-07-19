@@ -1,45 +1,59 @@
 package sendero;
 
+import sendero.abstract_containers.Pair;
 import sendero.functions.Functions;
 import sendero.interfaces.In;
 import sendero.interfaces.Updater;
 
-import java.util.function.BiFunction;
-import java.util.function.Supplier;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 class InImpl<T> implements In<T> {
     private final Updater<T> updater;
-    private final Supplier<Runnable> defaulter;
+    private final AtomicReference<Runnable> defaulter = new AtomicReference<>(Functions.emptyRunnable());
 
-    /**Prepares the initialization of the defaulter to overcome "THIS"*/
-    @SuppressWarnings("unchecked")
-    static<S, T, Ext extends In<T>> Ext factory(
-            BiFunction<T, S, T> update,
-            BiFunction<BiFunction<T, S, T>,Supplier<Runnable>, Ext> constructorFun
+    static<Fun, T> Fun defaulterCoupler(
+            AtomicReference<Runnable> runnableFun,
+            Updater<T> updater,
+            Function<Consumer<T>, Fun> mediatorFun
     ) {
-        final Runnable[] defaulter = new Runnable[]{
-                Functions.emptyRunnable()
-        };
-        final Updater<T>[] res = (Updater<T>[]) new Updater[1];
-        final BiFunction<T, S, T> mediator = (t, s) -> {
-            T next = update.apply(t, s);
-            defaulter[0] = () -> res[0].update(0, t1 -> next);
-            return next;
-        };
-        final Ext reif = constructorFun.apply(mediator, () -> defaulter[0]);
-        res[0] = reif;
-        return reif;
+        final Consumer<T> nextConsumer = t -> runnableFun.set(
+                () -> updater.update(0, t1 -> t)
+        );
+        return mediatorFun.apply(nextConsumer);
     }
 
-    public InImpl(Holders.BaseBroadcaster<T> broadcaster, Supplier<Runnable> defaulter) {
+    static<Fun, T> Pair.Immutables<AtomicReference<Runnable>, Fun> transientSourceFactory(
+            Function<AtomicReference<Runnable>, Fun> mediatorSupplier
+    ) {
+        AtomicReference<Runnable> init = new AtomicReference<>(Functions.emptyRunnable());
+        final Fun mediator = mediatorSupplier.apply(init);
+        return new Pair.Immutables<>(init, mediator);
+    }
+
+    public InImpl(Holders.BaseBroadcaster<T> broadcaster) {
         updater = Inputs.getUpdater(broadcaster);
-        this.defaulter = defaulter;
     }
 
     @Override
     public void setDefault() {
         defaulter.get().run();
+    }
+
+    private void setDefaulter(Runnable newDefaulter) {
+        defaulter.set(newDefaulter);
+    }
+
+    void onSwapped(SourceType type, T next) {
+        if (type == SourceType.stream) setDefaulter(
+                () -> updateAndGet(currentPrev -> next)
+        );
+    }
+
+    void clearDefault() {
+        setDefaulter(Functions.emptyRunnable());
     }
 
     @Override

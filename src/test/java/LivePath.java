@@ -2,7 +2,7 @@ import sendero.*;
 import sendero.AtomicBinaryEventConsumer;
 import sendero.interfaces.BinaryPredicate;
 import sendero.interfaces.Updater;
-import sendero.pairs.Pair;
+import sendero.abstract_containers.Pair;
 
 import java.util.HashMap;
 import java.util.Map;

@@ -1,4 +1,6 @@
-package sendero.pairs;
+package sendero.abstract_containers;
+
+import java.util.Objects;
 
 public final class Pair {
 
@@ -65,6 +67,19 @@ public final class Pair {
                 this.aBoolean = aBoolean;
                 this.value = value;
             }
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            Immutables<?, ?> that = (Immutables<?, ?>) o;
+            return Objects.equals(firstValue, that.firstValue) && Objects.equals(secondValue, that.secondValue);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(firstValue, secondValue);
         }
     }
 

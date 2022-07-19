@@ -7,6 +7,7 @@ import sendero.interfaces.SynthEqual;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 interface InputMethod<T> extends Holders.ColdConsumer<T> {
     <S> void accept(Immutable<S> immutable, Function<S, T> map);
@@ -33,6 +34,10 @@ interface InputMethod<T> extends Holders.ColdConsumer<T> {
         }
         static <S, R> Type<S, R> update(BiFunction<S, R, S> update) {
             return (method, param) -> method.accept(param, update);
+        }
+
+        static <S> Type<S, S> accessIdentity(UnaryOperator<S> identityOp) {
+            return (method, param) -> method.accept(param, identityOp);
         }
     }
 }

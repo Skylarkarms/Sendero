@@ -1,31 +1,13 @@
 package sendero;
 
 
+import sendero.abstract_containers.Pair;
 import sendero.lists.SimpleLists;
-import sendero.pairs.Pair;
 
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
 class Appointer<A> extends AtomicBinaryEventConsumer {
-//    public static final Appointer<?> CLEARED_APPOINTER = new Appointer<Object>(null, null) {
-//
-//        @Override
-//        public boolean on() {
-//            return false;
-//        }
-//
-//        @Override
-//        public boolean start() {
-//            return false;
-//        }
-//
-//        @Override
-//        public boolean isDefault() {
-//            return true;
-//        }
-//    };
-
     final BasePath<A> producer;
     final BasePath.Receptor<A> receptor;
 

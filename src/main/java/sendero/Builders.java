@@ -179,11 +179,17 @@ public final class Builders {
             return new InputMethods<>(InputMethod.Type.update(update));
         }
 
+        private static final InputMethods<?, ?> identity = new InputMethods<>(InputMethod.Type.identity());
+
+        boolean isIdentity() {
+            return this == identity;
+        }
+        @SuppressWarnings("unchecked")
         public static <T> InputMethods<T, T> identity() {
-            return new InputMethods<>(InputMethod.Type.identity());
+            return (InputMethods<T, T>) identity;
         }
 
-        private InputMethods(InputMethod.Type<M, T> type) {
+        InputMethods(InputMethod.Type<M, T> type) {
             this.type = type;
         }
 

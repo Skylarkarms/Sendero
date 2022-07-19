@@ -2,20 +2,15 @@ package sendero;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
 import static sendero.functions.Functions.myIdentity;
 
 public class SingleLink<T> extends SinglePath<T> implements BaseLink{
 
-    private SingleLink() {
-        this(myIdentity(), true);
-    }
-
-    public SingleLink(UnaryOperator<Builders.HolderBuilder<T>> builderOperator, boolean mutableManager) {
+    public SingleLink(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
         super(builderOperator,
-                Builders.ManagerBuilder.isMutable(mutableManager)
+                Builders.ManagerBuilder.mutable()
         );
     }
 
@@ -62,20 +57,16 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
 
     public static class Unbound<T> extends SingleLink<T> implements UnboundLink<T> {
 
-        final BaseUnbound<T> baseUnbound = new BaseUnbound<>(this);
+        final BaseUnbound<T> baseUnbound;
 
         public Unbound() {
-            super();
+            this(myIdentity());
         }
 
         public Unbound(UnaryOperator<Builders.HolderBuilder<T>> operator) {
-            super(operator, true);
+            super(operator);
+            baseUnbound = new BaseUnbound<>(this);
         }
-
-        private <S> Unbound(UnaryOperator<Builders.HolderBuilder<T>> builderOperator, BasePath<S> basePath, BiFunction<T, S, T> updateFun) {
-            super(builderOperator, basePath, updateFun);
-        }
-
 
         @Override
         public <S> void switchMap(BasePath<S> path, Function<S, ? extends BasePath<T>> switchMap) {
@@ -101,34 +92,24 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
                 impl.setDefault();
             }
 
-            public static <S, T> SingleLink.Unbound.In<T> get(
-                    BasePath<S> fixedPath,
-                    BiFunction<T, S, T> update
-            ) {
-                return get(myIdentity(), fixedPath, update);
+            public In() {
+                this(myIdentity());
             }
 
-            public static <S, T> SingleLink.Unbound.In<T> get(
-                    UnaryOperator<Builders.HolderBuilder<T>> operator,
-                    BasePath<S> fixedPath,
-                    BiFunction<T, S, T> update
-            ) {
-                return (SingleLink.Unbound.In<T>) InImpl.factory(
-                        update,
-                        (BiFunction<BiFunction<T, S, T>, Supplier<Runnable>, sendero.interfaces.In<T>>)
-                                (tstBiFunction, runnableSupplier) ->
-                                        new SingleLink.Unbound.In<>(operator, fixedPath, tstBiFunction, runnableSupplier)
-                );
+            public In(UnaryOperator<Builders.HolderBuilder<T>> operator) {
+                super(operator);
+                impl = new InImpl<>(this);
             }
 
-            private <S> In(
-                    UnaryOperator<Builders.HolderBuilder<T>> operator,
-                    BasePath<S> fixedPath,
-                    BiFunction<T, S, T> update,
-                    Supplier<Runnable> defaulter
-            ) {
-                super(operator, fixedPath, update);
-                impl = new InImpl<>(this, defaulter);
+            @Override
+            protected void onSwapped(SourceType type, T prev, T next) {
+                impl.onSwapped(type, next);
+            }
+
+            @Override
+            public boolean unbound() {
+                impl.clearDefault();
+                return super.unbound();
             }
 
             @Override
@@ -232,34 +213,25 @@ public class SingleLink<T> extends SinglePath<T> implements BaseLink{
                 impl.setDefault();
             }
 
-            public static <S, T> In<T> get(
-                    BasePath<S> fixedPath,
-                    BiFunction<T, S, T> update
-            ) {
-                return get(myIdentity(), fixedPath, update);
-            }
-
-            public static <S, T> In<T> get(
+            public <S> In(
                     UnaryOperator<Builders.HolderBuilder<T>> operator,
                     BasePath<S> fixedPath,
                     BiFunction<T, S, T> update
-            ) {
-                return (In<T>) InImpl.factory(
-                        update,
-                        (BiFunction<BiFunction<T, S, T>, Supplier<Runnable>, sendero.interfaces.In<T>>)
-                                (tstBiFunction, runnableSupplier) ->
-                                        new In<>(operator, fixedPath, tstBiFunction, runnableSupplier)
-                );
-            }
-
-            private <S> In(
-                    UnaryOperator<Builders.HolderBuilder<T>> operator,
-                    BasePath<S> fixedPath,
-                    BiFunction<T, S, T> update,
-                    Supplier<Runnable> defaulter
             ) {
                 super(operator, fixedPath, update);
-                impl = new InImpl<>(this, defaulter);
+                impl = new InImpl<>(this);
+            }
+
+            public <S> In(
+                    BasePath<S> fixedPath,
+                    BiFunction<T, S, T> update
+            ) {
+                this(myIdentity(), fixedPath, update);
+            }
+
+            @Override
+            protected void onSwapped(SourceType type, T prev, T next) {
+                impl.onSwapped(type, next);
             }
 
             @Override

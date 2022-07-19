@@ -1,8 +1,8 @@
 package sendero;
 
+import sendero.abstract_containers.Pair;
 import sendero.event_registers.ConsumerRegisters;
 import sendero.lists.SimpleLists;
-import sendero.pairs.Pair;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

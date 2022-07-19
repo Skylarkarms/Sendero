@@ -1,5 +1,6 @@
 package sendero;
 
+import sendero.abstract_containers.Pair;
 import sendero.atomics.AtomicScheduler;
 import sendero.atomics.AtomicUtils;
 import sendero.executor.DelayedServiceExecutor;
@@ -8,7 +9,6 @@ import sendero.interfaces.BinaryConsumer;
 import sendero.interfaces.BinaryPredicate;
 import sendero.interfaces.SynthEqual;
 import sendero.interfaces.Updater;
-import sendero.pairs.Pair;
 import sendero.threshold_listener.ThresholdListeners;
 
 import java.util.Objects;
@@ -35,47 +35,10 @@ final class Holders {
         }
     }
 
-//    private static Object paramAt(SynthEqual self, int at) {
-//        try {
-//            return self.getClass().getDeclaredFields()[at].get(self);
-//        } catch (IllegalAccessException e) {
-//            throw new IllegalStateException(e);
-//        }
-//    }
-
-//    interface SynthEqual {
-//        static int hashCodeOf(int... hashCodes) {
-//            if (hashCodes == null)
-//                return 0;
-//
-//            int result = 1;
-//
-//            for (int hashes : hashCodes)
-//                result = 31 * result + hashes;
-//
-//            return result;
-//        }
-//
-//        default <S> boolean equalTo(int at, S arg) {
-//            return paramAt(this, at).equals(arg);
-//        }
-//
-//        default<S> boolean equalTo(int at, SynthEqual that) {
-//            return that != null && paramAt(this, at).equals(paramAt(that, at));
-//        }
-//
-//        default int hashAt(int at) {
-//            return paramAt(this, at).hashCode();
-//        }
-//    }
-
     @FunctionalInterface
     interface SwapBroadcast<T> extends SynthEqual {
         long NO_DELAY = -1, HOT = 0;
         void onSwapped(T prev, Immutable<T> next, long delay);
-        default void onSwapped(T prev, Immutable<T> next) {
-            onSwapped(prev, next, NO_DELAY);
-        }
 
         static<S> SwapBroadcast<S> fromConsumer(Consumer<? super S> consumer) {
             return (prev, next, delay) -> consumer.accept(next.get());
@@ -145,13 +108,13 @@ final class Holders {
             manager = Holders.StreamManager.baseManager(
                     coreConsumer
             );
-            /**Manager captured by the Thread instance,
+            /*Manager captured by the Thread instance,
              * fields bound to Thread */
             runnableFactory = (topValues, tInt) -> () -> manager.filterAccept(topValues, tInt);
         }
 
         @Override
-        /**Consumes on Executor thread*/
+        /*Consumes on Executor thread*/
         public void filterAccept(Immutable.Values topValues, UnaryOperator<T> topData) {
             executor.swap(
                     runnableFactory.apply(topValues, topData)
@@ -159,7 +122,7 @@ final class Holders {
         }
 
         @Override
-        /**Invalidates atomically*/
+        /*Invalidates atomically*/
         public void invalidate() {
             manager.invalidate();
         }
@@ -177,7 +140,6 @@ final class Holders {
         ColdReceptorManager(Holder<T> holder, BinaryPredicate<T> test) {
             this.immutableWrite = holder;
             receptor = test.alwaysTrue() ?
-//            receptor = test != binaryAlwaysTrue ?
                     (topValues, topData) -> {
                         Immutable<T> prev;
                         Immutable.Values.LesserThan res;
@@ -360,16 +322,17 @@ final class Holders {
 
         private SwapBroadcast<T> build(Predicate<T> expectOut) {
             return Functions.truePredicate(expectOut) ?
-//            return expectOut == alwaysTrue ?
                     (prev, next, delay) -> {
-                        onSwapped(prev, next.get());
-                        broadcast(next, delay);
+                        boolean noDelay = delay == NO_DELAY;
+                        solveOnSwapped(noDelay, prev, next.get());
+                        broadcast(noDelay, next, delay);
                     }
                     :
                     (prevVal, next, delay) -> {
                         T nextData = next.get();
-                        onSwapped(prevVal, nextData);
-                        if (expectOut.test(nextData)) broadcast(next, delay);
+                        boolean noDelay = delay == NO_DELAY;
+                        solveOnSwapped(noDelay, prevVal, nextData);
+                        if (expectOut.test(nextData)) broadcast(noDelay, next, delay);
                     };
         }
 
@@ -405,7 +368,6 @@ final class Holders {
 
         private SnapConsumer<T> builder(Predicate<T> expectOut) {
             return Functions.truePredicate(expectOut) ?
-//            return expectOut == alwaysTrue ?
                     (currentSnap, values, consumer) -> {
                         if (currentSnap.isSet() && currentSnap.match(values)) {
                             consumer.accept(currentSnap);
@@ -437,13 +399,28 @@ final class Holders {
         /**dispatch is triggered by client input*/
         void dispatch(long delay, Immutable<T> t) {}
 
-        @SuppressWarnings("EmptyMethod")
-        protected void onSwapped(T prev, T next) {}
+        /*Visibility won't matter.
+         * Making it volatile will impact performance.
+         * By making it non-volatile the impact will be just upon first concurrent race condition.
+         * */
+        private boolean solveType = true;
+        void solveOnSwapped(boolean noDelay, T prev, T next) {
+            if (solveType) onSwapped(noDelay ? SourceType.stream : SourceType.client, prev, next);
+        }
+
+        /** Delete super upon Override
+         * @param type Defines the source from which the signal is coming from.
+         * @param prev The previous value
+         * @param next The next value
+         * */
+        protected void onSwapped(SourceType type, T prev, T next) {
+            solveType = false;
+        }
 
         private void broadcast(
-                Immutable<T> next, long delay
+                boolean noDelay, Immutable<T> next, long delay
         ) {
-            if (delay == NO_DELAY) coldDispatch(next);
+            if (noDelay) coldDispatch(next);
             else dispatch(delay, next);
         }
 

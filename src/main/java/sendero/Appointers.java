@@ -10,26 +10,10 @@ import java.util.function.Function;
 import static sendero.Appointers.ConcurrentProducerSwapper.bindStart;
 
 public class Appointers {
-    static class AppointerSwapCore<T> implements Switchers.Switch {
-        /**Accessed via side effects, ignore warnings*/
-        final AtomicReference<AtomicBinaryEvent> swappableAppointer;
-        final Holders.StreamManager<T> streamManager;
-
+    static class AppointerSwapCore<T> extends AtomicReference<AtomicBinaryEvent> implements Switchers.Switch {
         AppointerSwapCore(
-                Holders.StreamManager<T> streamManager
         ) {
-            this(streamManager, AtomicBinaryEvent.DEFAULT);
-        }
-
-        AppointerSwapCore(
-                Holders.StreamManager<T> streamManager,
-                AtomicBinaryEvent fixedAppointer) {
-            this.swappableAppointer = new AtomicReference<>(fixedAppointer);
-            this.streamManager = streamManager;
-        }
-
-        private AtomicBinaryEvent get() {
-            return swappableAppointer.get();
+            super(AtomicBinaryEvent.DEFAULT);
         }
 
         @Override
@@ -50,8 +34,7 @@ public class Appointers {
         @Override
         public String toString() {
             return "AppointerSwapCore{" +
-                    "swappableProducer=" + swappableAppointer +
-                    ", streamManager=" + streamManager +
+                    "\n swappableProducer=" + get() +
                     '}';
         }
     }
@@ -59,16 +42,19 @@ public class Appointers {
     static class ConcurrentProducerSwapper<T> implements Switchers.Switch, UnboundPathListener<T> {
 
         final AppointerSwapCore<T> appointerSwapCore;
+        final Holders.StreamManager<T> streamManager;
+
 
         Holders.StreamManager<T> getStreamManager() {
-            return appointerSwapCore.streamManager;
+            return streamManager;
         }
 
 
         ConcurrentProducerSwapper(
                 Holders.StreamManager<T> recipient
         ) {
-            appointerSwapCore = new AppointerSwapCore<>(recipient);
+            appointerSwapCore = new AppointerSwapCore<>();
+            streamManager = recipient;
         }
 
         @Override
@@ -94,11 +80,11 @@ public class Appointers {
         @Override
         public <S, P extends BasePath<S>> AtomicBinaryEvent bind(P basePath, Builders.InputMethods<T, S> inputMethod) {
             final AtomicUtils.Witness<AtomicBinaryEvent> witness = AtomicUtils.setIf(
-                    appointerSwapCore.swappableAppointer,
+                    appointerSwapCore,
                     prev -> prev == AtomicBinaryEvent.DEFAULT || !((Appointer<?>)prev).equalTo(basePath, inputMethod.type),
                     appointer -> Builders.BinaryEventConsumers.producerListener(
                             basePath,
-                            appointerSwapCore.streamManager,
+                            streamManager,
                             inputMethod.type)
             );
             final AtomicBinaryEvent next = witness.next;
@@ -107,13 +93,14 @@ public class Appointers {
         }
 
         public AtomicBinaryEvent getAndClear() {
-            return appointerSwapCore.swappableAppointer.getAndSet(AtomicBinaryEvent.DEFAULT);
+            return appointerSwapCore.getAndSet(AtomicBinaryEvent.DEFAULT);
         }
 
         @Override
         public String toString() {
             return "ConcurrentProducerSwapper{" +
-                    "appointerSwapCore=" + appointerSwapCore +
+                    "\n appointerSwapCore=" + appointerSwapCore +
+                    ",\n streamManager= " + streamManager +
                     '}';
         }
     }
@@ -149,7 +136,7 @@ public class Appointers {
 
         @Override
         public void stopAndClearPath() {
-            appointerSwapCore.swappableAppointer.getAndSet(AtomicBinaryEvent.DEFAULT).shutoff();
+            appointerSwapCore./*swappableAppointer.*/getAndSet(AtomicBinaryEvent.DEFAULT).shutoff();
         }
 
         @Override
