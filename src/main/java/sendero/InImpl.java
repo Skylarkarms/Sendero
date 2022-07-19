@@ -62,6 +62,11 @@ class InImpl<T> implements In<T> {
     }
 
     @Override
+    public T getAndUpdate(UnaryOperator<T> update) {
+        return updater.getAndUpdate(update);
+    }
+
+    @Override
     public void update(long delay, UnaryOperator<T> update) {
         updater.update(delay, update);
     }

@@ -118,6 +118,11 @@ public class Link<T> extends Path<T> implements BaseLink {
             }
 
             @Override
+            public T getAndUpdate(UnaryOperator<T> update) {
+                return impl.getAndUpdate(update);
+            }
+
+            @Override
             public void update(long delay, UnaryOperator<T> update) {
                 impl.update(delay, update);
             }
@@ -237,6 +242,11 @@ public class Link<T> extends Path<T> implements BaseLink {
             @Override
             public T updateAndGet(UnaryOperator<T> update) {
                 return impl.updateAndGet(update);
+            }
+
+            @Override
+            public T getAndUpdate(UnaryOperator<T> update) {
+                return impl.getAndUpdate(update);
             }
 
             @Override

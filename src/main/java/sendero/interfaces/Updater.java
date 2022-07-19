@@ -9,5 +9,6 @@ public interface Updater<T> {
      * @return: the updated value.
      * null if expectIn returned false*/
     T updateAndGet(UnaryOperator<T> update);
+    T getAndUpdate(UnaryOperator<T> update);
     void update(long delay, UnaryOperator<T> update);
 }

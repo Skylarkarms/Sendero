@@ -30,6 +30,11 @@ public final class Gate {
         }
 
         @Override
+        public T getAndUpdate(UnaryOperator<T> update) {
+            return consumerUpdater.getAndUpdate(update);
+        }
+
+        @Override
         public void accept(T t) {
             consumerUpdater.accept(t);
         }
@@ -76,6 +81,11 @@ public final class Gate {
         }
 
         @Override
+        public T getAndUpdate(UnaryOperator<T> update) {
+            return scoped.getAndUpdate(update);
+        }
+
+        @Override
         public void update(long delay, UnaryOperator<T> update) {
             scoped.update(delay, update);
         }
@@ -104,6 +114,11 @@ public final class Gate {
         @Override
         public T updateAndGet(UnaryOperator<T> update) {
             return consumerUpdater.updateAndGet(update);
+        }
+
+        @Override
+        public T getAndUpdate(UnaryOperator<T> update) {
+            return consumerUpdater.getAndUpdate(update);
         }
 
         @Override

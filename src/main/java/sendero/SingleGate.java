@@ -33,6 +33,11 @@ public final class SingleGate {
         }
 
         @Override
+        public T getAndUpdate(UnaryOperator<T> update) {
+            return consumerUpdater.getAndUpdate(update);
+        }
+
+        @Override
         public void accept(T t) {
             consumerUpdater.accept(t);
         }
@@ -66,6 +71,11 @@ public final class SingleGate {
         @Override
         public T updateAndGet(UnaryOperator<T> update) {
             return consumerUpdater.updateAndGet(update);
+        }
+
+        @Override
+        public T getAndUpdate(UnaryOperator<T> update) {
+            return consumerUpdater.getAndUpdate(update);
         }
 
         @Override

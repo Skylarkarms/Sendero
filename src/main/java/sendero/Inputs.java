@@ -4,6 +4,7 @@ import sendero.interfaces.BinaryPredicate;
 import sendero.interfaces.ConsumerUpdater;
 import sendero.interfaces.Updater;
 
+import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 
@@ -98,6 +99,11 @@ public class Inputs<T> {
         }
 
         @Override
+        public T getAndUpdate(UnaryOperator<T> update) {
+            return updater.getAndUpdate(update);
+        }
+
+        @Override
         public void update(long delay, UnaryOperator<T> update) {
             updater.update(delay, update);
         }
@@ -180,9 +186,16 @@ public class Inputs<T> {
                     };
         }
 
+        private final BinaryOperator<T> getNext = (prev, next) -> next, getPrev = (prev, next) -> prev;
+
         @Override
         public T updateAndGet(UnaryOperator<T> update) {
-            return lazyCASProcess(HOT ,update);
+            return lazyCASProcessAndThen(update, getNext);
+        }
+
+        @Override
+        public T getAndUpdate(UnaryOperator<T> update) {
+            return lazyCASProcessAndThen(update, getPrev);
         }
 
         @Override
@@ -190,11 +203,15 @@ public class Inputs<T> {
             lazyCASProcess(delay, update);
         }
 
-        private T lazyCASProcess(long delay, UnaryOperator<T> update) {
-            return lazyCASAccept(delay, lazyProcess.apply(update));
+        private void lazyCASProcess(long delay, UnaryOperator<T> update) {
+            lazyCASAccept(delay, lazyProcess.apply(update));
         }
 
-        private T lazyCASAccept(long delay, UnaryOperator<T> t) {
+        private T lazyCASProcessAndThen(UnaryOperator<T> update, BinaryOperator<T> prevNext) {
+            return lazyCASAcceptAndThen(lazyProcess.apply(update), prevNext);
+        }
+
+        private void lazyCASAccept(long delay, UnaryOperator<T> t) {
             Immutable<T> prev = null, next;
             T prevVal, newVal;
             while (prev != (prev = refGet())) {
@@ -202,7 +219,25 @@ public class Inputs<T> {
                 newVal = t.apply(prevVal);
                 if (newVal != INVALID) {
                     next = prev.newValue(newVal);
-                    if (compareAndSet(prev, next, delay)) return newVal;
+                    if (compareAndSet(prev, next, delay)) break;
+                }
+            }
+        }
+        /**
+         * @param prevNext: the value to return:<p>
+         *    * arg 1 = prev <p>
+         *    * arg 2 = next
+         *
+         * */
+        private T lazyCASAcceptAndThen(UnaryOperator<T> t, BinaryOperator<T> prevNext) {
+            Immutable<T> prev = null, next;
+            T prevVal, newVal;
+            while (prev != (prev = refGet())) {
+                prevVal = prev.get();
+                newVal = t.apply(prevVal);
+                if (newVal != INVALID) {
+                    next = prev.newValue(newVal);
+                    if (compareAndSet(prev, next, Holders.SwapBroadcast.HOT)) return prevNext.apply(prevVal, newVal);
                 }
             }
             return null;
