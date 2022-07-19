@@ -480,6 +480,21 @@ public final class Builders {
 
         public static<T> AtomicBinaryEvent producerListener(
                 BasePath<T> producer,
+                Consumer<Runnable> executor,
+                Consumer<? super T> consumer
+        ) {
+            return new Appointer<>(producer,
+                    BasePath.Receptor.withManagerInput(
+                            Holders.StreamManager.getManagerFor(
+                                    executor,
+                                    Holders.SwapBroadcast.fromConsumer(consumer)
+                            )
+                    )
+            );
+        }
+
+        public static<T> AtomicBinaryEvent producerListener(
+                BasePath<T> producer,
                 Consumer<? super T> consumer
         ) {
             return new Appointer<>(producer,
