@@ -436,6 +436,17 @@ public final class Builders {
 
         public static<S, T> AtomicBinaryEvent producerListener(
                 BasePath<S> producer,
+                Consumer<Runnable> executor,
+                InputMethods<T, S> inputMethod,
+                Consumer<? super T> consumer
+        ) {
+            return new Appointer<>(producer,
+                    ReceptorBuilder.getReceptor(executor, inputMethod, consumer)
+            );
+        }
+
+        public static<S, T> AtomicBinaryEvent producerListener(
+                BasePath<S> producer,
                 InputMethods<T, S> inputMethod,
                 BinaryPredicate<T> expectIn,
                 Consumer<? super T> consumer
