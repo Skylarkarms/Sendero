@@ -320,6 +320,27 @@ public final class Builders {
                     inputMethod.type
             );
         }
+        static <S, T> BasePath.Receptor<S> getReceptor(
+                Consumer<Runnable> executor,
+                InputMethods<T, S> inputMethod,
+                BinaryPredicate<T> expectIn,
+                Consumer<? super T> consumer
+        ) {
+            return BasePath.Receptor.withManagerInput(
+                    BinaryEventConsumers.getManagerFor(executor, expectIn, consumer),
+                    inputMethod.type
+            );
+        }
+        static <S, T> BasePath.Receptor<S> getReceptor(
+                Consumer<Runnable> executor,
+                InputMethods<T, S> inputMethod,
+                Consumer<? super T> consumer
+        ) {
+            return BasePath.Receptor.withManagerInput(
+                    BinaryEventConsumers.getManagerFor(executor, consumer),
+                    inputMethod.type
+            );
+        }
     }
 
     public static class BinaryEventConsumers {
@@ -403,6 +424,18 @@ public final class Builders {
 
         public static<S, T> AtomicBinaryEvent producerListener(
                 BasePath<S> producer,
+                Consumer<Runnable> executor,
+                InputMethods<T, S> inputMethod,
+                BinaryPredicate<T> expectIn,
+                Consumer<? super T> consumer
+        ) {
+            return new Appointer<>(producer,
+                    ReceptorBuilder.getReceptor(executor, inputMethod, expectIn, consumer)
+            );
+        }
+
+        public static<S, T> AtomicBinaryEvent producerListener(
+                BasePath<S> producer,
                 InputMethods<T, S> inputMethod,
                 BinaryPredicate<T> expectIn,
                 Consumer<? super T> consumer
@@ -447,6 +480,32 @@ public final class Builders {
                             Holders.SwapBroadcast.fromConsumer(consumer)
                     ),
                     expectIn
+            );
+        }
+
+        static <T> Holders.StreamManager<T> getManagerFor(
+                Consumer<Runnable> executor,
+                BinaryPredicate<T> expectIn,
+                Consumer<? super T> consumer
+        ) {
+            return Holders.StreamManager.getManagerFor(
+                    executor,
+                    new Holders.Holder<>(
+                            Holders.SwapBroadcast.fromConsumer(consumer)
+                    ),
+                    expectIn
+            );
+        }
+
+        static <T> Holders.StreamManager<T> getManagerFor(
+                Consumer<Runnable> executor,
+                Consumer<? super T> consumer
+        ) {
+            return Holders.StreamManager.getManagerFor(
+                    executor,
+                    new Holders.Holder<>(
+                            Holders.SwapBroadcast.fromConsumer(consumer)
+                    )
             );
         }
 

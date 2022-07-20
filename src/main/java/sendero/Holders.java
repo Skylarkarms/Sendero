@@ -70,8 +70,16 @@ final class Holders {
     }
 
     interface StreamManager<T> extends ColdReceptor<T>, Invalidator {
-        static<S> StreamManager<S> getManagerFor(Holder<S> holder, BinaryPredicate<S> test) {
+        static<S> StreamManager<S> getManagerFor(
+                Holder<S> holder,
+                BinaryPredicate<S> test
+        ) {
             return new ColdReceptorManager<>(holder, test);
+        }
+        static<S> StreamManager<S> getManagerFor(
+                Holder<S> holder
+        ) {
+            return new ColdReceptorManager<>(holder, BinaryPredicate.always(true));
         }
         static<S> StreamManager<S> baseManager(SwapBroadcast<S> broadcast) {
             return new ColdReceptorManager<>(broadcast);
@@ -86,6 +94,19 @@ final class Holders {
             );
         }
 
+        static <S> StreamManager<S> getManagerFor(
+                Consumer<Runnable> executor,
+                Holder<S> holder,
+                BinaryPredicate<S> test
+        ) {
+            return new StreamManagerExecutor<>(executor, getManagerFor(holder, test));
+        }
+        static <S> StreamManager<S> getManagerFor(
+                Consumer<Runnable> executor,
+                Holder<S> holder
+        ) {
+            return new StreamManagerExecutor<>(executor, getManagerFor(holder));
+        }
         static <S> StreamManager<S> getManagerFor(
                 Consumer<Runnable> executor,
                 SwapBroadcast<S> consumer
@@ -104,10 +125,17 @@ final class Holders {
                 Consumer<Runnable> executor,
                 SwapBroadcast<T> coreConsumer
         ) {
-            this.executor = new AtomicUtils.OverlapDropExecutor(executor);
-            manager = Holders.StreamManager.baseManager(
+            this(executor, Holders.StreamManager.baseManager(
                     coreConsumer
-            );
+            ));
+        }
+
+        private StreamManagerExecutor(
+                Consumer<Runnable> executor,
+                StreamManager<T> manager
+        ) {
+            this.executor = new AtomicUtils.OverlapDropExecutor(executor);
+            this.manager = manager;
             /*Manager captured by the Thread instance,
              * fields bound to Thread */
             runnableFactory = (topValues, tInt) -> () -> manager.filterAccept(topValues, tInt);
