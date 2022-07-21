@@ -4,6 +4,7 @@ import sendero.abstract_containers.Pair;
 import sendero.atomics.AtomicScheduler;
 import sendero.atomics.AtomicUtils;
 import sendero.executor.DelayedServiceExecutor;
+import sendero.executor.ThrowableExecutor;
 import sendero.functions.Functions;
 import sendero.interfaces.BinaryConsumer;
 import sendero.interfaces.BinaryPredicate;
@@ -448,6 +449,7 @@ final class Holders {
         private void broadcast(
                 boolean noDelay, Immutable<T> next, long delay
         ) {
+            System.err.println("no delay?? " + noDelay);
             if (noDelay) coldDispatch(next);
             else dispatch(delay, next);
         }
@@ -638,7 +640,7 @@ final class Holders {
             INSTANCE;
             private final LifeCycledThresholdExecutor<ScheduledExecutorService> lifeCycledSchedulerExecutor = new LifeCycledThresholdExecutor<>(
                     100,
-                    () -> Executors.newScheduledThreadPool(Runtime.getRuntime().availableProcessors()),
+                    () -> new ThrowableExecutor(Runtime.getRuntime().availableProcessors()),
                     ExecutorService::shutdown
             );
 

@@ -2,7 +2,9 @@ import ProactiveSupplierTest.LifeCycledViewModel;
 import ProactiveSupplierTest.SwitchSwitchMapTest;
 import sendero.Gate;
 import sendero.Merge;
+import sendero.Path;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -25,7 +27,49 @@ public class Main {
         new Thread(runnable).start();
     }
 
+    private static void postpone(int millis, Runnable runnable) {
+        new Thread(() -> {
+            try {
+                Thread.sleep(millis);
+                runnable.run();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    static class MyObj {
+        private final int anInt;
+
+        MyObj(int anInt) {
+            this.anInt = anInt;
+        }
+
+        public int getAnInt() {
+            return anInt;
+        }
+    }
+
     public static void main(String[] args) {
+
+//        System.err.println("current THread is: " + Thread.currentThread());
+//        INITIALIZE init = new INITIALIZE();
+//
+//
+//        Map<String, MyObj> aMap = new HashMap<>();
+//        aMap.put("A", new MyObj(1));
+//        init.set(aMap);
+//        init.getRes(x -> {
+//            System.err.println("HEY!!!");
+//            System.err.println(x);
+//
+//        });
+//        postpone(4000, () -> {
+//            System.err.println("UNREGISTERING!!!!!!! from thread: " + Thread.currentThread());
+//            init.unregister();
+//            System.err.println("UNREGISTERING!!!!!!!1111");
+//        });
+
 
         SwitchSwitchMapTest switchSwitchMapTest = new SwitchSwitchMapTest();
 

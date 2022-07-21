@@ -114,7 +114,18 @@ public class Inputs<T> {
         private final Consumer<T> coreConsumer;
 
         private Consumer<T> build(BinaryPredicate<T> testIn) {
-            return testIn != binaryAlwaysTrue ?
+            return testIn.alwaysTrue() ?
+                    t -> {
+                        Immutable<T> prev = null, next;
+                        while (prev != (prev = refGet())) {
+                            next = prev.newValue(t);
+                            if (hotCompareAndSet(prev, next)) {
+                                break;
+                            }
+                        }
+
+                    }
+                    :
                     t -> {
                         Immutable<T> prev = null, next;
                         while (prev != (prev = refGet())) {
@@ -125,17 +136,6 @@ public class Inputs<T> {
                                 }
                             } else return;
                         }
-                    }
-                    :
-                    t -> {
-                        Immutable<T> prev = null, next;
-                        while (prev != (prev = refGet())) {
-                                next = prev.newValue(t);
-                                if (hotCompareAndSet(prev, next)) {
-                                    break;
-                                }
-                        }
-
                     };
         }
 
@@ -161,7 +161,18 @@ public class Inputs<T> {
 
         @SuppressWarnings("unchecked")
         private UnaryOperator<UnaryOperator<T>> build(BinaryPredicate<T> testIn) {
-            return testIn != binaryAlwaysTrue ?
+            return testIn.alwaysTrue() ?
+                    update -> currentValue -> {
+                        //Not valid if same instance
+                        try {
+                            T updated = update.apply(currentValue);
+                            return updated == currentValue ? (T) INVALID : updated;
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            throw new RuntimeException(e);
+                        }
+                    }
+                    :
                     update -> currentValue -> {
                         //Not valid if same instance
                         try {
@@ -172,18 +183,8 @@ public class Inputs<T> {
                             e.printStackTrace();
                             throw new RuntimeException(e);
                         }
-                    }
-                    :
-                    update -> currentValue -> {
-                        //Not valid if same instance
-                        try {
-                            T updated = update.apply(currentValue);
-                            return updated == currentValue ? (T) INVALID : updated;
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            throw new RuntimeException(e);
-                        }
                     };
+
         }
 
         private final BinaryOperator<T> getNext = (prev, next) -> next, getPrev = (prev, next) -> prev;
