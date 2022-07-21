@@ -15,6 +15,7 @@ class ActivePathListener<T> implements InputMethodBinder<T> {
 
     @Override
     public <S, P extends BasePath<S>> Void bind(P basePath, Builders.InputMethods<T, S> inputMethod) {
+        checkInstance(basePath);
         AtomicBinaryEvent next = basePathListener.bind(basePath, inputMethod);
         if (next != null) {
             manager.setActivationListener(
@@ -22,6 +23,12 @@ class ActivePathListener<T> implements InputMethodBinder<T> {
             );
         }
         return null;
+    }
+
+    private <S, P extends BasePath<S>> void checkInstance(P basePath) {
+        if (basePath.activationManager == manager) {
+            throw new IllegalStateException("Cannot bind BasePath<>: " + basePath + " to itself!");
+        }
     }
 
     public void forcedSet(AtomicBinaryEvent activationListener) {
