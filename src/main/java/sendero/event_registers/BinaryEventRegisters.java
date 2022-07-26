@@ -136,14 +136,14 @@ public final class BinaryEventRegisters {
     public static class NonConcurrentToMany extends BaseEvent {
         private final Set<Switchers.Switch> suppliersSet = new HashSet<>();
 
-        public<S extends Switchers.Switch> S add(S aSwitch) {
+        protected <S extends Switchers.Switch> S add(S aSwitch) {
             if (!suppliersSet.contains(aSwitch) && suppliersSet.add(aSwitch) && isActive()) aSwitch.on();
             return aSwitch;
         }
-        public void remove(Switchers.Switch aSwitch) {
+        protected void remove(Switchers.Switch aSwitch) {
             if (suppliersSet.remove(aSwitch) && aSwitch.isActive()) aSwitch.off();
         }
-        public void clear() {
+        protected void clear() {
             forEachSet(Switchers.Switch::off);
             suppliersSet.clear();
         }
