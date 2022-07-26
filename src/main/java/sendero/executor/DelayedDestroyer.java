@@ -30,4 +30,11 @@ class DelayedDestroyer {
         }
         return false;
     }
+
+    @Override
+    public String toString() {
+        return "DelayedDestroyer{" +
+                "consumer=" + consumer +
+                '}';
+    }
 }

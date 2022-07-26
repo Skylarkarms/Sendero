@@ -14,7 +14,6 @@ import sendero.threshold_listener.ThresholdListeners;
 
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -449,7 +448,6 @@ final class Holders {
         private void broadcast(
                 boolean noDelay, Immutable<T> next, long delay
         ) {
-            System.err.println("no delay?? " + noDelay);
             if (noDelay) coldDispatch(next);
             else dispatch(delay, next);
         }
@@ -639,7 +637,8 @@ final class Holders {
         public enum EService {
             INSTANCE;
             private final LifeCycledThresholdExecutor<ScheduledExecutorService> lifeCycledSchedulerExecutor = new LifeCycledThresholdExecutor<>(
-                    100,
+                    200,
+//                    100, //Android view change is usually this value so a value a bit higher may be required.
                     () -> new ThrowableExecutor(Runtime.getRuntime().availableProcessors()),
                     ExecutorService::shutdown
             );

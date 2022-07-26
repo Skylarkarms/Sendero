@@ -282,7 +282,11 @@ public final class Builders {
         BasePath.Receptor<S> build(Consumer<Runnable> executor) {
             return build(executor, broadcast, inputMethods);
         }
-        static<T, S> BasePath.Receptor<S> build(Consumer<Runnable> executor, Holders.SwapBroadcast<T> broadcast, InputMethods<T, S> inputMethods) {
+        static<T, S> BasePath.Receptor<S> build(
+                Consumer<Runnable> executor,
+                Holders.SwapBroadcast<T> broadcast,
+                InputMethods<T, S> inputMethods
+        ) {
             return BasePath.Receptor.withManagerInput(
                     Holders.StreamManager.getManagerFor(executor, broadcast),
                     inputMethods.type

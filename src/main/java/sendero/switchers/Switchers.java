@@ -14,7 +14,7 @@ public class Switchers {
 
     }
 
-    private static class Atomic implements Switch {
+    static class Atomic implements Switch {
 
         private final AtomicBoolean state = new AtomicBoolean();
         @Override

@@ -174,22 +174,6 @@ public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
         return activationHolder.isActive();
     }
 
-
-    @Override
-    public boolean start() {
-        return on();
-    }
-
-    @Override
-    public boolean shutoff() {
-        return off();
-    }
-
-    @Override
-    public boolean isOff() {
-        return !isActive();
-    }
-
     @Override
     public String toString() {
         return "ProactiveSuppliers{" +

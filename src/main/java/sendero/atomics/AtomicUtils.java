@@ -47,7 +47,6 @@ public final class AtomicUtils {
             UnaryOperator<T> nextMap
     ) {
         T prev = getVoid(), next;
-//        T prev = null, next;
         while (prev != (prev = ref.get())) {
             if (test.test(prev)) {
                 next = nextMap.apply(prev);
@@ -60,7 +59,7 @@ public final class AtomicUtils {
 
     /**Delays the first execution, and then blocks contention and reuses Thread.*/
     public static class OverlapDropExecutor {
-        private static final int QUEUE = -2, CLOSE = -1, OPEN = 0, BUSY = 1;
+        private static final int QUEUE = -2, CLOSE = -1, SLEEPING = 0, BUSY = 1, OPEN = 2;
 
         private static final class RunnableRef extends Pair.Immutables.Int<Runnable> implements Runnable {
             public static final RunnableRef OPENED = new RunnableRef(OPEN, null);
@@ -70,10 +69,15 @@ public final class AtomicUtils {
             }
 
             boolean shouldCompute() {
-                return anInt < OPEN;
+                return anInt < SLEEPING;
             }
-            boolean notOpen() {
-                return anInt != OPEN;
+
+            boolean atLeastSleeping() {
+                return anInt < BUSY;
+            }
+
+            RunnableRef sleeping() {
+                return new RunnableRef(SLEEPING, value);
             }
 
             RunnableRef computing() {
@@ -108,7 +112,7 @@ public final class AtomicUtils {
 
         public boolean interrupt() {
             RunnableRef prev = semaphore.get();
-            return prev.notOpen() && semaphore.compareAndSet(prev, RunnableRef.OPENED);
+            return prev.atLeastSleeping() && semaphore.compareAndSet(prev, RunnableRef.OPENED);
         }
 
         public void swap(Runnable runnable) {
@@ -151,8 +155,11 @@ public final class AtomicUtils {
                 SleeperThreadState computing(){
                     return new SleeperThreadState(reference.computing(), sleeperThread);
                 }
-                boolean notOpen() {
-                    return reference.notOpen();
+                SleeperThreadState sleeping(){
+                    return new SleeperThreadState(reference.sleeping(), sleeperThread);
+                }
+                boolean atLeastSleeping() {
+                    return reference.atLeastSleeping();
                 }
             }
 
@@ -163,7 +170,9 @@ public final class AtomicUtils {
 
             public boolean interrupt() {
                 final SleeperThreadState prev = semaphore.get();
-                return prev.notOpen() && semaphore.compareAndSet(prev, SleeperThreadState.OPEN_THREAD);
+                boolean interrupted = prev.atLeastSleeping() && semaphore.compareAndSet(prev, SleeperThreadState.OPEN_THREAD);
+                if (interrupted) prev.sleeperThread.interrupt();
+                return interrupted;
             }
 
             private SleeperThreadState getNewClosed(Runnable newRun) {
@@ -201,12 +210,13 @@ public final class AtomicUtils {
 
                 @Override
                 public void run() {
-                    SleeperThreadState prev, busy;
+                    SleeperThreadState prev, sleeping, busy;
                     while ((prev = semaphore.get()).shouldCompute()) {
-                        busy = prev.computing();
-                        if (semaphore.compareAndSet(prev, busy)) {
+                        sleeping = prev.sleeping();
+                        if (semaphore.compareAndSet(prev, sleeping)) {
                             inferSleep();
-                            if (semaphore.get() == busy) { // Last check, it may have changed to QUEUE
+                            busy = sleeping.computing();
+                            if (semaphore.compareAndSet(sleeping, busy)) { // Last check, it may have changed to QUEUE
                                 busy.reference.run();
                                 semaphore.compareAndSet(busy, SleeperThreadState.OPEN_THREAD);
                             }
@@ -235,11 +245,8 @@ public final class AtomicUtils {
             }
 
             private void CAS(Runnable with, SleeperThreadState closed) {
-                if (semaphore.compareAndSet(SleeperThreadState.OPEN_THREAD, closed)) {
-                    closed.sleeperThread.start();
-                } else {
-                    if (!semaphore.get().sleeperThread.queue(with)) CAS(with, closed);
-                }
+                if (semaphore.compareAndSet(SleeperThreadState.OPEN_THREAD, closed)) closed.sleeperThread.start();
+                else if (!semaphore.get().sleeperThread.queue(with)) CAS(with, closed);
             }
         }
     }

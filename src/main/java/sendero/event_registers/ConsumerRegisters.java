@@ -97,6 +97,7 @@ public class ConsumerRegisters<T> {
         /**@return prev*/
         AtomicBinaryEvent swapRegister(AtomicBinaryEvent expect, AtomicBinaryEvent set);
     }
+    /**Takes a Snapshot of the current state while registering, the current state is stored upstream*/
     protected static final class StateAwareBinaryConsumerRegisterImpl implements StateAwareBinaryConsumerRegister {
         private final BooleanSupplier volatileBinaryState;
         private final AtomicReference<AtomicBinaryEvent> ref2 = new AtomicReference<>(AtomicBinaryEvent.DEFAULT);

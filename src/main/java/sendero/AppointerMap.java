@@ -5,7 +5,7 @@ import sendero.lists.Removed;
 import java.util.function.Function;
 
 /**The nature of an exit is for an input to be stable.
- * Since there may be multiple ways in which this class may be used, lets create a fixed and final Input Producer, and lets build
+ * Since there may be multiple ways in which this class may be used, lets create a fixed and final Input Producer, and let's build
  * upon this base principle.*/
 public final class AppointerMap<K, V> implements AtomicBinaryEvent{
     final ExitAppointers<K, V> exitAppointers;

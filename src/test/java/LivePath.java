@@ -1,8 +1,7 @@
 import sendero.*;
-import sendero.AtomicBinaryEventConsumer;
+import sendero.abstract_containers.Pair;
 import sendero.interfaces.BinaryPredicate;
 import sendero.interfaces.Updater;
-import sendero.abstract_containers.Pair;
 
 import java.util.HashMap;
 import java.util.Map;

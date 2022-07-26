@@ -9,7 +9,7 @@ abstract class ActivationManager implements Switchers.Switch {
     /**BinaryEventRegisters handle both the onStart and onShutdown states of each AtomicEventListener.
      * Each of which should only be handled during swap concurrent operations.
      * The user should only care of both "on" and "off" operations, both which override onStart, but are overridden by shutdown
-     * If this state register is required by and external dependecy it could in theory be chacked as instanceof AtomicEventListener and gain access to it's inner functions*/
+     * If this state register is required by and external dependency it could in theory be checked as instanceof AtomicEventListener and gain access to its inner functions*/
     private final Switchers.Switch stateRegister;
 
     @Override

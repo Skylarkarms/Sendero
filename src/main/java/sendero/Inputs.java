@@ -9,7 +9,6 @@ import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 
 import static sendero.Holders.SwapBroadcast.HOT;
-import static sendero.functions.Functions.binaryAlwaysTrue;
 
 public class Inputs<T> {
     private final Holders.Holder<T> baseColdHolderBroadcaster;

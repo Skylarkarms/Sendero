@@ -1,4 +1,7 @@
-import sendero.*;
+import sendero.Gate;
+import sendero.Merge;
+import sendero.Path;
+import sendero.ProactiveSuppliers;
 
 import java.util.function.UnaryOperator;
 

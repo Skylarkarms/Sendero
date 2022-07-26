@@ -165,7 +165,6 @@ public final class Gate {
                 private Runnable dispatchCommandFun(Immutable<T> pair) {
                     return () -> {
                         boolean emptyLocale = locale.isEmpty();
-                        System.err.println("empty locale??? " + emptyLocale);
                         if (emptyLocale) pathDispatch(false, pair);
                         else {
                             pathDispatch(true, pair);

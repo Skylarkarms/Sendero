@@ -3,7 +3,6 @@ import sendero.Path;
 
 import java.util.Map;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 public class INITIALIZE {
     private final Gate.Acceptor<Map<String, Main.MyObj>> acceptor = new Gate.Acceptor<>();

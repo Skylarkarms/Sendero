@@ -3,6 +3,10 @@ package sendero.event_registers;
 import sendero.AtomicBinaryEvent;
 import sendero.switchers.Switchers;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.Consumer;
+
 public final class BinaryEventRegisters {
     public static Switchers.Switch getAtomicRegister() {
         return new AtomicBinaryEventRegisterImpl();
@@ -21,17 +25,23 @@ public final class BinaryEventRegisters {
     }
 
     /**Keeps the BasePath's state alive while swapping event listeners*/
-    static class BaseEvent implements Switchers.Switch {
+    static abstract class BaseEvent implements Switchers.Switch {
         final Switchers.Switch mainState = Switchers.getAtomic();
+
+        abstract void onStateChanged(boolean isActive);
 
         @Override
         public boolean on() {
-            return mainState.on();
+            boolean on = mainState.on();
+            if (on) onStateChanged(true);
+            return on;
         }
 
         @Override
         public boolean off() {
-            return mainState.off();
+            boolean off = mainState.off();
+            if (off) onStateChanged(false);
+            return off;
         }
 
         @Override
@@ -48,23 +58,22 @@ public final class BinaryEventRegisters {
      *      Consumer can perform registrations freely without being tied to the on() or off() atomic pipeline. (the ifAccept() short-circuits if false)
      *
      * If both were heavily related, contention between boolean changes and consumer changes both with heavy traffic would be required to access a single atomic pipeline.
-     * By using a loose relation between both, the only requirement is a volatile read of the current boolean state at the moment of new registration, with minor drawbacks explained*/
+     * By using a loose relation between both, the only requirement is a volatile read of the current boolean state at the moment of new registration, with minor drawbacks explained
+     *
+     * This class can handle ONE register at a time.
+     * For multiple registers see Appointer.ConcurrentToMany.
+     * For multiple NON-concurrent see bellow class*/
     private static class AtomicBinaryEventRegisterImpl extends BaseEvent implements BinaryEventRegister.Atomic {
         private final ConsumerRegisters.StateAwareBinaryConsumerRegister register = ConsumerRegisters.getStateAware(this::isActive);
-        @Override
-        public boolean on() {
-            boolean isOn = super.on();
-            if (isOn) register.on();
-            return isOn;
-        }
 
         @Override
-        public boolean off() {
-            boolean isOff = super.off();
-            if (isOff) register.off();
-            return isOff;
+        void onStateChanged(boolean isActive) {
+            if (isActive) register.on();
+            else register.off();
         }
 
+        /**There are two caches for state, BaseEvent, which handles the Path's state (owner of this register), another within the AtomicBinaryEvent created on the fly.
+         * AtomicBinaryEvent's state controls its own register and unregister functions, while This one retains state for the next incoming register (if any)*/
         @Override
         public void register(AtomicBinaryEvent booleanConsumer) {
             register.registerDispatch(booleanConsumer);
@@ -95,17 +104,9 @@ public final class BinaryEventRegisters {
         }
 
         @Override
-        public boolean on() {
-            boolean on = super.on();
-            if (on) fixed.on();
-            return on;
-        }
-
-        @Override
-        public boolean off() {
-            boolean off = super.off();
-            if (off) fixed.off();
-            return off;
+        void onStateChanged(boolean isActive) {
+            if (isActive) fixed.on();
+            else fixed.off();
         }
 
         @Override
@@ -129,6 +130,31 @@ public final class BinaryEventRegisters {
                     "\n mainState=" + mainState +
                     ",\n fixed=" + fixed +
                     "}@" + hashCode();
+        }
+    }
+
+    public static class NonConcurrentToMany extends BaseEvent {
+        private final Set<Switchers.Switch> suppliersSet = new HashSet<>();
+
+        public<S extends Switchers.Switch> S add(S aSwitch) {
+            if (suppliersSet.add(aSwitch) && isActive()) aSwitch.on();
+            return aSwitch;
+        }
+        public void remove(Switchers.Switch aSwitch) {
+            if (suppliersSet.remove(aSwitch) && aSwitch.isActive()) aSwitch.off();
+        }
+        public void clear() {
+            forEachSet(Switchers.Switch::off);
+            suppliersSet.clear();
+        }
+        private void forEachSet(Consumer<Switchers.Switch> consumer) {
+            suppliersSet.forEach(consumer);
+        }
+
+        @Override
+        void onStateChanged(boolean isActive) {
+            if (isActive) forEachSet(Switchers.Switch::on);
+            else forEachSet(Switchers.Switch::off);
         }
     }
 }

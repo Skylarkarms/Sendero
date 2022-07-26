@@ -51,13 +51,13 @@ class Appointer<A> extends AtomicBinaryEventConsumer {
     }
 
     /**This To-Many Appointer has Autonomy from Producer's activation state*/
-    static class ConcurrentList<S> extends AtomicBinaryEventConsumer {
+    static class ConcurrentToMany extends AtomicBinaryEventConsumer {
 
-        final BooleanSupplier stateSupplier;
+        private final BooleanSupplier stateSupplier;
 
-        final SimpleLists.LockFree.Snapshooter<AtomicBinaryEvent, Boolean> receptors;
+        private final SimpleLists.LockFree.Snapshooter<AtomicBinaryEvent, Boolean> receptors;
 
-        public ConcurrentList() {
+        public ConcurrentToMany() {
             stateSupplier = this::isActive;
             receptors = SimpleLists.getSnapshotting(
                     AtomicBinaryEvent.class,
@@ -65,7 +65,7 @@ class Appointer<A> extends AtomicBinaryEventConsumer {
             );
         }
 
-        ConcurrentList(BooleanSupplier stateSupplier, AtomicBinaryEvent ... binaryEvents) {
+        ConcurrentToMany(BooleanSupplier stateSupplier, AtomicBinaryEvent ... binaryEvents) {
             this.stateSupplier = stateSupplier;
             this.receptors = SimpleLists.getSnapshotting(
                     AtomicBinaryEvent.class,
@@ -74,7 +74,7 @@ class Appointer<A> extends AtomicBinaryEventConsumer {
             for (AtomicBinaryEvent e:binaryEvents) this.receptors.add(e);
         }
 
-        ConcurrentList(BooleanSupplier stateSupplier, AtomicBinaryEvent first) {
+        ConcurrentToMany(BooleanSupplier stateSupplier, AtomicBinaryEvent first) {
             this.stateSupplier = stateSupplier;
             this.receptors = SimpleLists.getSnapshotting(
                     AtomicBinaryEvent.class,

@@ -1,6 +1,5 @@
 import sendero.Builders;
 import sendero.Gate;
-import sendero.Inputs;
 import sendero.Path;
 
 import java.util.HashMap;

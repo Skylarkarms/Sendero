@@ -216,7 +216,6 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
 
         @Override
         public void dispatch(long delay, Immutable<T> t) {
-            System.err.println("dispatch: delay is: " + delay);
             //Last local observers on same thread
             scheduleExecution(
                         delay,
@@ -248,9 +247,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         public void pathDispatch(boolean fullyParallel, Immutable<T> t) {
             final Receptor<T>[] subs = remote.copy();
             final int length = subs.length;
-            System.err.println("length is: " + length);
             if (length == 0) return;
-            System.err.println("pathDispatch: fully parallel??? " + fullyParallel);
             if (!fullyParallel) {
                 if (length > 1) parallelDispatch(1, subs, t, UnaryOperator.identity());
 

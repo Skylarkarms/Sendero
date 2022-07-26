@@ -12,12 +12,12 @@ import java.util.stream.Stream;
  * Since there may be multiple ways in which this class may be used, lets create a fixed and final Input Producer, and build
  * upon this base principle.*/
 final class ExitAppointers<S, Entry> implements AtomicBinaryEvent{
-    final Appointer.ConcurrentList<S> appointers;
+    final Appointer.ConcurrentToMany appointers;
     final Map<Entry, AtomicBinaryEvent> fieldEntries = new ConcurrentHashMap<>();
 
     public ExitAppointers(
     ) {
-        appointers = new Appointer.ConcurrentList<>();
+        appointers = new Appointer.ConcurrentToMany();
     }
 
     @SafeVarargs
@@ -27,7 +27,7 @@ final class ExitAppointers<S, Entry> implements AtomicBinaryEvent{
             Entry ... entries
     ) {
 
-        appointers = new Appointer.ConcurrentList<>(stateSupplier,
+        appointers = new Appointer.ConcurrentToMany(stateSupplier,
                 Stream.of(entries).map(
                         entry -> {
                             AtomicBinaryEvent event = eventFun.apply(entry);
@@ -44,7 +44,7 @@ final class ExitAppointers<S, Entry> implements AtomicBinaryEvent{
             Entry first
     ) {
 
-        appointers = new Appointer.ConcurrentList<>(stateSupplier,
+        appointers = new Appointer.ConcurrentToMany(stateSupplier,
                 eventFun.apply(first));
     }
 
@@ -52,7 +52,7 @@ final class ExitAppointers<S, Entry> implements AtomicBinaryEvent{
             BooleanSupplier stateSupplier
     ) {
 
-        appointers = new Appointer.ConcurrentList<>(stateSupplier);
+        appointers = new Appointer.ConcurrentToMany(stateSupplier);
     }
 
     public Removed remove(
