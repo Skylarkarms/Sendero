@@ -137,7 +137,7 @@ public final class BinaryEventRegisters {
         private final Set<Switchers.Switch> suppliersSet = new HashSet<>();
 
         public<S extends Switchers.Switch> S add(S aSwitch) {
-            if (suppliersSet.add(aSwitch) && isActive()) aSwitch.on();
+            if (!suppliersSet.contains(aSwitch) && suppliersSet.add(aSwitch) && isActive()) aSwitch.on();
             return aSwitch;
         }
         public void remove(Switchers.Switch aSwitch) {
