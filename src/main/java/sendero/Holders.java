@@ -20,9 +20,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
-import static sendero.Holders.SwapBroadcast.NO_DELAY;
-import static sendero.Immutable.getNotSet;
-
 final class Holders {
 
     interface HolderIO<T> extends Updater<T>, Consumer<T> {
@@ -176,7 +173,7 @@ final class Holders {
                                 (res = (prev = getSnapshot()).test(topValues)).isLesser()
                         ) {
                             T prevData = prev.get(), nextData = topData.apply(prevData);
-                            if (nextData != prevData && test.test(nextData, prevData)) {
+                            if (nextData != prevData) {
                                 Immutable<T> next = res.getNext(prev, topValues, nextData);
                                 if (compareAndSet(prev, next)) {
                                     break;
@@ -193,7 +190,7 @@ final class Holders {
                                 (res = (prev = getSnapshot()).test(topValues)).isLesser()
                         ) {
                             T prevData = prev.get(), nextData = topData.apply(prevData);
-                            if (nextData != prevData) {
+                            if (nextData != prevData && test.test(nextData, prevData)) {
                                 Immutable<T> next = res.getNext(prev, topValues, nextData);
                                 if (compareAndSet(prev, next)) {
                                     break;
@@ -250,7 +247,7 @@ final class Holders {
         }
 
         Holder(SwapBroadcast<T> broadcaster) {
-            this(broadcaster, getNotSet());
+            this(broadcaster, Immutable.getNotSet());
         }
 
         Holder(
@@ -348,17 +345,17 @@ final class Holders {
             return getSnapshot().get();
         }
 
-        private SwapBroadcast<T> build(Predicate<T> expectOut) {
-            return Functions.truePredicate(expectOut) ?
+        private SwapBroadcast<T> build(boolean outIsDefault, Predicate<T> expectOut) {
+            return outIsDefault ?
                     (prev, next, delay) -> {
-                        boolean noDelay = delay == NO_DELAY;
+                        boolean noDelay = delay == SwapBroadcast.NO_DELAY;
                         solveOnSwapped(noDelay, prev, next.get());
                         broadcast(noDelay, next, delay);
                     }
                     :
                     (prevVal, next, delay) -> {
                         T nextData = next.get();
-                        boolean noDelay = delay == NO_DELAY;
+                        boolean noDelay = delay == SwapBroadcast.NO_DELAY;
                         solveOnSwapped(noDelay, prevVal, nextData);
                         if (expectOut.test(nextData)) broadcast(noDelay, next, delay);
                     };
@@ -387,15 +384,16 @@ final class Holders {
         ) {
             Builders.HolderBuilder<T> builder = holderBuilder.apply(Builders.getHolderBuild2());
             Predicate<T> expectOut = builder.expectOut;
-            this.consumingFunction = builder(expectOut);
+            boolean outIsDefault = Functions.truePredicate(expectOut);
+            this.consumingFunction = builder(outIsDefault, expectOut);
             this.expectInput = builder.expectInput;
-            this.core = build(expectOut);
+            this.core = build(outIsDefault, expectOut);
             this.holder = builder.buildHolder(core);
             streamManager = StreamManager.getManagerFor(holder, expectInput);
         }
 
-        private SnapConsumer<T> builder(Predicate<T> expectOut) {
-            return Functions.truePredicate(expectOut) ?
+        private SnapConsumer<T> builder(boolean outIsDefault, Predicate<T> expectOut) {
+            return outIsDefault ?
                     (currentSnap, values, consumer) -> {
                         if (currentSnap.isSet() && currentSnap.match(values)) {
                             consumer.accept(currentSnap);
