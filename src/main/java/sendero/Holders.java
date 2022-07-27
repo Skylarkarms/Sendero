@@ -3,7 +3,7 @@ package sendero;
 import sendero.abstract_containers.Pair;
 import sendero.atomics.AtomicScheduler;
 import sendero.atomics.AtomicUtils;
-import sendero.executor.DelayedServiceExecutor;
+import sendero.atomics.LazyHolder;
 import sendero.executor.ThrowableExecutor;
 import sendero.functions.Functions;
 import sendero.interfaces.BinaryConsumer;
@@ -549,7 +549,7 @@ final class Holders {
     }
 
     abstract static class ExecutorHolder<T> extends ActivationHolder<T> {
-        private final EService eService = EService.INSTANCE;
+        private final LazyEService eService = LazyEService.INSTANCE;
 
         //Only if isColdHolder == true;
         private final AtomicScheduler scheduler = new AtomicScheduler(eService::getScheduledService, TimeUnit.MILLISECONDS);
@@ -608,62 +608,29 @@ final class Holders {
             eService.decrement();
         }
 
-        private static final class LifeCycledThresholdExecutor<S extends ExecutorService> {
-
+        public enum LazyEService {
+            INSTANCE;
             private final ThresholdListeners.ThresholdListener thresholdSwitch = ThresholdListeners.getAtomicOf(
                     0, 0
             );
-            private final DelayedServiceExecutor<S> delayedServiceExecutor;
-
-            private LifeCycledThresholdExecutor(long millis, Supplier<S> serviceSupplier, Consumer<S> serviceDestroyer) {
-                delayedServiceExecutor = new DelayedServiceExecutor<>(millis, serviceSupplier, serviceDestroyer);
-            }
-
-            public void tryActivate() {
-                if (thresholdSwitch.increment()) {
-                    delayedServiceExecutor.create();
-                }
-            }
-
-            public void tryDeactivate() {
-                if (thresholdSwitch.decrement()) delayedServiceExecutor.destroy();
-            }
-
-            public S getService() {
-                return delayedServiceExecutor.getService();
-            }
-        }
-
-        public enum EService {
-            INSTANCE;
-            private final LifeCycledThresholdExecutor<ScheduledExecutorService> lifeCycledSchedulerExecutor = new LifeCycledThresholdExecutor<>(
-                    200,
-//                    100, //Android view change is usually this value so a value a bit higher may be required.
+            private final LazyHolder<ScheduledExecutorService> lazyExecutor = new LazyHolder<>(
                     () -> new ThrowableExecutor(Runtime.getRuntime().availableProcessors()),
+                    300, //Good Enough!
+//                    200, //200 may be enough for new destination, but more is required for backstack pops
                     ExecutorService::shutdown
             );
-
-            private void create() {
-                lifeCycledSchedulerExecutor.tryActivate();
-            }
-
-            private void destroy() {
-                lifeCycledSchedulerExecutor.tryDeactivate();
-            }
-
             public void increment() {
-                create();
+                thresholdSwitch.increment();
             }
             public void decrement() {
-                destroy();
+                if (thresholdSwitch.decrement())
+                    lazyExecutor.destroy();
             }
-
             public ScheduledExecutorService getScheduledService() {
-                return lifeCycledSchedulerExecutor.getService();
+                return lazyExecutor.get();
             }
-
             void fastExecute(Runnable command) {
-                lifeCycledSchedulerExecutor.getService().schedule(command, 0, TimeUnit.NANOSECONDS);
+                lazyExecutor.get().schedule(command, 0, TimeUnit.NANOSECONDS);
             }
         }
     }

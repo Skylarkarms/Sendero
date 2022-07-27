@@ -73,23 +73,19 @@ public class ForkedMultiplication {
                 )
         );
         activeSupplier.bind(finalResult, ints -> ints[2]);
-        new Thread(
+        Main.postpone(
+                200,
                 () -> {
-                    try {
-                        System.out.println("SLEEPING... FOR SUPPLIER");
-                        Thread.sleep(200);
-                        activeSupplier.get(
-                                100,
-                                integer -> {
-                                    System.out.println("Result is: " + integer);
-                                    activeSupplier.off();
-                                }
-                        );
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+                    System.out.println("SLEEPING... FOR SUPPLIER");
+                    activeSupplier.get(
+                            100,
+                            integer -> {
+                                System.out.println("Result is: " + integer);
+                                activeSupplier.off();
+                            }
+                    );
                 }
-        ).start();
+        );
         resultOutput = finalResult.out(Gate.Out.Single.class, ints -> ints[2]);
         resultOutput.register(
                 integer -> System.out.println("Final result is: " + integer)
@@ -113,12 +109,12 @@ public class ForkedMultiplication {
                     }
             );
         }
-        try {
-            Thread.sleep(2000);
-            System.err.println("<<<Unregistering>>>...");
-            resultOutput.unregister();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        Main.postpone(
+                2000,
+                () -> {
+                    System.err.println("<<<Unregistering>>>...");
+                    resultOutput.unregister();
+                }
+        );
     }
 }

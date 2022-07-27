@@ -1,6 +1,6 @@
 package sendero;
 
-import sendero.executor.DelayedServiceExecutor;
+import sendero.atomics.LazyHolder;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -98,10 +98,10 @@ public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
     }
     private static final int max_tries = 3;
 
-    private final DelayedServiceExecutor<ExecutorService> delayedServiceExecutor = new DelayedServiceExecutor<>(
+    private final LazyHolder<ExecutorService> lazyExecutor = new LazyHolder<>(
+            () -> Executors.newFixedThreadPool(2),
             100,
-        () -> Executors.newFixedThreadPool(2),
-        ExecutorService::shutdown
+            ExecutorService::shutdown
     );
 
     @SuppressWarnings("BusyWait")
@@ -109,7 +109,7 @@ public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
         if (delay == 0) {
             zeroDelay(consumer);
         } else {
-            delayedServiceExecutor.getService().execute(
+            lazyExecutor.get().execute(
                     () -> {
                         int tries = 0;
                         Immutable<T> snapshot;
@@ -157,15 +157,13 @@ public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
 
     @Override
     public boolean on() {
-        boolean active = activationHolder.tryActivate();
-        if (active) delayedServiceExecutor.create();
-        return active;
+        return activationHolder.tryActivate();
     }
 
     @Override
     public boolean off() {
         boolean deactive = activationHolder.tryDeactivate();
-        if (deactive) delayedServiceExecutor.destroy();
+        if (deactive) lazyExecutor.destroy();
         return deactive;
     }
 

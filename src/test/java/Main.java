@@ -20,7 +20,7 @@ public class Main {
         new Thread(runnable).start();
     }
 
-    private static void postpone(int millis, Runnable runnable) {
+    public static void postpone(int millis, Runnable runnable) {
         new Thread(() -> {
             try {
                 Thread.sleep(millis);
@@ -369,8 +369,8 @@ public class Main {
 //        ComplexHelloWorld test2 = new ComplexHelloWorld();
 //        test2.commence();
 //
-//        ForkedMultiplication multiplication = new ForkedMultiplication();
-//        multiplication.commence();
+        ForkedMultiplication multiplication = new ForkedMultiplication();
+        multiplication.commence();
 //
 //        System.err.println("Test Hard");
 //
