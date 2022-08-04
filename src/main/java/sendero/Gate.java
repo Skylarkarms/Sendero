@@ -62,6 +62,11 @@ public final class Gate {
         public void accept(T t) {
             scoped.accept(t);
         }
+
+        @Override
+        public Acceptor<T> store(String TAG) {
+            return (Acceptor<T>) super.store(TAG);
+        }
     }
     public static class Updater<T> extends Path<T> implements sendero.interfaces.Updater<T> {
 

@@ -3,6 +3,7 @@ package sendero.event_registers;
 import sendero.AtomicBinaryEvent;
 import sendero.switchers.Switchers;
 
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -133,22 +134,38 @@ public final class BinaryEventRegisters {
         }
     }
 
-    public static class NonConcurrentToMany extends BaseEvent {
-        private final Set<Switchers.Switch> suppliersSet = new HashSet<>();
+    public static class NonConcurrentToMany<K> extends BaseEvent {
+        private final HashMap<K, Switchers.Switch> suppliersSet = new HashMap<>();
 
-        protected <S extends Switchers.Switch> S add(S aSwitch) {
-            if (!suppliersSet.contains(aSwitch) && suppliersSet.add(aSwitch) && isActive()) aSwitch.on();
-            return aSwitch;
+        protected <S extends Switchers.Switch> S putIfAbsent(K key, S aSwitch) {
+            assert aSwitch != null;
+            if (!suppliersSet.containsKey(key)) {
+                suppliersSet.put(key, aSwitch);
+                if (isActive()) aSwitch.on();
+                return aSwitch;
+            } throw new IllegalStateException("Key: " + key + " already present in Map.");
         }
-        protected void remove(Switchers.Switch aSwitch) {
-            if (suppliersSet.remove(aSwitch) && aSwitch.isActive()) aSwitch.off();
+        protected <S extends Switchers.Switch> boolean trueIfAbsent(K key, S aSwitch) {
+            assert aSwitch != null;
+            if (!suppliersSet.containsKey(key)) {
+                suppliersSet.put(key, aSwitch);
+                if (isActive()) aSwitch.on();
+                return true;
+            } return false;
+        }
+        protected boolean contains(K key) {
+            return suppliersSet.containsKey(key);
+        }
+        protected void remove(K key) {
+            Switchers.Switch removed = suppliersSet.remove(key);
+            if (removed != null && removed.isActive()) removed.off();
         }
         protected void clear() {
             forEachSet(Switchers.Switch::off);
             suppliersSet.clear();
         }
         private void forEachSet(Consumer<Switchers.Switch> consumer) {
-            suppliersSet.forEach(consumer);
+            for (Switchers.Switch s:suppliersSet.values()) consumer.accept(s);
         }
 
         @Override
@@ -157,4 +174,5 @@ public final class BinaryEventRegisters {
             else forEachSet(Switchers.Switch::off);
         }
     }
+
 }
