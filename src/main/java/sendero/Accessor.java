@@ -5,16 +5,22 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
-public class Container<T> implements Supplier<T> {
+/**Atomically accesses and alters the inner value of a BasePath without dispatching any changes downstream.<p>
+ * The Value returned IS NOT GUARANTEED to be the most updated as the proactive get() is not in sync with inner dispatches from the system.<p>
+ * The value returned WILL NOT BE the most updated IF the BasePath owner of this object, is NOT BEING ACTIVELY OBSERVED <p>
+ * while changes occurred to parent nodes, <p>
+ * in which case a ProactiveSupplier must be used instead.
+ * */
+public class Accessor<T> implements Supplier<T> {
 
     final AtomicReference<Immutable<T>> reference;
     private final AtomicBoolean isConnected = new AtomicBoolean();
 
-    public Container(T value) {
+    public Accessor(T value) {
         this.reference = new AtomicReference<>(Immutable.forFirstValue(value));
     }
 
-    public Container() {
+    public Accessor() {
         this.reference = new AtomicReference<>(Immutable.getNotSet());
     }
 

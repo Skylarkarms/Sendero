@@ -38,8 +38,8 @@ public final class Builders {
             return this;
         }
 
-        public HolderBuilder<T> withContainer(Container<T> container) {
-            this.value = container.getRef();
+        public HolderBuilder<T> withContainer(Accessor<T> accessor) {
+            this.value = accessor.getRef();
             return this;
         }
 
@@ -296,7 +296,7 @@ public final class Builders {
         static <S, T> BasePath.Receptor<S> getReceptor(
                 InputMethods<T, S> inputMethod,
                 BinaryPredicate<T> expectIn,
-                Container<T> target,
+                Accessor<T> target,
                 BinaryConsumer<T> consumer
         ) {
             return BasePath.Receptor.withManagerInput(
@@ -351,7 +351,7 @@ public final class Builders {
 
         public static<T> AtomicBinaryEvent producerListener(
                 BasePath<T> producer,
-                Container<T> target,
+                Accessor<T> target,
                 BinaryConsumer<T> consumer
         ) {
             return producerListener(producer,
@@ -370,7 +370,7 @@ public final class Builders {
         public static<S, T> AtomicBinaryEvent producerListener(
                 BasePath<S> producer,
                 InputMethods<T, S> inputMethod,
-                Container<T> target,
+                Accessor<T> target,
                 BinaryConsumer<T> consumer
         ) {
             return producerListener(producer,
@@ -407,7 +407,7 @@ public final class Builders {
                 BasePath<S> producer,
                 InputMethods<T, S> inputMethod,
                 BinaryPredicate<T> expectIn,
-                Container<T> target,
+                Accessor<T> target,
                 BinaryConsumer<T> consumer
         ) {
             return new Appointer<>(producer,
@@ -462,7 +462,7 @@ public final class Builders {
 
         static <T> Holders.StreamManager<T> getManagerFor(
                 BinaryPredicate<T> expectIn,
-                Container<T> target,
+                Accessor<T> target,
                 BinaryConsumer<? super T> consumer
         ) {
             return Holders.StreamManager.getManagerFor(
