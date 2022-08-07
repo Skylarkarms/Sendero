@@ -1,6 +1,7 @@
 package sendero;
 
 import sendero.event_registers.ConsumerRegisters;
+import sendero.interfaces.BinaryPredicate;
 import sendero.interfaces.ConsumerUpdater;
 import sendero.interfaces.Register;
 import sendero.lists.SimpleLists;
@@ -12,7 +13,28 @@ import java.util.function.UnaryOperator;
 import static sendero.Holders.SwapBroadcast.HOT;
 import static sendero.functions.Functions.myIdentity;
 
-public final class Gate {
+public class Gate<T> extends Path<T> {
+    @Override
+    public T get() {
+        return super.get();
+    }
+
+    Gate() {
+        super();
+    }
+
+    Gate(T initialValue) {
+        super(initialValue);
+    }
+
+    Gate(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+        super(builderOperator);
+    }
+
+    Gate(BinaryPredicate<T> excludeIn) {
+        this(Builders.excludeIn(excludeIn));
+    }
+
     public static final class IO<T> extends Outs.OutBasePath.Many<T> implements Holders.HolderIO<T> {
         private final ConsumerUpdater<T> consumerUpdater = Inputs.getConsumerUpdater(this);
 
@@ -44,7 +66,7 @@ public final class Gate {
             consumerUpdater.update(delay, update);
         }
     }
-    public static class Acceptor<T> extends Path<T> implements Consumer<T> {
+    public static final class Acceptor<T> extends Gate<T> implements Consumer<T> {
         private final Consumer<T> scoped = Inputs.getConsumer(this);
 
         public Acceptor() {
@@ -58,6 +80,10 @@ public final class Gate {
             super(initialValue);
         }
 
+        public Acceptor(BinaryPredicate<T> excludeIn) {
+            super(excludeIn);
+        }
+
         @Override
         public void accept(T t) {
             scoped.accept(t);
@@ -68,7 +94,7 @@ public final class Gate {
             return (Acceptor<T>) super.store(TAG);
         }
     }
-    public static class Updater<T> extends Path<T> implements sendero.interfaces.Updater<T> {
+    public static class Updater<T> extends Gate<T> implements sendero.interfaces.Updater<T> {
 
         private final sendero.interfaces.Updater<T> scoped = Inputs.getUpdater(this);
 
@@ -78,6 +104,14 @@ public final class Gate {
 
         public Updater(T initialValue) {
             super(initialValue);
+        }
+
+        public Updater(BinaryPredicate<T> excludeIn) {
+            super(excludeIn);
+        }
+
+        public Updater(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
+            super(builderOperator);
         }
 
         @Override
