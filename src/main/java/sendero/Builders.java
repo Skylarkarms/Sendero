@@ -394,7 +394,7 @@ public final class Builders {
             );
         }
 
-        static<S, T> AtomicBinaryEvent producerListener(
+        static<S, T> AtomicBinaryEvent newApp(
                 BasePath<S> producer,
                 BasePath.Receptor<S> receptor
         ) {
@@ -410,7 +410,7 @@ public final class Builders {
                 Accessor<T> target,
                 BinaryConsumer<T> consumer
         ) {
-            return new Appointer<>(producer,
+            return newApp(producer,
                     ReceptorBuilder.getReceptor(inputMethod, expectIn, target, consumer)
             );
         }
@@ -421,7 +421,7 @@ public final class Builders {
                 BinaryPredicate<T> expectIn,
                 BinaryConsumer<T> consumer
         ) {
-            return new Appointer<>(producer,
+            return newApp(producer,
                     ReceptorBuilder.getReceptor(inputMethod, expectIn, consumer)
             );
         }
@@ -433,7 +433,7 @@ public final class Builders {
                 BinaryPredicate<T> expectIn,
                 Consumer<? super T> consumer
         ) {
-            return new Appointer<>(producer,
+            return newApp(producer,
                     ReceptorBuilder.getReceptor(executor, inputMethod, expectIn, consumer)
             );
         }
@@ -444,7 +444,7 @@ public final class Builders {
                 InputMethods<T, S> inputMethod,
                 Consumer<? super T> consumer
         ) {
-            return new Appointer<>(producer,
+            return newApp(producer,
                     ReceptorBuilder.getReceptor(executor, inputMethod, consumer)
             );
         }
@@ -455,7 +455,7 @@ public final class Builders {
                 BinaryPredicate<T> expectIn,
                 Consumer<? super T> consumer
         ) {
-            return new Appointer<>(producer,
+            return newApp(producer,
                     ReceptorBuilder.getReceptor(inputMethod, expectIn, consumer)
             );
         }
@@ -557,7 +557,7 @@ public final class Builders {
                 Consumer<Runnable> executor,
                 Consumer<? super T> consumer
         ) {
-            return new Appointer<>(producer,
+            return newApp(producer,
                     BasePath.Receptor.withManagerInput(
                             Holders.StreamManager.getManagerFor(
                                     executor,
@@ -571,7 +571,7 @@ public final class Builders {
                 BasePath<T> producer,
                 Consumer<? super T> consumer
         ) {
-            return new Appointer<>(producer,
+            return newApp(producer,
                     BasePath.Receptor.withManagerInput(
                             Holders.StreamManager.baseManager(
                                     Holders.SwapBroadcast.fromConsumer(consumer)
@@ -607,7 +607,7 @@ public final class Builders {
                 BinaryConsumer<? super T> onSwapped,
                 InputMethods<T, S> inputMethod
         ) {
-            return new Appointer<>(producer,
+            return newApp(producer,
                     BasePath.Receptor.withManagerInput(
                             Holders.StreamManager.baseManager(
                                     Holders.SwapBroadcast.fromBinaryConsumer(onSwapped)
@@ -622,7 +622,7 @@ public final class Builders {
                 Holders.StreamManager<T> consumer,
                 InputMethod.Type<T, S> inputMethod
         ) {
-            return new Appointer<>(producer, BasePath.Receptor.withManagerInput(
+            return newApp(producer, BasePath.Receptor.withManagerInput(
                     consumer,
                     inputMethod
             ));
@@ -633,7 +633,7 @@ public final class Builders {
                 Holders.BaseBroadcaster<T> consumer,
                 InputMethods<T, S> inputMethod
         ) {
-            return new Appointer<>(
+            return newApp(
                     producer,
                     BasePath.Receptor.withManagerInput(consumer.getManager(), inputMethod.type)
             );

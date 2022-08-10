@@ -110,7 +110,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
     interface Receptor<T> extends Holders.ColdConsumer<T>, Holders.Invalidator {
 
         default AtomicBinaryEvent toBinaryEvent(BasePath<T> producer) {
-            return Builders.BinaryEventConsumers.producerListener(
+            return Builders.BinaryEventConsumers.newApp(
                     producer,
                     this
             );
