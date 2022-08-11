@@ -1,5 +1,6 @@
 package sendero;
 
+
 import sendero.functions.Functions;
 import sendero.interfaces.*;
 
@@ -401,6 +402,19 @@ public final class Builders {
             );
         }
 
+        public static<S, T> AtomicBinaryEvent producerListenerDefaulter(
+                BasePath<S> producer,
+                InputMethods<T, S> inputMethod,
+                Consumer<? super T> consumer
+        ) {
+            return producerListenerDefaulter(
+                    producer,
+                    inputMethod,
+                    BinaryPredicate.always(true),
+                    consumer
+            );
+        }
+
         /**re-appointments will only return a signal if the value in cache(Receptor) has changed. */
         static<S, T> AtomicBinaryEvent newApp(
                 BasePath<S> producer,
@@ -485,6 +499,17 @@ public final class Builders {
                 Consumer<? super T> consumer
         ) {
             return newApp(producer,
+                    ReceptorBuilder.getReceptor(inputMethod, expectIn, consumer)
+            );
+        }
+
+        public static<S, T> AtomicBinaryEvent producerListenerDefaulter(
+                BasePath<S> producer,
+                InputMethods<T, S> inputMethod,
+                BinaryPredicate<T> expectIn,
+                Consumer<? super T> consumer
+        ) {
+            return newDefaulter(producer,
                     ReceptorBuilder.getReceptor(inputMethod, expectIn, consumer)
             );
         }
