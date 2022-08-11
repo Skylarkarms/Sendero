@@ -467,6 +467,17 @@ public final class Builders {
             );
         }
 
+        public static<S, T> AtomicBinaryEvent producerListenerDefaulter(
+                BasePath<S> producer,
+                Consumer<Runnable> executor,
+                InputMethods<T, S> inputMethod,
+                Consumer<? super T> consumer
+        ) {
+            return newDefaulter(producer,
+                    ReceptorBuilder.getReceptor(executor, inputMethod, consumer)
+            );
+        }
+
         public static<S, T> AtomicBinaryEvent producerListener(
                 BasePath<S> producer,
                 InputMethods<T, S> inputMethod,
