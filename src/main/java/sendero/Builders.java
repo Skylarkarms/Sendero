@@ -39,7 +39,7 @@ public final class Builders {
             return this;
         }
 
-        public HolderBuilder<T> withContainer(Accessor<T> accessor) {
+        public HolderBuilder<T> withAccessor(Accessor<T> accessor) {
             this.value = accessor.getRef();
             return this;
         }
