@@ -5,6 +5,7 @@ import sendero.switchers.Switchers;
 
 import java.util.HashMap;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public final class BinaryEventRegisters {
     public static Switchers.Switch getAtomicRegister() {
@@ -143,9 +144,11 @@ public final class BinaryEventRegisters {
                 return aSwitch;
             } throw new IllegalStateException("Key: " + key + " already present in Map.");
         }
-        protected <S extends Switchers.Switch> boolean trueIfAbsent(K key, S aSwitch) {
-            assert aSwitch != null;
+        protected <S extends Switchers.Switch> boolean trueIfAbsent(K key, Supplier<S> aSwitchSupplier) {
+            assert aSwitchSupplier != null;
             if (!suppliersSet.containsKey(key)) {
+                S aSwitch = aSwitchSupplier.get();
+                assert aSwitch != null;
                 suppliersSet.put(key, aSwitch);
                 if (isActive()) aSwitch.on();
                 return true;
