@@ -1,5 +1,7 @@
 package sendero.abstract_containers;
 
+import sendero.interfaces.BinaryPredicate;
+
 import java.util.Objects;
 
 public final class Pair {
@@ -58,6 +60,11 @@ public final class Pair {
             public Int<T> deepCopy() {
                 return new Int<>(anInt, value);
             }
+
+            public boolean sameValue(Int<T> that, BinaryPredicate<T> equal) {
+                return value == that.value || equal.test(that.value, value);
+            }
+
         }
 
         public static class Bool<T> {
