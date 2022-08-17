@@ -1,5 +1,6 @@
 package sendero;
 
+import sendero.functions.Functions;
 import sendero.interfaces.ActivationListener;
 import sendero.interfaces.BinaryPredicate;
 import sendero.interfaces.ConsumerUpdater;
@@ -7,8 +8,6 @@ import sendero.interfaces.ConsumerUpdater;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
-
-import static sendero.functions.Functions.myIdentity;
 
 public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
 
@@ -30,7 +29,7 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
     }
 
     protected SinglePath(Builders.ManagerBuilder mngrBuilder) {
-        this(myIdentity(),
+        this(Functions.myIdentity(),
                 mngrBuilder
         );
     }
@@ -40,6 +39,19 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
             Function<ConsumerUpdater<T>, ActivationListener> activationsFun
     ) {
        return new SinglePath<>(builderOperator, activationsFun);
+    }
+
+    public static<T> SinglePath<T> getSinglePath(
+            BinaryPredicate<T> excludeIn,
+            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
+    ) {
+       return new SinglePath<>(Builders.excludeIn(excludeIn), activationsFun);
+    }
+
+    public static<T> SinglePath<T> getSinglePath(
+            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
+    ) {
+       return new SinglePath<>(Functions.myIdentity(), activationsFun);
     }
 
     protected SinglePath(
