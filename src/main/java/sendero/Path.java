@@ -1,6 +1,8 @@
 package sendero;
 
+import sendero.interfaces.ActivationListener;
 import sendero.interfaces.BinaryPredicate;
+import sendero.interfaces.ConsumerUpdater;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -21,12 +23,27 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
         super(activationListener);
     }
 
-    Path(
-            UnaryOperator<Builders.HolderBuilder<T>> operator,
-            Function<Holders.StreamManager<T>, AtomicBinaryEvent> selfMap
+    public static<T> Path<T> getPath(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
     ) {
-        super(operator,
-                selfMap
+        return new Path<>(builderOperator, activationsFun);
+    }
+
+    protected Path(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
+    ) {
+        super(builderOperator, activationsFun);
+    }
+
+    Path(
+            Function<Holders.StreamManager<T>, AtomicBinaryEvent> selfMap,
+            UnaryOperator<Builders.HolderBuilder<T>> operator
+            ) {
+        super(
+                selfMap,
+                operator
         );
     }
 
@@ -61,8 +78,8 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
     @Override
     public <S> Path<S> forkMap(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, S> map) {
         return new Path<>(
-                builderOperator,
-                mapFunctionBuilder(map)
+                mapFunctionBuilder(map),
+                builderOperator
         );
     }
 
@@ -98,8 +115,8 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
     @Override
     public <S> Path<S> forkSwitch(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, BasePath<S>> switchMap) {
         return new Path<>(
-                builderOperator,
-                switchFunctionBuilder(switchMap)
+                switchFunctionBuilder(switchMap),
+                builderOperator
         );
     }
 

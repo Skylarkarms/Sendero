@@ -61,15 +61,15 @@ public final class Pair {
                 return new Int<>(anInt, value);
             }
 
-            public boolean sameValue(Int<T> that, BinaryPredicate<T> equal) {
-                return value == that.value || equal.test(that.value, value);
+            public boolean sameValue(T thatValue, BinaryPredicate<T> equal) {
+                return value == thatValue || equal.test(thatValue, value);
             }
 
             public boolean areSame(Int<T> that, BinaryPredicate<T> equal) {
                 if (that == null) return false;
                 if (this == that) return true;
                 if (compareTo(that) != 0) return false;
-                return sameValue(that, equal);
+                return sameValue(that.value, equal);
             }
         }
 

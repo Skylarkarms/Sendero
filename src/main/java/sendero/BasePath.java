@@ -2,6 +2,8 @@ package sendero;
 
 import sendero.abstract_containers.Pair;
 import sendero.event_registers.ConsumerRegisters;
+import sendero.interfaces.ActivationListener;
+import sendero.interfaces.ConsumerUpdater;
 import sendero.lists.SimpleLists;
 
 import java.util.Map;
@@ -70,6 +72,16 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
                         (Function<Holders.StreamManager<T>, AtomicBinaryEvent>) coldHolder ->
                                 Builders.BinaryEventConsumers.producerListener(basePath, coldHolder, updateFun)
 
+                )
+        );
+    }
+
+    <S> BasePath(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            Function<ConsumerUpdater<T>, ActivationListener> activationsFun) {
+        super(builderOperator,
+                Builders.ManagerBuilder.onActive(
+                        activationsFun
                 )
         );
     }

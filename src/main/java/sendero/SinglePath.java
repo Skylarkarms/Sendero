@@ -1,6 +1,8 @@
 package sendero;
 
+import sendero.interfaces.ActivationListener;
 import sendero.interfaces.BinaryPredicate;
+import sendero.interfaces.ConsumerUpdater;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -27,11 +29,24 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
         this(builderOperator, (Builders.ManagerBuilder) null);
     }
 
-
     protected SinglePath(Builders.ManagerBuilder mngrBuilder) {
         this(myIdentity(),
                 mngrBuilder
         );
+    }
+
+    public static<T> SinglePath<T> getSinglePath(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
+    ) {
+       return new SinglePath<>(builderOperator, activationsFun);
+    }
+
+    protected SinglePath(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
+    ) {
+        super(builderOperator, activationsFun);
     }
 
     protected SinglePath(
@@ -42,13 +57,13 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
     }
 
     SinglePath(
-            UnaryOperator<Builders.HolderBuilder<T>> operator,
-            Function<Holders.StreamManager<T>, AtomicBinaryEvent> selfMap
+            Function<Holders.StreamManager<T>, AtomicBinaryEvent> selfMap,
+            UnaryOperator<Builders.HolderBuilder<T>> operator
     ) {
         super(
-                operator,
-                selfMap
-        );
+                selfMap,
+                operator
+                );
     }
 
     protected <S> SinglePath(
@@ -66,8 +81,8 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
     @Override
     public <S> SinglePath<S> forkMap(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, S> map) {
         return new SinglePath<>(
-                builderOperator,
-                mapFunctionBuilder(map)
+                mapFunctionBuilder(map),
+                builderOperator
         );
     }
 
@@ -103,8 +118,8 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
     @Override
     public <S> SinglePath<S> forkSwitch(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, BasePath<S>> switchMap) {
         return new SinglePath<>(
-                builderOperator,
-                switchFunctionBuilder(switchMap)
+                switchFunctionBuilder(switchMap),
+                builderOperator
         );
     }
 

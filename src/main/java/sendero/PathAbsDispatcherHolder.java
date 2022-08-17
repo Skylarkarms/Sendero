@@ -1,5 +1,8 @@
 package sendero;
 
+import sendero.interfaces.ActivationListener;
+import sendero.interfaces.ConsumerUpdater;
+
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -15,17 +18,25 @@ public abstract class PathAbsDispatcherHolder<T> extends BasePath<T> {
         return getPathDispatcher();
     }
 
+    PathAbsDispatcherHolder(
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
+            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
+    ) {
+        this(
+                builderOperator,
+                Builders.ManagerBuilder.onActive(activationsFun)
+        );
+    }
+
     protected PathAbsDispatcherHolder() {
-        super(myIdentity(), null);
-        pathDispatcher = pathDispatcherBuild();
+        this(myIdentity(), (Builders.ManagerBuilder) null);
     }
 
     protected PathAbsDispatcherHolder(boolean mutable) {
-        super(
+        this(
                 myIdentity(),
                 Builders.ManagerBuilder.isMutable(mutable)
         );
-        pathDispatcher = pathDispatcherBuild();
     }
 
     protected <S> PathAbsDispatcherHolder(
@@ -52,15 +63,14 @@ public abstract class PathAbsDispatcherHolder<T> extends BasePath<T> {
     }
 
     protected PathAbsDispatcherHolder(
-            UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
-            Function<Holders.StreamManager<T>, AtomicBinaryEvent> selfMap
+            Function<Holders.StreamManager<T>, AtomicBinaryEvent> selfMap,
+            UnaryOperator<Builders.HolderBuilder<T>> builderOperator
     ) {
-        super(builderOperator,
+        this(builderOperator,
                 Builders.ManagerBuilder.withFixed(
                         selfMap
                 )
         );
-        pathDispatcher = pathDispatcherBuild();
     }
 
     @Override
