@@ -363,5 +363,10 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
     public String toStringDetailed() {
         throw new IllegalStateException("Overridden by PathAbsDispatcherHolder!");
     }
+
+    @Override
+    public boolean isActive() {
+        return super.isActive();
+    }
 }
 
