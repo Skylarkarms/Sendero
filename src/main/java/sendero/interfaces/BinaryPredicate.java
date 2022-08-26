@@ -10,7 +10,15 @@ public interface BinaryPredicate<T> extends BiPredicate<T, T> {
 
     @Override
     default BinaryPredicate<T> negate() {
-        return (next, prev) -> !test(next, prev);
+        RuntimeException e = new RuntimeException();
+        return (next, prev) -> {
+            try {
+                return !test(next, prev);
+            } catch (Exception ex) {
+                e.initCause(ex);
+                throw e;
+            }
+        };
     }
 
     default boolean alwaysTrue() {
