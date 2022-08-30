@@ -136,7 +136,7 @@ public class Appointers {
 
         @Override
         public void stopAndClearPath() {
-            appointerSwapCore./*swappableAppointer.*/getAndSet(AtomicBinaryEvent.DEFAULT).shutoff();
+            appointerSwapCore.getAndSet(AtomicBinaryEvent.DEFAULT).shutoff();
         }
 
         @Override
