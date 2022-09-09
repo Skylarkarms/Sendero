@@ -2,10 +2,7 @@ package sendero.functions;
 
 import sendero.interfaces.BinaryPredicate;
 
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.UnaryOperator;
+import java.util.function.*;
 
 public final class Functions {
     private static final String CLEARED_STRING = ": [EMPTY FUNCTION]";
@@ -81,7 +78,7 @@ public final class Functions {
     public static Runnable emptyRunnable() {
         return emptyRunnable;
     }
-    private static final Predicate<?> alwaysTrue = new Predicate<Object>() {
+    public static final Predicate<?> alwaysTrue = new Predicate<Object>() {
         @Override
         public boolean test(Object next) {
             return true;
@@ -98,9 +95,43 @@ public final class Functions {
     public static<T> Predicate<T> always(boolean fixed) {
         return fixed ? (Predicate<T>) alwaysTrue : t -> false;
     }
-
     public static boolean truePredicate(Predicate<?> predicate) {
         return predicate == alwaysTrue;
+    }
+    public static boolean isEmpty(Consumer<?> consumer) {
+        return consumer == emptyConsumer;
+    }
+
+    public static final IntConsumer defaultIntConsumer = new IntConsumer() {
+        @Override
+        public void accept(int value) {
+
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + CLEARED_STRING;
+        }
+    };
+
+    public static boolean isDefault(IntConsumer that) {
+        return that == defaultIntConsumer;
+    }
+
+    public static final LongConsumer defaultLongConsumer = new LongConsumer() {
+        @Override
+        public void accept(long value) {
+
+        }
+
+        @Override
+        public String toString() {
+            return super.toString() + CLEARED_STRING;
+        }
+    };
+
+    public static boolean isDefault(LongConsumer that) {
+        return that == defaultLongConsumer;
     }
 
 }

@@ -2,6 +2,7 @@ package sendero.functions;
 
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.IntConsumer;
 import java.util.function.Predicate;
 
 public final class Consumers {
