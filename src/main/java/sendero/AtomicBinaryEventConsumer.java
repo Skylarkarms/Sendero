@@ -10,15 +10,6 @@ import java.util.function.Function;
  * */
 public abstract class AtomicBinaryEventConsumer implements AtomicBinaryEvent {
 
-    public static AtomicBinaryEvent base(ActivationListener listener) {
-        return new AtomicBinaryEventConsumer() {
-            @Override
-            protected void onStateChange(boolean isActive) {
-                listener.onStateChange(isActive);
-            }
-        };
-    }
-
     private static final int NOT_SET = -2, SHUT_DOWN = -1, ON = 1, OFF = 0;
     private final AtomicInteger versionedState = new AtomicInteger(NOT_SET);
 

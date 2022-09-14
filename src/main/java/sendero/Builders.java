@@ -125,7 +125,7 @@ public final class Builders {
 
         ) {
             return new ManagerBuilder(
-                    broadcaster -> BinaryEventConsumers.producerListener(
+                    broadcaster -> AtomicBinaryEvent.base(
                             activationListenerFun.apply(
                                     (ConsumerUpdater<S>) Inputs.getConsumerUpdater(broadcaster)
                             )
@@ -367,12 +367,6 @@ public final class Builders {
                     target,
                     consumer
             );
-        }
-
-        static<T> AtomicBinaryEvent producerListener(
-                ActivationListener listener
-        ) {
-            return AtomicBinaryEventConsumer.base(listener);
         }
 
         public static<S, T> AtomicBinaryEvent producerListener(
