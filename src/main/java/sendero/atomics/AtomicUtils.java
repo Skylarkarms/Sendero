@@ -2,6 +2,7 @@ package sendero.atomics;
 
 import sendero.abstract_containers.Pair;
 
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -91,7 +92,7 @@ public final class AtomicUtils {
         }
 
         private final AtomicReference<RunnableRef> semaphore = new AtomicReference<>(RunnableRef.OPENED);
-        private final Consumer<Runnable> runnableConsumer;
+        private final Executor runnableConsumer;
         private final Runnable localRunnable = new Runnable() {
             @Override
             public void run() {
@@ -99,14 +100,16 @@ public final class AtomicUtils {
                 while ((prev = semaphore.get()).shouldCompute()) {
                     RunnableRef computing = prev.computing();
                     if (semaphore.compareAndSet(prev, computing)) {
-                        runnableConsumer.accept(computing);
+                        runnableConsumer.execute(computing);
                         semaphore.compareAndSet(computing, RunnableRef.OPENED);
                     }
                 }
             }
         };
 
-        public OverlapDropExecutor(Consumer<Runnable> runnableConsumer) {
+        public OverlapDropExecutor(
+                Executor runnableConsumer
+        ) {
             this.runnableConsumer = runnableConsumer;
         }
 

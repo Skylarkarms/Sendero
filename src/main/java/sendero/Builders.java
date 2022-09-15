@@ -5,6 +5,7 @@ import sendero.functions.Functions;
 import sendero.interfaces.*;
 
 import java.util.Objects;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
@@ -275,23 +276,23 @@ public final class Builders {
         }
 
         public AtomicBinaryEvent asEvent(
-                Consumer<Runnable> executor,
+                Executor executor,
                 BasePath<S> producer
         ) {
             return build(executor).toBinaryEvent(producer);
         }
         /**This Appointer will default receptor on re-appointment, returning a signal on each re-appointment. */
         public AtomicBinaryEvent asDefaulterEvent(
-                Consumer<Runnable> executor,
+                Executor executor,
                 BasePath<S> producer
         ) {
             return build(executor).toDefaulterBinaryEvent(producer);
         }
-        BasePath.Receptor<S> build(Consumer<Runnable> executor) {
+        BasePath.Receptor<S> build(Executor executor) {
             return build(executor, broadcast, inputMethods);
         }
         static<T, S> BasePath.Receptor<S> build(
-                Consumer<Runnable> executor,
+                Executor executor,
                 Holders.SwapBroadcast<T> broadcast,
                 InputMethods<T, S> inputMethods
         ) {
@@ -333,7 +334,7 @@ public final class Builders {
             );
         }
         static <S, T> BasePath.Receptor<S> getReceptor(
-                Consumer<Runnable> executor,
+                Executor executor,
                 InputMethods<T, S> inputMethod,
                 BinaryPredicate<T> expectIn,
                 Consumer<? super T> consumer
@@ -344,7 +345,7 @@ public final class Builders {
             );
         }
         static <S, T> BasePath.Receptor<S> getReceptor(
-                Consumer<Runnable> executor,
+                Executor executor,
                 InputMethods<T, S> inputMethod,
                 Consumer<? super T> consumer
         ) {
@@ -454,7 +455,7 @@ public final class Builders {
 
         public static<S, T> AtomicBinaryEvent producerListener(
                 BasePath<S> producer,
-                Consumer<Runnable> executor,
+                Executor executor,
                 InputMethods<T, S> inputMethod,
                 BinaryPredicate<T> expectIn,
                 Consumer<? super T> consumer
@@ -466,7 +467,7 @@ public final class Builders {
 
         public static<S, T> AtomicBinaryEvent producerListener(
                 BasePath<S> producer,
-                Consumer<Runnable> executor,
+                Executor executor,
                 InputMethods<T, S> inputMethod,
                 Consumer<? super T> consumer
         ) {
@@ -477,7 +478,7 @@ public final class Builders {
 
         public static<S, T> AtomicBinaryEvent producerListenerDefaulter(
                 BasePath<S> producer,
-                Consumer<Runnable> executor,
+                Executor executor,
                 InputMethods<T, S> inputMethod,
                 Consumer<? super T> consumer
         ) {
@@ -547,7 +548,7 @@ public final class Builders {
         }
 
         static <T> Holders.StreamManager<T> getManagerFor(
-                Consumer<Runnable> executor,
+                Executor executor,
                 BinaryPredicate<T> expectIn,
                 Consumer<? super T> consumer
         ) {
@@ -561,7 +562,7 @@ public final class Builders {
         }
 
         static <T> Holders.StreamManager<T> getManagerFor(
-                Consumer<Runnable> executor,
+                Executor executor,
                 Consumer<? super T> consumer
         ) {
             return Holders.StreamManager.getManagerFor(
@@ -587,10 +588,10 @@ public final class Builders {
 
         public static<T> AtomicBinaryEvent producerListener(
                 BasePath<T> producer,
-                Consumer<Runnable> executor,
+                Executor executor,
                 BinaryConsumer<? super T> consumer
         ) {
-            return new Appointer<>(producer,
+            return newApp(producer,
                     BasePath.Receptor.withManagerInput(
                             Holders.StreamManager.getManagerFor(
                                     executor,
@@ -602,7 +603,7 @@ public final class Builders {
 
         public static<T> AtomicBinaryEvent producerListener(
                 BasePath<T> producer,
-                Consumer<Runnable> executor,
+                Executor executor,
                 Consumer<? super T> consumer
         ) {
             return newApp(producer,

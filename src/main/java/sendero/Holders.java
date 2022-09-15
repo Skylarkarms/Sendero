@@ -13,6 +13,7 @@ import sendero.interfaces.Updater;
 import sendero.threshold_listener.ThresholdListeners;
 
 import java.util.Objects;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -92,20 +93,20 @@ final class Holders {
         }
 
         static <S> StreamManager<S> getManagerFor(
-                Consumer<Runnable> executor,
+                Executor executor,
                 Holder<S> holder,
                 BinaryPredicate<S> test
         ) {
             return new StreamManagerExecutor<>(executor, getManagerFor(holder, test));
         }
         static <S> StreamManager<S> getManagerFor(
-                Consumer<Runnable> executor,
+                Executor executor,
                 Holder<S> holder
         ) {
             return new StreamManagerExecutor<>(executor, getManagerFor(holder));
         }
         static <S> StreamManager<S> getManagerFor(
-                Consumer<Runnable> executor,
+                Executor executor,
                 SwapBroadcast<S> consumer
         ) {
             return new StreamManagerExecutor<>(executor, consumer);
@@ -119,7 +120,7 @@ final class Holders {
         private final BiFunction<Immutable.Values, UnaryOperator<T>, Runnable> runnableFactory;
 
         private StreamManagerExecutor(
-                Consumer<Runnable> executor,
+                Executor executor,
                 SwapBroadcast<T> coreConsumer
         ) {
             this(executor, Holders.StreamManager.baseManager(
@@ -128,7 +129,7 @@ final class Holders {
         }
 
         private StreamManagerExecutor(
-                Consumer<Runnable> executor,
+                Executor executor,
                 StreamManager<T> manager
         ) {
             this.executor = new AtomicUtils.OverlapDropExecutor(executor);
@@ -410,13 +411,13 @@ final class Holders {
         void backGroundPeek(
                 Immutable.Values localValues,
                 ColdConsumer<T> consumer,
-                Consumer<Runnable> executionMethod
+                Executor executionMethod
         ) {
             Runnable runnable = () -> {
                 final Immutable<T> currentSnap = holder.getSnapshot();
                 consumingFunction.accept(currentSnap, localValues, consumer);
             };
-            executionMethod.accept(runnable);
+            executionMethod.execute(runnable);
         }
 
         /**coldDispatch is triggered by Sendero's inner communication*/
@@ -514,7 +515,7 @@ final class Holders {
         void onRegistered(
                 ColdConsumer<T> consumer,
                 Supplier<Pair.Immutables.Bool<Immutable.Values>> snapshotFun,
-                Consumer<Runnable> executionMethod
+                Executor executionMethod
         ) {
             Pair.Immutables.Bool<Immutable.Values> res = snapshotFun.get();
             if (res.aBoolean) tryActivate();
@@ -570,7 +571,7 @@ final class Holders {
         }
 
         void fastExecute(Runnable action) {
-            eService.fastExecute(action);
+            eService.execute(action);
         }
 
         void scheduleExecution(long delay, Runnable action) {
@@ -597,7 +598,7 @@ final class Holders {
             onRegistered(
                     subscriber,
                     snapshotFun,
-                    this::fastExecute
+                    eService
             );
         }
 
@@ -606,7 +607,7 @@ final class Holders {
             eService.decrement();
         }
 
-        public enum LazyEService {
+        public enum LazyEService implements Executor {
             INSTANCE;
             private final ThresholdListeners.ThresholdListener thresholdSwitch = ThresholdListeners.getAtomicOf(
                     0, 0
@@ -627,7 +628,9 @@ final class Holders {
             public ScheduledExecutorService getScheduledService() {
                 return lazyExecutor.get();
             }
-            void fastExecute(Runnable command) {
+
+            @Override
+            public void execute(Runnable command) {
                 lazyExecutor.get().schedule(command, 0, TimeUnit.NANOSECONDS);
             }
         }
