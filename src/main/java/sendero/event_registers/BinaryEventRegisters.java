@@ -1,10 +1,13 @@
 package sendero.event_registers;
 
 import sendero.AtomicBinaryEvent;
+import sendero.interfaces.Register;
 import sendero.switchers.Switchers;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public final class BinaryEventRegisters {
@@ -134,6 +137,28 @@ public final class BinaryEventRegisters {
     }
 
     public static class NonConcurrentToMany<K> extends BaseEvent {
+        public static <K, Inheritor extends NonConcurrentToMany<K>, Event> Inheritor factory(
+                Supplier<Inheritor> inheritorSupplier,
+                Register<Event> lifecycleRegister,
+                final Event ON,
+                final Event OFF,
+                final Event DESTROY
+        ) {
+            assert inheritorSupplier != null;
+            Inheritor core = inheritorSupplier.get();
+            Predicate<Event> isOn, isOff, destroy;
+            isOn = event -> event == ON;
+            isOff = event -> event == OFF;
+            destroy = event -> event == DESTROY;
+            lifecycleRegister.register(
+                    event -> {
+                        if (isOn.test(event)) core.on();
+                        else if (isOff.test(event)) core.off();
+                        else if (destroy.test(event)) core.clear();
+                    }
+            );
+            return core;
+        }
         private final HashMap<K, Switchers.Switch> suppliersSet = new HashMap<>();
 
         protected <S extends Switchers.Switch> S putIfAbsent(K key, S aSwitch) {
