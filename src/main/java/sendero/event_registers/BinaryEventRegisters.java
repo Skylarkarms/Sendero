@@ -187,7 +187,7 @@ public final class BinaryEventRegisters {
             if (removed != null && removed.isActive()) removed.off();
         }
         protected void clear() {
-            forEachSet(Switchers.Switch::off);
+            off();
             suppliersSet.clear();
         }
         private void forEachSet(Consumer<Switchers.Switch> consumer) {
