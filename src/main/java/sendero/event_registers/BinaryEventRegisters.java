@@ -1,12 +1,15 @@
 package sendero.event_registers;
 
 import sendero.AtomicBinaryEvent;
+import sendero.AtomicBinaryEventConsumer;
 import sendero.interfaces.Register;
 import sendero.switchers.Switchers;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -27,7 +30,9 @@ public final class BinaryEventRegisters {
         }
     }
 
-    /**Keeps the BasePath's state alive while swapping event listeners*/
+    /**Keeps the BasePath's state alive while swapping event listeners
+     * Lighter and faster version than that of AtomicBinaryEventConsumer
+     * */
     static abstract class BaseEvent implements Switchers.Switch {
         final Switchers.Switch mainState = Switchers.getAtomic();
 
@@ -51,6 +56,13 @@ public final class BinaryEventRegisters {
         public boolean isActive() {
             return mainState.isActive();
         }
+
+        @Override
+        public String toString() {
+            return "BaseEvent{" +
+                    "mainState=" + mainState +
+                    '}';
+        }
     }
 
     /**The link between Consumer and boolean state is loosely related.
@@ -66,7 +78,9 @@ public final class BinaryEventRegisters {
      * This class can handle ONE register at a time.
      * For multiple registers see Appointer.ConcurrentToMany.
      * For multiple NON-concurrent see bellow class*/
-    private static class AtomicBinaryEventRegisterImpl extends BaseEvent implements BinaryEventRegister.Atomic {
+    private static class AtomicBinaryEventRegisterImpl
+            extends BaseEvent
+            implements BinaryEventRegister.Atomic {
         private final ConsumerRegisters.StateAwareBinaryConsumerRegister register = ConsumerRegisters.getStateAware(this::isActive);
 
         @Override
@@ -98,7 +112,9 @@ public final class BinaryEventRegisters {
         }
     }
 
-    private static class AtomicWithFixed extends BaseEvent implements BinaryEventRegister {
+    private static class AtomicWithFixed
+            extends BaseEvent
+            implements BinaryEventRegister {
 
         private final AtomicBinaryEvent fixed;
 
@@ -130,13 +146,50 @@ public final class BinaryEventRegisters {
         @Override
         public String toString() {
             return "AtomicWithFixed{" +
-                    "\n mainState=" + mainState +
+                    "\n mainState=" + super.toString() +
                     ",\n fixed=" + fixed +
                     "}@" + hashCode();
         }
     }
 
-    public static class NonConcurrentToMany<K> extends BaseEvent {
+    /**AtomicBinaryEventConsumer is used instead because it's "shutOff()" method allows "Destroy" concatenation*/
+    public static class NonConcurrentToMany<K>
+            extends AtomicBinaryEventConsumer {
+        private final AtomicBoolean synced = new AtomicBoolean();
+        /**Parent will drop listeners on destruction*/
+        public <S extends NonConcurrentToMany<K>> void syncWith(K key, S parent) {
+            SYNC_CHECK_EXCEPT(
+                    () -> parent.putIfAbsent(key, this)
+            );
+        }
+        void SYNC_CHECK_EXCEPT(Runnable passed) {
+            if (!synced.getAndSet(true)) {
+                passed.run();
+            } else
+                throw new IllegalStateException("Manager already synced.");
+        }
+        @SuppressWarnings("unchecked")
+        public static <K, Inheritor extends NonConcurrentToMany<K>> Inheritor syncFactory(
+                Inheritor parent,
+                Supplier<Inheritor> childSupplier
+        ) {
+            Inheritor child = childSupplier.get();
+            try {
+                child.syncWith((K)child, parent);
+                return child;
+            } catch (Exception e) {
+                throw new IllegalStateException("parent must be instance of K (key), use the Key factory instead", e);
+            }
+        }
+        public static <K, Inheritor extends NonConcurrentToMany<K>> Inheritor syncFactory(
+                Inheritor parent,
+                Function<Inheritor, K> key,
+                Supplier<Inheritor> childSupplier
+        ) {
+            Inheritor child = childSupplier.get();
+            child.syncWith(key.apply(child), parent);
+            return child;
+        }
         public static <K, Inheritor extends NonConcurrentToMany<K>, Event> Inheritor factory(
                 Supplier<Inheritor> inheritorSupplier,
                 Register<Event> lifecycleRegister,
@@ -150,16 +203,18 @@ public final class BinaryEventRegisters {
             isOn = event -> event == ON;
             isOff = event -> event == OFF;
             destroy = event -> event == DESTROY;
-            lifecycleRegister.register(
-                    event -> {
-                        if (isOn.test(event)) core.on();
-                        else if (isOff.test(event)) core.off();
-                        else if (destroy.test(event)) core.clear();
-                    }
+            core.SYNC_CHECK_EXCEPT(
+                    () -> lifecycleRegister.register(
+                            event -> {
+                                if (isOn.test(event)) core.on();
+                                else if (isOff.test(event)) core.off();
+                                else if (destroy.test(event)) core.shutoff();
+                            }
+                    )
             );
             return core;
         }
-        private final HashMap<K, Switchers.Switch> suppliersSet = new HashMap<>();
+        private final Map<K, Switchers.Switch> suppliersSet = new HashMap<>();
 
         protected <S extends Switchers.Switch> S putIfAbsent(K key, S aSwitch) {
             assert aSwitch != null;
@@ -186,16 +241,24 @@ public final class BinaryEventRegisters {
             Switchers.Switch removed = suppliersSet.remove(key);
             if (removed != null && removed.isActive()) removed.off();
         }
-        protected void clear() {
-            off();
+
+        @Override
+        protected final void onDestroyed() {
+            synced.set(false);
+            forEachSet(
+                    aSwitch -> {
+                        if (aSwitch instanceof AtomicBinaryEvent) ((AtomicBinaryEvent) aSwitch).shutoff();
+                    }
+            );
             suppliersSet.clear();
         }
+
         private void forEachSet(Consumer<Switchers.Switch> consumer) {
             for (Switchers.Switch s:suppliersSet.values()) consumer.accept(s);
         }
 
         @Override
-        void onStateChanged(boolean isActive) {
+        protected void onStateChange(boolean isActive) {
             if (isActive) forEachSet(Switchers.Switch::on);
             else forEachSet(Switchers.Switch::off);
         }

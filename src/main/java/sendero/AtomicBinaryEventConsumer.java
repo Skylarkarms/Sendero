@@ -1,7 +1,5 @@
 package sendero;
 
-import sendero.interfaces.ActivationListener;
-
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
@@ -83,7 +81,7 @@ public abstract class AtomicBinaryEventConsumer implements AtomicBinaryEvent {
 
     }
 
-    void onDestroyed() {
+    protected void onDestroyed() {
 
     }
 
@@ -129,5 +127,23 @@ public abstract class AtomicBinaryEventConsumer implements AtomicBinaryEvent {
                 }
             }
         };
+    }
+
+    @Override
+    public String toString() {
+        return "AtomicBinaryEventConsumer{" +
+                "versionedState=" + getState() +
+                '}';
+    }
+
+    private String getState() {
+        int state = versionedState.get();
+        switch (state) {
+            case NOT_SET: return "NOT_SET";
+            case SHUT_DOWN: return "SHUT_DOWN";
+            case ON: return "ON";
+            case OFF: return "OFF";
+            default: throw new RuntimeException("State is invalid: " + state);
+        }
     }
 }

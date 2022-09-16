@@ -110,7 +110,7 @@ class Appointer<A> extends AtomicBinaryEventConsumer {
         }
 
         @Override
-        void onDestroyed() {
+        protected final void onDestroyed() {
             set(AtomicBinaryEvent::shutoff);
         }
 
