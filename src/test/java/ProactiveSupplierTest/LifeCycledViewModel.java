@@ -7,7 +7,7 @@ import sendero.event_registers.BinaryEventRegisters;
 
 import java.util.function.Supplier;
 
-public class LifeCycledViewModel extends BinaryEventRegisters.NonConcurrentToMany<Path<SwitchSwitchMapTest.Result>> implements Supplier<SwitchSwitchMapTest.Result> {
+public class LifeCycledViewModel extends BinaryEventRegisters.SwitchSynchronizerImpl<Path<SwitchSwitchMapTest.Result>> implements Supplier<SwitchSwitchMapTest.Result> {
 
     Path<SwitchSwitchMapTest.Result> toBound = SwitchSwitchMapTest.getResult();
     ProactiveSupplier<SwitchSwitchMapTest.Result> resultSupp = putIfAbsent(toBound, ProactiveSuppliers.Bound.bound(

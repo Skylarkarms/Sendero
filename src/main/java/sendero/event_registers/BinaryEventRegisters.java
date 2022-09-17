@@ -153,13 +153,171 @@ public final class BinaryEventRegisters {
     }
 
     /**AtomicBinaryEventConsumer is used instead because it's "shutOff()" method allows "Destroy" concatenation*/
-    public static class NonConcurrentToMany<K>
-            extends AtomicBinaryEventConsumer {
+//    public static class NonConcurrentToMany<K>
+//            extends AtomicBinaryEventConsumer {
+//        private final AtomicBoolean synced = new AtomicBoolean();
+//        /**Parent will drop listeners on destruction*/
+//        public <S extends NonConcurrentToMany<K>> void syncWith(K key, S parent) {
+//            SYNC_CHECK_EXCEPT(
+//                    () -> parent.putIfAbsent(key, this)
+//            );
+//        }
+//        void SYNC_CHECK_EXCEPT(Runnable passed) {
+//            if (!synced.getAndSet(true)) {
+//                passed.run();
+//            } else
+//                throw new IllegalStateException("Manager already synced.");
+//        }
+//        @SuppressWarnings("unchecked")
+//        public static <K, Inheritor extends NonConcurrentToMany<K>> Inheritor syncFactory(
+//                Inheritor parent,
+//                Supplier<Inheritor> childSupplier
+//        ) {
+//            Inheritor child = childSupplier.get();
+//            try {
+//                child.syncWith((K)child, parent);
+//                return child;
+//            } catch (Exception e) {
+//                throw new IllegalStateException("parent must be instance of K (key), use the Key factory instead", e);
+//            }
+//        }
+//        public static <K, Inheritor extends NonConcurrentToMany<K>> Inheritor syncFactory(
+//                Inheritor parent,
+//                Function<Inheritor, K> key,
+//                Supplier<Inheritor> childSupplier
+//        ) {
+//            Inheritor child = childSupplier.get();
+//            child.syncWith(key.apply(child), parent);
+//            return child;
+//        }
+//        public static <K, Inheritor extends NonConcurrentToMany<K>, Event> Inheritor factory(
+//                Supplier<Inheritor> inheritorSupplier,
+//                Register<Event> lifecycleRegister,
+//                final Event ON,
+//                final Event OFF,
+//                final Event DESTROY
+//        ) {
+//            assert inheritorSupplier != null;
+//            Inheritor core = inheritorSupplier.get();
+//            Predicate<Event> isOn, isOff, destroy;
+//            isOn = event -> event == ON;
+//            isOff = event -> event == OFF;
+//            destroy = event -> event == DESTROY;
+//            core.SYNC_CHECK_EXCEPT(
+//                    () -> lifecycleRegister.register(
+//                            event -> {
+//                                if (isOn.test(event)) core.on();
+//                                else if (isOff.test(event)) core.off();
+//                                else if (destroy.test(event)) core.shutoff();
+//                            }
+//                    )
+//            );
+//            return core;
+//        }
+//        private final Map<K, Switchers.Switch> suppliersSet = new HashMap<>();
+//
+//        protected <S extends Switchers.Switch> S putIfAbsent(K key, S aSwitch) {
+//            assert aSwitch != null;
+//            if (!suppliersSet.containsKey(key)) {
+//                suppliersSet.put(key, aSwitch);
+//                if (isActive()) aSwitch.on();
+//                return aSwitch;
+//            } throw new IllegalStateException("Key: " + key + " already present in Map.");
+//        }
+//        protected <S extends Switchers.Switch> boolean trueIfAbsent(K key, Supplier<S> aSwitchSupplier) {
+//            assert aSwitchSupplier != null;
+//            if (!suppliersSet.containsKey(key)) {
+//                S aSwitch = aSwitchSupplier.get();
+//                assert aSwitch != null;
+//                suppliersSet.put(key, aSwitch);
+//                if (isActive()) aSwitch.on();
+//                return true;
+//            } return false;
+//        }
+//        protected boolean contains(K key) {
+//            return suppliersSet.containsKey(key);
+//        }
+//        protected void remove(K key) {
+//            Switchers.Switch removed = suppliersSet.remove(key);
+//            if (removed != null && removed.isActive()) removed.off();
+//        }
+//
+//        @Override
+//        protected final void onDestroyed() {
+//            synced.set(false);
+//            forEachSet(
+//                    aSwitch -> {
+//                        if (aSwitch instanceof AtomicBinaryEvent) ((AtomicBinaryEvent) aSwitch).shutoff();
+//                    }
+//            );
+//            suppliersSet.clear();
+//        }
+//
+//        private void forEachSet(Consumer<Switchers.Switch> consumer) {
+//            for (Switchers.Switch s:suppliersSet.values()) consumer.accept(s);
+//        }
+//
+//        @Override
+//        protected void onStateChange(boolean isActive) {
+//            if (isActive) forEachSet(Switchers.Switch::on);
+//            else forEachSet(Switchers.Switch::off);
+//        }
+//    }
+
+    public interface SwitchSynchronizer<K> {
+        <S extends Switchers.Switch> S putIfAbsent(K key, S aSwitch) throws IllegalStateException;
+        <S extends Switchers.Switch> boolean trueIfAbsent(K key, Supplier<S> aSwitchSupplier);
+        <S extends SwitchSynchronizer<K>> void syncWith(K key, S parent);
+        <S extends SwitchSynchronizer<K>> void syncWith(S parent);
+        boolean remove(K key);
+        boolean contains(K key);
+    }
+
+    public static class SynchronizedModel {
+        private final SwitchSynchronizer<? super Switchers.Switch> synchronizer;
+
+        protected SynchronizedModel(SwitchSynchronizer<? super Switchers.Switch> synchronizer) {
+            this.synchronizer = synchronizer;
+        }
+
+        protected <S extends Switchers.Switch> S sync(S aSwitch) {
+            return synchronizer.putIfAbsent(aSwitch, aSwitch);
+        }
+
+        protected <S extends Switchers.Switch> boolean sync(S aSwitch, Supplier<S> supplier) {
+            return synchronizer.trueIfAbsent(aSwitch, supplier);
+        }
+
+        protected <S extends Switchers.Switch> boolean remove(S aSwitch) {
+            return synchronizer.remove(aSwitch);
+        }
+    }
+
+    /**AtomicBinaryEventConsumer is used instead because it's "shutOff()" method allows "Destroy" concatenation*/
+    public static class SwitchSynchronizerImpl<K>
+            extends AtomicBinaryEventConsumer
+            implements SwitchSynchronizer<K>
+    {
+        private final Map<K, Switchers.Switch> suppliersSet = new HashMap<>();
         private final AtomicBoolean synced = new AtomicBoolean();
         /**Parent will drop listeners on destruction*/
-        public <S extends NonConcurrentToMany<K>> void syncWith(K key, S parent) {
+        @Override
+        public <S extends SwitchSynchronizer<K>> void syncWith(K key, S parent) {
             SYNC_CHECK_EXCEPT(
                     () -> parent.putIfAbsent(key, this)
+            );
+        }
+        @Override
+        @SuppressWarnings("unchecked")
+        public <S extends SwitchSynchronizer<K>> void syncWith(S parent) {
+            SYNC_CHECK_EXCEPT(
+                    () -> {
+                        try {
+                            parent.putIfAbsent((K) this, this);
+                        } catch (Exception e) {
+                            throw new IllegalStateException("parent must be instance of K (key), use the Key factory instead", e);
+                        }
+                    }
             );
         }
         void SYNC_CHECK_EXCEPT(Runnable passed) {
@@ -169,7 +327,7 @@ public final class BinaryEventRegisters {
                 throw new IllegalStateException("Manager already synced.");
         }
         @SuppressWarnings("unchecked")
-        public static <K, Inheritor extends NonConcurrentToMany<K>> Inheritor syncFactory(
+        public static <K, Inheritor extends SwitchSynchronizer<K>> Inheritor syncFactory(
                 Inheritor parent,
                 Supplier<Inheritor> childSupplier
         ) {
@@ -181,7 +339,7 @@ public final class BinaryEventRegisters {
                 throw new IllegalStateException("parent must be instance of K (key), use the Key factory instead", e);
             }
         }
-        public static <K, Inheritor extends NonConcurrentToMany<K>> Inheritor syncFactory(
+        public static <K, Inheritor extends SwitchSynchronizer<K>> Inheritor syncFactory(
                 Inheritor parent,
                 Function<Inheritor, K> key,
                 Supplier<Inheritor> childSupplier
@@ -190,7 +348,7 @@ public final class BinaryEventRegisters {
             child.syncWith(key.apply(child), parent);
             return child;
         }
-        public static <K, Inheritor extends NonConcurrentToMany<K>, Event> Inheritor factory(
+        public static <K, Inheritor extends SwitchSynchronizerImpl<K>, Event> Inheritor factory(
                 Supplier<Inheritor> inheritorSupplier,
                 Register<Event> lifecycleRegister,
                 final Event ON,
@@ -199,7 +357,12 @@ public final class BinaryEventRegisters {
         ) {
             assert inheritorSupplier != null;
             Inheritor core = inheritorSupplier.get();
-            Predicate<Event> isOn, isOff, destroy;
+            syncWithEventRegister(lifecycleRegister, ON, OFF, DESTROY, core);
+            return core;
+        }
+
+        public static <K, Inheritor extends SwitchSynchronizerImpl<K>, Event> void syncWithEventRegister(Register<Event> lifecycleRegister, Event ON, Event OFF, Event DESTROY, Inheritor core) {
+            Predicate<Event> isOff, isOn, destroy;
             isOn = event -> event == ON;
             isOff = event -> event == OFF;
             destroy = event -> event == DESTROY;
@@ -212,11 +375,10 @@ public final class BinaryEventRegisters {
                             }
                     )
             );
-            return core;
         }
-        private final Map<K, Switchers.Switch> suppliersSet = new HashMap<>();
 
-        protected <S extends Switchers.Switch> S putIfAbsent(K key, S aSwitch) {
+        @Override
+        public <S extends Switchers.Switch> S putIfAbsent(K key, S aSwitch) throws IllegalStateException {
             assert aSwitch != null;
             if (!suppliersSet.containsKey(key)) {
                 suppliersSet.put(key, aSwitch);
@@ -224,7 +386,8 @@ public final class BinaryEventRegisters {
                 return aSwitch;
             } throw new IllegalStateException("Key: " + key + " already present in Map.");
         }
-        protected <S extends Switchers.Switch> boolean trueIfAbsent(K key, Supplier<S> aSwitchSupplier) {
+        @Override
+        public <S extends Switchers.Switch> boolean trueIfAbsent(K key, Supplier<S> aSwitchSupplier) {
             assert aSwitchSupplier != null;
             if (!suppliersSet.containsKey(key)) {
                 S aSwitch = aSwitchSupplier.get();
@@ -234,16 +397,20 @@ public final class BinaryEventRegisters {
                 return true;
             } return false;
         }
-        protected boolean contains(K key) {
+        @Override
+        public boolean contains(K key) {
             return suppliersSet.containsKey(key);
         }
-        protected void remove(K key) {
+        @Override
+        public boolean remove(K key) {
             Switchers.Switch removed = suppliersSet.remove(key);
-            if (removed != null && removed.isActive()) removed.off();
+            boolean removedB = removed != null;
+            if (removedB && removed.isActive()) removed.off();
+            return removedB;
         }
 
         @Override
-        protected final void onDestroyed() {
+        protected void onDestroyed() {
             synced.set(false);
             forEachSet(
                     aSwitch -> {
