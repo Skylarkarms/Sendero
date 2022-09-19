@@ -2,11 +2,14 @@ package sendero.event_registers;
 
 import sendero.AtomicBinaryEvent;
 import sendero.AtomicBinaryEventConsumer;
+import sendero.BasePath;
+import sendero.Builders;
 import sendero.interfaces.Register;
 import sendero.switchers.Switchers;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -152,118 +155,6 @@ public final class BinaryEventRegisters {
         }
     }
 
-    /**AtomicBinaryEventConsumer is used instead because it's "shutOff()" method allows "Destroy" concatenation*/
-//    public static class NonConcurrentToMany<K>
-//            extends AtomicBinaryEventConsumer {
-//        private final AtomicBoolean synced = new AtomicBoolean();
-//        /**Parent will drop listeners on destruction*/
-//        public <S extends NonConcurrentToMany<K>> void syncWith(K key, S parent) {
-//            SYNC_CHECK_EXCEPT(
-//                    () -> parent.putIfAbsent(key, this)
-//            );
-//        }
-//        void SYNC_CHECK_EXCEPT(Runnable passed) {
-//            if (!synced.getAndSet(true)) {
-//                passed.run();
-//            } else
-//                throw new IllegalStateException("Manager already synced.");
-//        }
-//        @SuppressWarnings("unchecked")
-//        public static <K, Inheritor extends NonConcurrentToMany<K>> Inheritor syncFactory(
-//                Inheritor parent,
-//                Supplier<Inheritor> childSupplier
-//        ) {
-//            Inheritor child = childSupplier.get();
-//            try {
-//                child.syncWith((K)child, parent);
-//                return child;
-//            } catch (Exception e) {
-//                throw new IllegalStateException("parent must be instance of K (key), use the Key factory instead", e);
-//            }
-//        }
-//        public static <K, Inheritor extends NonConcurrentToMany<K>> Inheritor syncFactory(
-//                Inheritor parent,
-//                Function<Inheritor, K> key,
-//                Supplier<Inheritor> childSupplier
-//        ) {
-//            Inheritor child = childSupplier.get();
-//            child.syncWith(key.apply(child), parent);
-//            return child;
-//        }
-//        public static <K, Inheritor extends NonConcurrentToMany<K>, Event> Inheritor factory(
-//                Supplier<Inheritor> inheritorSupplier,
-//                Register<Event> lifecycleRegister,
-//                final Event ON,
-//                final Event OFF,
-//                final Event DESTROY
-//        ) {
-//            assert inheritorSupplier != null;
-//            Inheritor core = inheritorSupplier.get();
-//            Predicate<Event> isOn, isOff, destroy;
-//            isOn = event -> event == ON;
-//            isOff = event -> event == OFF;
-//            destroy = event -> event == DESTROY;
-//            core.SYNC_CHECK_EXCEPT(
-//                    () -> lifecycleRegister.register(
-//                            event -> {
-//                                if (isOn.test(event)) core.on();
-//                                else if (isOff.test(event)) core.off();
-//                                else if (destroy.test(event)) core.shutoff();
-//                            }
-//                    )
-//            );
-//            return core;
-//        }
-//        private final Map<K, Switchers.Switch> suppliersSet = new HashMap<>();
-//
-//        protected <S extends Switchers.Switch> S putIfAbsent(K key, S aSwitch) {
-//            assert aSwitch != null;
-//            if (!suppliersSet.containsKey(key)) {
-//                suppliersSet.put(key, aSwitch);
-//                if (isActive()) aSwitch.on();
-//                return aSwitch;
-//            } throw new IllegalStateException("Key: " + key + " already present in Map.");
-//        }
-//        protected <S extends Switchers.Switch> boolean trueIfAbsent(K key, Supplier<S> aSwitchSupplier) {
-//            assert aSwitchSupplier != null;
-//            if (!suppliersSet.containsKey(key)) {
-//                S aSwitch = aSwitchSupplier.get();
-//                assert aSwitch != null;
-//                suppliersSet.put(key, aSwitch);
-//                if (isActive()) aSwitch.on();
-//                return true;
-//            } return false;
-//        }
-//        protected boolean contains(K key) {
-//            return suppliersSet.containsKey(key);
-//        }
-//        protected void remove(K key) {
-//            Switchers.Switch removed = suppliersSet.remove(key);
-//            if (removed != null && removed.isActive()) removed.off();
-//        }
-//
-//        @Override
-//        protected final void onDestroyed() {
-//            synced.set(false);
-//            forEachSet(
-//                    aSwitch -> {
-//                        if (aSwitch instanceof AtomicBinaryEvent) ((AtomicBinaryEvent) aSwitch).shutoff();
-//                    }
-//            );
-//            suppliersSet.clear();
-//        }
-//
-//        private void forEachSet(Consumer<Switchers.Switch> consumer) {
-//            for (Switchers.Switch s:suppliersSet.values()) consumer.accept(s);
-//        }
-//
-//        @Override
-//        protected void onStateChange(boolean isActive) {
-//            if (isActive) forEachSet(Switchers.Switch::on);
-//            else forEachSet(Switchers.Switch::off);
-//        }
-//    }
-
     public interface SwitchSynchronizer<K> {
         <S extends Switchers.Switch> S putIfAbsent(K key, S aSwitch) throws IllegalStateException;
         <S extends Switchers.Switch> boolean trueIfAbsent(K key, Supplier<S> aSwitchSupplier);
@@ -271,17 +162,234 @@ public final class BinaryEventRegisters {
         <S extends SwitchSynchronizer<K>> void syncWith(S parent);
         boolean remove(K key);
         boolean contains(K key);
+        boolean isActive();
+
+        @SuppressWarnings("unchecked")
+        static <K, Inheritor extends SwitchSynchronizer<K>> Inheritor syncFactory(
+                Inheritor parent,
+                Supplier<Inheritor> childSupplier
+        ) {
+            Inheritor child = childSupplier.get();
+            try {
+                child.syncWith((K)child, parent);
+                return child;
+            } catch (Exception e) {
+                throw new IllegalStateException("parent must be instance of K (key), use the Key factory instead", e);
+            }
+        }
+        static <K, Inheritor extends SwitchSynchronizer<K>> Inheritor syncFactory(
+                Inheritor parent,
+                Function<Inheritor, K> key,
+                Supplier<Inheritor> childSupplier
+        ) {
+            Inheritor child = childSupplier.get();
+            child.syncWith(key.apply(child), parent);
+            return child;
+        }
+        static <K, Inheritor extends SwitchSynchronizerImpl<K>, Event> Inheritor factory(
+                Supplier<Inheritor> inheritorSupplier,
+                Register<Event> lifecycleRegister,
+                final Event ON,
+                final Event OFF,
+                final Event DESTROY
+        ) {
+            assert inheritorSupplier != null;
+            Inheritor core = inheritorSupplier.get();
+            SwitchSynchronizerImpl.syncWithEventRegister(lifecycleRegister, ON, OFF, DESTROY, core);
+            return core;
+        }
+    }
+
+    private static <S, T> AtomicBinaryEvent getBackgroundSwitch(BasePath<S> source, Builders.InputMethods<T, S> inputMethod, Consumer<? super T> consumer) {
+        return Builders.BinaryEventConsumers.producerListenerDefaulter(source, inputMethod, consumer);
+    }
+
+    private static <S, T> AtomicBinaryEvent getSwitch(
+            Executor executor,
+            BasePath<S> source, Builders.InputMethods<T, S> inputMethod, Consumer<? super T> consumer) {
+        return Builders.BinaryEventConsumers.producerListenerDefaulter(source, executor, inputMethod, consumer);
+    }
+
+    public interface ModelImplementation {
+        SynchronizedModel get();
+        default <S extends Switchers.Switch> S sync(S aSwitch) {
+            return get().sync(aSwitch);
+        }
+        default <S extends Switchers.Switch> boolean sync(S aSwitch, Supplier<S> supplier) {
+            return get().sync(aSwitch, supplier);
+        }
+        default <S extends Switchers.Switch> boolean remove(S aSwitch) {
+            return get().remove(aSwitch);
+        }
+        default boolean isActive() {
+            return get().isActive();
+        }
+        default <S, T, BP extends BasePath<S>> BP syncSource(
+                BP basePath,
+                Builders.InputMethods<T, S> inputMethod,
+                Consumer<? super T> consumer
+        ) {
+            return get().syncSource(basePath, inputMethod, consumer);
+        }
+
+        default <T, BP extends BasePath<T>> BP syncSource(
+                BP basePath,
+                Consumer<? super T> consumer
+        ) {
+            return get().syncSource(basePath, consumer);
+        }
+        default <S, T, BP extends BasePath<S>, Cons extends Consumer<? super T>> Cons syncCons(
+                BP basePath,
+                Builders.InputMethods<T, S> inputMethod,
+                Cons consumer
+        ) {
+            return get().syncCons(basePath, inputMethod, consumer);
+        }
+        default <T, BP extends BasePath<T>, Cons extends Consumer<? super T>> Cons syncCons(
+                BP basePath,
+                Cons consumer
+        ) {
+            return get().syncCons(basePath, consumer);
+        }
+        default <S, T, BP extends BasePath<S>>boolean threadSync(
+                Executor executor,
+                BP basePath,
+                Builders.InputMethods<T, S> inputMethod,
+                Consumer<? super T> consumer
+        ){
+            return get().threadSync(executor, basePath, inputMethod, consumer);
+        }
+        default <T, BP extends BasePath<T>>boolean threadSync(
+                Executor executor,
+                BP basePath,
+                Consumer<? super T> consumer
+        ){
+            return get().threadSync(executor, basePath, consumer);
+        }
+        default <S, T, BP extends BasePath<S>, Cons extends Consumer<? super T>> boolean sync(
+                BP basePath,
+                Builders.InputMethods<T, S> inputMethod,
+                Cons consumer
+        ) {
+            return get().sync(basePath, inputMethod, consumer);
+        }
+        default <T, BP extends BasePath<T>, Cons extends Consumer<? super T>> boolean sync(
+                BP basePath,
+                Cons consumer
+        ) {
+            return get().sync(basePath, consumer);
+        }
     }
 
     public static class SynchronizedModel {
-        private final SwitchSynchronizer<? super Switchers.Switch> synchronizer;
+        private final SwitchSynchronizer<Object> synchronizer;
 
-        protected SynchronizedModel(SwitchSynchronizer<? super Switchers.Switch> synchronizer) {
+        public static SynchronizedModel getInstance(SwitchSynchronizer<Object> synchronizer) {
+            return new SynchronizedModel(synchronizer);
+        }
+
+        protected SynchronizedModel(SwitchSynchronizer<Object> synchronizer) {
             this.synchronizer = synchronizer;
+        }
+
+        protected SynchronizedModel(SynchronizedModel model) {
+            this.synchronizer = model.synchronizer;
+        }
+
+        protected SynchronizedModel(ModelImplementation model) {
+            this.synchronizer = model.get().synchronizer;
         }
 
         protected <S extends Switchers.Switch> S sync(S aSwitch) {
             return synchronizer.putIfAbsent(aSwitch, aSwitch);
+        }
+
+        protected <S, T, BP extends BasePath<S>, Cons extends Consumer<? super T>>BP syncSource(
+                BP basePath,
+                Builders.InputMethods<T, S> inputMethod,
+                Cons consumer
+        ) {
+            synchronizer.putIfAbsent(
+                    basePath,
+                    getBackgroundSwitch(basePath, inputMethod, consumer)
+            );
+            return basePath;
+        }
+
+        protected <S, T, BP extends BasePath<S>, Cons extends Consumer<? super T>> boolean sync(
+                BP basePath,
+                Builders.InputMethods<T, S> inputMethod,
+                Cons consumer
+        ) {
+            return synchronizer.trueIfAbsent(
+                    basePath,
+                    () -> getBackgroundSwitch(basePath, inputMethod, consumer)
+            );
+        }
+
+        protected <T, BP extends BasePath<T>, Cons extends Consumer<? super T>> boolean sync(
+                BP basePath,
+                Cons consumer
+        ) {
+            return sync(
+                    basePath,
+                    Builders.InputMethods.identity(),
+                    consumer
+            );
+        }
+
+        protected <S, T, BP extends BasePath<S>, Cons extends Consumer<? super T>> Cons syncCons(
+                BP basePath,
+                Builders.InputMethods<T, S> inputMethod,
+                Cons consumer
+        ) {
+            synchronizer.putIfAbsent(
+                    basePath,
+                    getBackgroundSwitch(basePath, inputMethod, consumer)
+            );
+            return consumer;
+        }
+
+        protected <T, BP extends BasePath<T>> BP syncSource(
+                BP basePath,
+                Consumer<? super T> consumer
+        ) {
+            return syncSource(
+                    basePath,
+                    Builders.InputMethods.identity(),
+                    consumer
+            );
+        }
+
+        protected <T, BP extends BasePath<T>, Cons extends Consumer<? super T>> Cons syncCons(
+                BP basePath,
+                Cons consumer
+        ) {
+            return syncCons(
+                    basePath,
+                    Builders.InputMethods.identity(),
+                    consumer
+            );
+        }
+
+        protected <S, T, BP extends BasePath<S>>boolean threadSync(
+                Executor executor,
+                BP basePath,
+                Builders.InputMethods<T, S> inputMethod,
+                Consumer<? super T> consumer
+        ) {
+            return synchronizer.trueIfAbsent(
+                    basePath,
+                    () -> getSwitch(executor, basePath, inputMethod, consumer)
+            );
+        }
+
+        protected <T, BP extends BasePath<T>>boolean threadSync(
+                Executor executor,
+                BP basePath,
+                Consumer<? super T> consumer
+        ) {
+            return threadSync(executor, basePath, Builders.InputMethods.identity(), consumer);
         }
 
         protected <S extends Switchers.Switch> boolean sync(S aSwitch, Supplier<S> supplier) {
@@ -290,6 +398,10 @@ public final class BinaryEventRegisters {
 
         protected <S extends Switchers.Switch> boolean remove(S aSwitch) {
             return synchronizer.remove(aSwitch);
+        }
+
+        protected boolean isActive() {
+            return synchronizer.isActive();
         }
     }
 
@@ -326,40 +438,6 @@ public final class BinaryEventRegisters {
             } else
                 throw new IllegalStateException("Manager already synced.");
         }
-        @SuppressWarnings("unchecked")
-        public static <K, Inheritor extends SwitchSynchronizer<K>> Inheritor syncFactory(
-                Inheritor parent,
-                Supplier<Inheritor> childSupplier
-        ) {
-            Inheritor child = childSupplier.get();
-            try {
-                child.syncWith((K)child, parent);
-                return child;
-            } catch (Exception e) {
-                throw new IllegalStateException("parent must be instance of K (key), use the Key factory instead", e);
-            }
-        }
-        public static <K, Inheritor extends SwitchSynchronizer<K>> Inheritor syncFactory(
-                Inheritor parent,
-                Function<Inheritor, K> key,
-                Supplier<Inheritor> childSupplier
-        ) {
-            Inheritor child = childSupplier.get();
-            child.syncWith(key.apply(child), parent);
-            return child;
-        }
-        public static <K, Inheritor extends SwitchSynchronizerImpl<K>, Event> Inheritor factory(
-                Supplier<Inheritor> inheritorSupplier,
-                Register<Event> lifecycleRegister,
-                final Event ON,
-                final Event OFF,
-                final Event DESTROY
-        ) {
-            assert inheritorSupplier != null;
-            Inheritor core = inheritorSupplier.get();
-            syncWithEventRegister(lifecycleRegister, ON, OFF, DESTROY, core);
-            return core;
-        }
 
         public static <K, Inheritor extends SwitchSynchronizerImpl<K>, Event> void syncWithEventRegister(Register<Event> lifecycleRegister, Event ON, Event OFF, Event DESTROY, Inheritor core) {
             Predicate<Event> isOff, isOn, destroy;
@@ -379,7 +457,7 @@ public final class BinaryEventRegisters {
 
         @Override
         public <S extends Switchers.Switch> S putIfAbsent(K key, S aSwitch) throws IllegalStateException {
-            assert aSwitch != null;
+            assert aSwitch != null && !isOff();
             if (!suppliersSet.containsKey(key)) {
                 suppliersSet.put(key, aSwitch);
                 if (isActive()) aSwitch.on();
