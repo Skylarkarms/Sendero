@@ -11,18 +11,12 @@ import java.util.function.UnaryOperator;
 public final class AtomicUtils {
 
     public static class Witness<T> {
-        private static final Witness<?> DEFAULT = new Witness<>(null, null);
-        @SuppressWarnings("unchecked")
-        public static<S> Witness<S> getDefault() {
-            return (Witness<S>) DEFAULT;
-        }
         public final T prev, next;
 
         Witness(T prev, T next) {
             this.prev = prev;
             this.next = next;
         }
-
         public static class Int {
             public final int prev, next;
 
@@ -30,10 +24,6 @@ public final class AtomicUtils {
                 this.prev = prev;
                 this.next = next;
             }
-        }
-
-        public boolean isDefault() {
-            return this == DEFAULT;
         }
     }
 
