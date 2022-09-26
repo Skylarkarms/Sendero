@@ -1,6 +1,5 @@
 package sendero;
 
-
 import java.util.function.Supplier;
 
 /**The system is composed of 2 types of reconfigurations:
@@ -78,7 +77,7 @@ final class Immutable<T> implements Supplier<T> {
                 return this == branch;
             }
 
-            <S> Immutable<S> getNext(Immutable<S> prev, Immutable.Values topValues, S nextData) {
+            <S> Immutable<S> getNext(Immutable<S> prev, Values topValues, S nextData) {
                 return isBranch() ?
                         prev.branchSwitched(topValues, nextData)
                         :
@@ -105,9 +104,9 @@ final class Immutable<T> implements Supplier<T> {
         @Override
         public String toString() {
             return "   Values{" +
-                    "\n   branchSerial=" + branchSerial +
-                    ",\n  dataSerial=" + dataSerial +
-                    "\n   }";
+                    "\n >> branchSerial=" + branchSerial +
+                    ",\n >> dataSerial=" + dataSerial +
+                    "\n}";
         }
     }
 
@@ -117,6 +116,10 @@ final class Immutable<T> implements Supplier<T> {
 
     public boolean isSet() {
         return this != NOT_SET;
+    }
+
+    public boolean isInvalid() {
+        return isSet() && upper == Values.NOT_SET;
     }
 
     public int dataSerial() {
@@ -134,10 +137,10 @@ final class Immutable<T> implements Supplier<T> {
     @Override
     public String toString() {
         return "Immutable{" +
-                "\n local=" + local +
-                ",\n upper=" + upper +
-                ",\n data=" + data +
-                ",\n hash = " + hashCode() +
+                "\n >> local=" + local +
+                ",\n >> upper=" + upper +
+                ",\n >> data=" + data +
+                ",\n >> hash = " + hashCode() +
                 "\n }";
     }
 }

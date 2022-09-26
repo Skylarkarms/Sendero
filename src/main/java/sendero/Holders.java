@@ -19,10 +19,14 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.*;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 final class Holders {
-
     interface HolderIO<T> extends Updater<T>, Consumer<T> {
     }
 
@@ -113,17 +117,17 @@ final class Holders {
         }
     }
 
-    private static final class StreamManagerExecutor<T> implements Holders.StreamManager<T> {
+    private static final class StreamManagerExecutor<T> implements StreamManager<T> {
 
         private final AtomicUtils.OverlapDropExecutor executor;
-        private final Holders.StreamManager<T> manager;
+        private final StreamManager<T> manager;
         private final BiFunction<Immutable.Values, UnaryOperator<T>, Runnable> runnableFactory;
 
         private StreamManagerExecutor(
                 Executor executor,
                 SwapBroadcast<T> coreConsumer
         ) {
-            this(executor, Holders.StreamManager.baseManager(
+            this(executor, StreamManager.baseManager(
                     coreConsumer
             ));
         }
@@ -152,6 +156,15 @@ final class Holders {
         public void invalidate() {
             manager.invalidate();
         }
+
+        @Override
+        public String toString() {
+            return "StreamManagerExecutor{" +
+                    "\n >> executor=" + executor +
+                    ",\n >> manager=" + manager +
+                    ",\n >> runnableFactory=" + runnableFactory +
+                    "\n}";
+        }
     }
 
 
@@ -174,7 +187,7 @@ final class Holders {
                                 (res = (prev = getSnapshot()).test(topValues)).isLesser()
                         ) {
                             T prevData = prev.get(), nextData = topData.apply(prevData);
-                            if (nextData != prevData) {
+                            if (prev.isInvalid() || nextData != prevData) {
                                 Immutable<T> next = res.getNext(prev, topValues, nextData);
                                 if (compareAndSet(prev, next)) {
                                     break;
@@ -191,7 +204,7 @@ final class Holders {
                                 (res = (prev = getSnapshot()).test(topValues)).isLesser()
                         ) {
                             T prevData = prev.get(), nextData = topData.apply(prevData);
-                            if (nextData != prevData && test.test(nextData, prevData)) {
+                            if ((prev.isInvalid() || nextData != prevData) && test.test(nextData, prevData)) {
                                 Immutable<T> next = res.getNext(prev, topValues, nextData);
                                 if (compareAndSet(prev, next)) {
                                     break;
@@ -222,8 +235,8 @@ final class Holders {
         @Override
         public String toString() {
             return "ColdReceptorImpl{" +
-                    "\n immutableRead=" + immutableWrite +
-                    '}';
+                    "\n >> immutableWrite=" + immutableWrite +
+                    "\n }";
         }
     }
 
@@ -292,8 +305,8 @@ final class Holders {
         @Override
         public String toString() {
             return "BaseColdHolder{" +
-                    "\n reference=" + reference.get().toString() +
-                    "\n TAG=" + TAGRef.get() +
+                    "\n >> reference=" + reference.get().toString() +
+                    "\n >> TAG=" + TAGRef.get() +
                     "\n}@" + hashCode();
         }
     }
@@ -396,15 +409,13 @@ final class Holders {
         private SnapConsumer<T> builder(boolean outIsDefault, Predicate<T> expectOut) {
             return outIsDefault ?
                     (currentSnap, values, consumer) -> {
-                        if (currentSnap.isSet() && currentSnap.match(values)) {
+                        if (currentSnap.isSet() && currentSnap.match(values))
                             consumer.accept(currentSnap);
-                        }
                     }
                     :
                     (currentSnap, values, consumer) -> {
-                        if (currentSnap.isSet() && expectOut.test(currentSnap.get()) && currentSnap.match(values)) {
+                        if (currentSnap.isSet() && expectOut.test(currentSnap.get()) && currentSnap.match(values))
                             consumer.accept(currentSnap);
-                        }
             };
         }
 
@@ -454,7 +465,7 @@ final class Holders {
         @Override
         public String toString() {
             return "BaseBroadcaster{" +
-                    "\n   holder=" + holder +
+                    "\n >> holder=" + holder +
                     "\n }";
         }
     }
@@ -467,7 +478,7 @@ final class Holders {
         public String toString() {
             return super.toString() +
                     "\n ActivationHolder{" +
-                    "\n   activationManager=" + activationManager +
+                    "\n >> activationManager=" + activationManager +
                     "\n }";
         }
 
