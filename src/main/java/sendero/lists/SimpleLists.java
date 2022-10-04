@@ -36,7 +36,7 @@ public class SimpleLists {
         interface Snapshooter<E, Snapshot> extends LockFree<E> {
             /**returns true if this is the first item to be added*/
             Pair.Immutables.Bool<Snapshot> snapshotAdd(E element);
-
+            Snapshot snapAdd(E element);
         }
     }
 
@@ -185,6 +185,21 @@ public class SimpleLists {
             return new Pair.Immutables.Bool<>(first, snap);
         }
 
+        private static<S, E> S simpleAdd(
+                AtomicReference<Snapshot<E>> atomicReference,
+                E element,
+                Supplier<S> sSupplier,
+                E[] componentArr) {
+            Snapshot<E> prev, next;
+            S snap;
+            do {
+                prev = atomicReference.get();
+                next = Snapshot.add(element, prev, componentArr);
+                snap = sSupplier.get();
+            } while (!atomicReference.compareAndSet(prev, next));
+            return snap;
+        }
+
         private static<E> boolean add(AtomicReference<Snapshot<E>> atomicReference, E element, E[] componentArr) {
             Snapshot<E> prev, next;
             do {
@@ -263,7 +278,7 @@ public class SimpleLists {
         @SuppressWarnings("unchecked")
         private LockFreeImpl(Class<? super E> componentType) {
             this.EMPTY_ELEMENT_ARRAY = (E[]) Array.newInstance(componentType, 0);
-            Snapshot<E> FIRST = SimpleLists.Snapshot.initialize((E[])DEFAULT_CAPACITY_EMPTY_ELEMENT_DATA);
+            Snapshot<E> FIRST = Snapshot.initialize((E[])DEFAULT_CAPACITY_EMPTY_ELEMENT_DATA);
             this.core = new AtomicReference<>(FIRST);
         }
 
@@ -289,7 +304,7 @@ public class SimpleLists {
 
         @Override
         public E[] copy() {
-            SimpleLists.Snapshot<E> snapshot = core.get();
+            Snapshot<E> snapshot = core.get();
             E[] res = snapshot.copy;
             return res == DEFAULT_CAPACITY_EMPTY_ELEMENT_DATA ? EMPTY_ELEMENT_ARRAY : trimToSize(snapshot);
         }
@@ -299,7 +314,7 @@ public class SimpleLists {
             return Snapshot.clear(core, EMPTY_ELEMENT_ARRAY);
         }
 
-        public E[] trimToSize(SimpleLists.Snapshot<E> snap) {
+        public E[] trimToSize(Snapshot<E> snap) {
             E[] copy = snap.copy;
             int size = snap.size;
             if (size < copy.length) return Arrays.copyOf(copy, size);
@@ -322,7 +337,12 @@ public class SimpleLists {
 
         @Override
         public Pair.Immutables.Bool<S> snapshotAdd(E element) {
-            return SimpleLists.Snapshot.add(core, element, sSupplier, EMPTY_ELEMENT_ARRAY);
+            return Snapshot.add(core, element, sSupplier, EMPTY_ELEMENT_ARRAY);
+        }
+
+        @Override
+        public S snapAdd(E element) {
+            return Snapshot.simpleAdd(core, element, sSupplier, EMPTY_ELEMENT_ARRAY);
         }
     }
 

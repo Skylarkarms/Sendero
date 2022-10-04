@@ -2,9 +2,12 @@ package sendero.atomics;
 
 import sendero.abstract_containers.Pair;
 
+import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.IntPredicate;
+import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 
@@ -21,6 +24,14 @@ public final class AtomicUtils {
             public final int prev, next;
 
             public Int(int prev, int next) {
+                this.prev = prev;
+                this.next = next;
+            }
+        }
+        public static class IntObject {
+            public final Integer prev, next;
+
+            public IntObject(Integer prev, Integer next) {
                 this.prev = prev;
                 this.next = next;
             }
@@ -54,6 +65,23 @@ public final class AtomicUtils {
             }
         }
         return new Witness<>(prev, null);
+    }
+
+    public static<T> Witness.IntObject setIf(
+            AtomicInteger ref,
+            IntPredicate test,
+            IntUnaryOperator nextMap
+    ) {
+        Integer prev = null;
+        int next;
+        while (!Objects.equals(prev, prev = ref.get())) {
+            if (test.test(prev)) {
+                next = nextMap.applyAsInt(prev);
+                if (ref.compareAndSet(prev, next)) return new Witness.IntObject(prev, next);
+                else return new Witness.IntObject(null, null);
+            }
+        }
+        return new Witness.IntObject(prev, null);
     }
 
     /**Delays the first execution, and then blocks contention and reuses Thread.*/
@@ -125,7 +153,6 @@ public final class AtomicUtils {
             if (semaphore.compareAndSet(RunnableRef.OPENED, newRef)) {
                 localRunnable.run();
             } else {
-
                 RunnableRef queued = new RunnableRef(QUEUE, runnable);
                 if (!queued(queued)) CAS(newRef, runnable);
             }
@@ -177,7 +204,7 @@ public final class AtomicUtils {
             }
 
             private SleeperThreadState getNewClosed(Runnable newRun) {
-                return new SleeperThreadState(new RunnableRef(CLOSE, newRun), new OverlapDropExecutor.Long.SleeperThread());
+                return new SleeperThreadState(new RunnableRef(CLOSE, newRun), new SleeperThread());
             }
 
             private class SleeperThread extends Thread {
