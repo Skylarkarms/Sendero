@@ -368,5 +368,10 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
     public boolean isActive() {
         return super.isActive();
     }
+
+    /**Called by SinglePath*/
+    public boolean isDefault() {
+        return false;
+    }
 }
 

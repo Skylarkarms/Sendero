@@ -101,16 +101,26 @@ public abstract class AtomicBinaryEventConsumer implements AtomicBinaryEvent {
             Function<S, ? extends BasePath<T>> switchMap
     ) {
         final Appointers.ConcurrentProducerSwapper<T> pathListener = new Appointers.ConcurrentProducerSwapper<>(target);
+        final IllegalStateException exception = new IllegalStateException("Path is null, from source: " + source +
+                ",\n and target: " + target +
+                ",\n and switchMap is: " + switchMap);
+        final Holders.StreamManager<BasePath<T>> basePathStreamManager = Holders.StreamManager.baseManager(
+                (prev, next, delay) -> {
+                    BasePath<T> nextP = next.get();
+                    if (nextP != null) {
+                        pathListener.setAndStart(nextP);
+                        if (nextP.isDefault())
+                            System.err.println("Path was default at source: " + source +
+                                    ",\n and target: " + target +
+                                    ",\n and switchMap: " + switchMap);
+                    }
+                    else throw exception;
+                }
+        );
 
         final AtomicBinaryEvent booleanConsumerAppointer = Builders.BinaryEventConsumers.producerListener(
                 source,
-        Holders.StreamManager.baseManager(
-                (prev, next, delay) -> {
-                    BasePath<T> nextP = next.get();
-                    pathListener.setAndStart(nextP);
-                    if (nextP == null) throw new IllegalStateException("Path is null.");
-                }
-        ),
+                basePathStreamManager,
                 (Function<S, BasePath<T>>) switchMap
         );
 
@@ -132,8 +142,8 @@ public abstract class AtomicBinaryEventConsumer implements AtomicBinaryEvent {
     @Override
     public String toString() {
         return "AtomicBinaryEventConsumer{" +
-                "versionedState=" + getState() +
-                '}';
+                "\n >> versionedState=" + getState() +
+                "}";
     }
 
     private String getState() {

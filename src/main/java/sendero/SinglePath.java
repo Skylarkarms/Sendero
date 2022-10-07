@@ -149,5 +149,45 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
     public SinglePath<T> store(String TAG) {
         return (SinglePath<T>) super.store(TAG);
     }
+
+    private static final BasePath<?> DEFAULT = new SinglePath<Object>(){
+        private void throwException() {
+            throw new IllegalStateException("Action not allowed");
+        }
+        @Override
+        protected void onSwapped(SourceType type, Object prev, Object next) {
+            throwException();
+            super.onSwapped(type, prev, next);
+        }
+
+        @Override
+        <S> Function<Holders.StreamManager<S>, AtomicBinaryEvent> mapFunctionBuilder(Function<Object, S> map) {
+            throwException();
+            return super.mapFunctionBuilder(map);
+        }
+
+        @Override
+        <S> Function<Holders.StreamManager<S>, AtomicBinaryEvent> switchFunctionBuilder(Function<Object, BasePath<S>> switchMap) {
+            throwException();
+            return super.switchFunctionBuilder(switchMap);
+        }
+
+        @Override
+        public <S, O extends Gate.Out<S>> O out(Class<? super O> outputType, Function<Object, S> map) {
+            throwException();
+            return super.out(outputType, map);
+        }
+    };
+
+    @SuppressWarnings("unchecked")
+    public static<T> BasePath<T> getDefault() {
+        return (BasePath<T>) DEFAULT;
+    }
+
+    @Override
+    public boolean isDefault() {
+        return this == DEFAULT;
+    }
+
 }
 
