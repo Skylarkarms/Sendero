@@ -11,7 +11,6 @@ import java.util.function.UnaryOperator;
 import static sendero.functions.Functions.myIdentity;
 
 public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
-
     final Holders.ActivationHolder<T> activationHolder;
 
     public static<T> Unbound<T> unbound(UnaryOperator<Builders.HolderBuilder<T>> operator) {
@@ -112,12 +111,12 @@ public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
             lazyExecutor.get().execute(
                     () -> {
                         int tries = 0;
-                        Immutable<T> snapshot;
+                        Immutable<T> snapshot = NOT_SET;
                         do {
-                            Immutable<T> nullable = activationHolder.getSnapshot();
-                            snapshot = nullable == null ? NOT_SET : nullable;
                             try {
                                 Thread.sleep(delay);
+                                Immutable<T> nullable = activationHolder.getSnapshot();
+                                snapshot = nullable == null ? NOT_SET : nullable;
                                 tries++;
                             } catch (InterruptedException ignored) {
                             }
@@ -131,18 +130,19 @@ public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
     private void zeroDelay(Consumer<? super T> consumer) {
         Immutable<T> snapshot = NOT_SET;
         int tries = 0;
-        while (tries < max_tries && !snapshot.match(activationHolder.localSerialValues())) {
-            Immutable<T> nullable = activationHolder.getSnapshot();
-            snapshot = nullable == null ? NOT_SET : nullable;
+        while (!snapshot.match((snapshot = activationHolder.getSnapshot()).local)) {
             tries++;
+            if (tries == max_tries) break;
         }
         makeAccept(snapshot, consumer);
     }
 
     private void makeAccept(Immutable<T> snapshot, Consumer<? super T> consumer) {
-        final T finalT = snapshot.isSet() ? snapshot.get() : null;
-        NOT_ACTIVE_WARNING();
-        consumer.accept(finalT);
+        if (snapshot.isSet()) {
+            NOT_ACTIVE_WARNING();
+            consumer.accept(snapshot.get());
+        } else
+            System.err.println("Snapshot NOT_SET at: " + this);
     }
 
     @Override
@@ -176,6 +176,6 @@ public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
     public String toString() {
         return "ProactiveSuppliers{" +
                 ",\n activationHolder=" + activationHolder +
-                '}';
+                "\n}";
     }
 }
