@@ -9,6 +9,27 @@ public final class Functions {
 
     private static final UnaryOperator<?> IDENTITY = UnaryOperator.identity();
 
+    private static final Supplier<?> NULL_SUPP = new Supplier<Object>() {
+        @Override
+        public Object get() {
+            return null;
+        }
+        @Override
+        public String toString() {
+            return super.toString() + CLEARED_STRING;
+        }
+
+    };
+
+    @SuppressWarnings("unchecked")
+    public static<T> Supplier<T> nullSupplier() {
+        return (Supplier<T>) NULL_SUPP;
+    }
+
+    public static boolean isNull(Supplier<?> that) {
+        return that == NULL_SUPP;
+    }
+
     public static boolean isIdentity(Function<?, ?> operator) {
         return operator == IDENTITY;
     }
