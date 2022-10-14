@@ -64,15 +64,6 @@ public final class AtomicUtils {
         return new Witness<>(prev, null);
     }
 
-    public static<T> T setAndGetIfAbsent(AtomicReference<T> ref, Supplier<T> tSupplier) {
-        T next = setIf(
-                ref,
-                Objects::isNull,
-                t -> tSupplier.get()
-        ).next;
-        return next != null ? next : ref.get();
-    }
-
     public static<T> Witness.IntObject setIf(
             AtomicInteger ref,
             IntPredicate test,
