@@ -6,10 +6,7 @@ import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.IntPredicate;
-import java.util.function.IntUnaryOperator;
-import java.util.function.Predicate;
-import java.util.function.UnaryOperator;
+import java.util.function.*;
 
 public final class AtomicUtils {
 
@@ -65,6 +62,15 @@ public final class AtomicUtils {
             }
         }
         return new Witness<>(prev, null);
+    }
+
+    public static<T> T setAndGetIfAbsent(AtomicReference<T> ref, Supplier<T> tSupplier) {
+        T next = setIf(
+                ref,
+                Objects::isNull,
+                t -> tSupplier.get()
+        ).next;
+        return next != null ? next : ref.get();
     }
 
     public static<T> Witness.IntObject setIf(
