@@ -1,5 +1,7 @@
 package sendero.interfaces;
 
+import java.util.function.Predicate;
+
 public interface SynthEqual {
     static int hashCodeOf(int... hashCodes) {
         if (hashCodes == null)
@@ -13,12 +15,18 @@ public interface SynthEqual {
         return result;
     }
 
+    @SuppressWarnings("unchecked")
+    default <S> boolean expect(int at, Predicate<S> that) {
+        return that.test((S) paramAt(this, at));
+    }
+
+
     default <S> boolean equalTo(int at, S arg) {
         return paramAt(this, at).equals(arg);
     }
 
     default<S> boolean equalTo(int at, SynthEqual that) {
-        return that != null && paramAt(this, at).equals(paramAt(that, at));
+        return that != null && equalTo(at, paramAt(that, at));
     }
 
     default int hashAt(int at) {
