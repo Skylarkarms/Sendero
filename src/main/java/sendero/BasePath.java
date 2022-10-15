@@ -15,6 +15,10 @@ import java.util.function.UnaryOperator;
 
 public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements Forkable<T> {
 
+    public String getTag() {
+        return holder.getTag();
+    }
+
     public enum Storage {
         INSTANCE;
         final Map<String, BasePath<?>> basePathMap = new ConcurrentHashMap<>();
