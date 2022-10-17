@@ -5,9 +5,9 @@ import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
+/**TopData UnaryOperator applies AFTER value comparison test has been validated. see: ColdReceptorManager.class*/
 @FunctionalInterface
-interface ColdReceptor<T> extends InputMethod<T> {
-
+public interface ColdReceptor<T> extends InputMethod<T> {
     /**Base Cold Stream receptive function<P>
      * If contention misses immediately retries.<P>
      * If Serial values are proved to be lesser than current, then it drops the thread <P>
@@ -16,17 +16,20 @@ interface ColdReceptor<T> extends InputMethod<T> {
 
     @Override
     default void accept(Immutable<T> immutable) {
-        filterAccept(immutable.local, prev -> immutable.get());
+        final T current = immutable.get();
+        filterAccept(immutable.local, prev -> current);
     }
 
     @Override
     default<S> void accept(Immutable<S> immutable, Function<S, T> map) {
-        T mapped = map.apply(immutable.get());
-        filterAccept(immutable.local, prev -> mapped);
+        final S current = immutable.get();
+        filterAccept(immutable.local, prev -> map.apply(current)
+        );
     }
 
     @Override
     default<S> void accept(Immutable<S> immutable, BiFunction<T, S, T> update) {
-        filterAccept(immutable.local, t -> update.apply(t, immutable.get()));
+        final S current = immutable.get();
+        filterAccept(immutable.local, t -> update.apply(t, current));
     }
 }
