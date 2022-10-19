@@ -84,7 +84,7 @@ public class LivePath extends Path<Map<String, ?>> {
         }
 
         public<V> Path<V> getAt(Function<Map<String, ?>, V> mapVFunction) {
-            return forkMap(mapVFunction);
+            return map(mapVFunction);
         }
 
 //    }

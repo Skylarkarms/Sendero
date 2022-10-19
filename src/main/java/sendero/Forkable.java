@@ -15,23 +15,23 @@ interface Forkable<T> {
         return out(outputType, myIdentity());
     }
 
-    <S> Forkable<S> forkMap(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, S> map);
+    <S> Forkable<S> map(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, S> map);
 
-    default <S> Forkable<S> forkMap(BinaryPredicate<S> excludeIn, Function<T, S> map) {
-        return forkMap(
+    default <S> Forkable<S> map(BinaryPredicate<S> excludeIn, Function<T, S> map) {
+        return map(
                 Builders.excludeIn(excludeIn),
                 map
         );
     }
-    default <S> Forkable<S> forkMap(Function<T, S> map) {
-        return forkMap(myIdentity(), map);
+    default <S> Forkable<S> map(Function<T, S> map) {
+        return map(myIdentity(), map);
     }
 
     /**For when additional rules are required, including an INITIAL value for S*/
-    <S> Forkable<S> forkUpdate(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, BiFunction<S, T, S> update);
+    <S> Forkable<S> update(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, BiFunction<S, T, S> update);
 
-    default  <S> Forkable<S> forkUpdate(BinaryPredicate<S> excludeIn, BiFunction<S, T, S> update) {
-        return forkUpdate(
+    default  <S> Forkable<S> update(BinaryPredicate<S> excludeIn, BiFunction<S, T, S> update) {
+        return update(
                Builders.excludeIn(excludeIn),
                update
         );
@@ -44,19 +44,19 @@ interface Forkable<T> {
      * first argument: previous value <P>
      * second argument: new incoming value <P>
      * third argument return new Value*/
-    default <S> Forkable<S> forkUpdate(BiFunction<S, T, S> update) {
-        return forkUpdate(myIdentity(), update);
+    default <S> Forkable<S> update(BiFunction<S, T, S> update) {
+        return update(myIdentity(), update);
     }
 
-    <S> Forkable<S> forkSwitch(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, BasePath<S>> switchMap);
+    <S> Forkable<S> switchMap(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, BasePath<S>> switchMap);
 
-    default <S> Forkable<S> forkSwitch(BinaryPredicate<S> excludeIn, Function<T, BasePath<S>> switchMap) {
-        return forkSwitch(
+    default <S> Forkable<S> switchMap(BinaryPredicate<S> excludeIn, Function<T, BasePath<S>> switchMap) {
+        return switchMap(
                 Builders.excludeIn(excludeIn),
                 switchMap
         );
     }
-    default <S> Forkable<S> forkSwitch(Function<T, BasePath<S>> switchMap) {
-        return forkSwitch(myIdentity(), switchMap);
+    default <S> Forkable<S> switchMap(Function<T, BasePath<S>> switchMap) {
+        return switchMap(myIdentity(), switchMap);
     }
 }

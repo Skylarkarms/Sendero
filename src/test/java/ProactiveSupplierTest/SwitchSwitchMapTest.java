@@ -97,11 +97,11 @@ public class SwitchSwitchMapTest {
     private static final String RESULT_KEY = "RESULT_KEY";
 
     {
-        isActivePath.forkSwitch(
+        isActivePath.switchMap(
                 Result::isEqualTo,
                 isActive ->
-                        titlePath.forkSwitch(title ->
-                                titleVerMapClassPath.forkMap(
+                        titlePath.switchMap(title ->
+                                titleVerMapClassPath.map(
                                         titleVerMapClass -> {
                                             int ver = titleVerMapClass.titleVersionMap.get(title);
                                             return new Result(

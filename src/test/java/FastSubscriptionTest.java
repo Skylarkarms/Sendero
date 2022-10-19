@@ -9,9 +9,9 @@ public class FastSubscriptionTest {
     private static final String FIRST = "FIRST", SECOND = "SECOND", THIRD = "THIRD", FOURTH = "FOURTH", CHANGED = "CHANGED";
     Gate.Acceptor<String> first = new Gate.Acceptor<>(FIRST);
 
-    private final Path<String> second = first.forkMap(prev -> prev + ",\n " + SECOND);
-    private final Path<String> third = second.forkMap(prev -> prev + ",\n " + THIRD);
-    private final Path<String> fourth = third.forkMap(prev -> prev + ",\n " + FOURTH);
+    private final Path<String> second = first.map(prev -> prev + ",\n " + SECOND);
+    private final Path<String> third = second.map(prev -> prev + ",\n " + THIRD);
+    private final Path<String> fourth = third.map(prev -> prev + ",\n " + FOURTH);
 
     public AtomicBinaryEvent watch(Consumer<String> consumer) {
         return Builders.ReceptorBuilder.exit(consumer).asEvent(Runnable::run, fourth);

@@ -7,7 +7,7 @@ import java.util.function.Consumer;
 public class INITIALIZE {
     private final Gate.Acceptor<Map<String, Main.MyObj>> acceptor = new Gate.Acceptor<>();
 
-    private final Path<Integer> integerPath = acceptor.forkMap(
+    private final Path<Integer> integerPath = acceptor.map(
             stringIntegerMap -> {
                 System.err.println("HELLO MFCKER!!! from thread: " + Thread.currentThread());
                 return stringIntegerMap.get(0).getAnInt();

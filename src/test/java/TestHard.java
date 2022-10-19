@@ -13,7 +13,7 @@ public class TestHard {
 //    Link.Unbound.Switch<String> ALink = new Link.Unbound.Switch<>();
 
     Gate.In<String> hello = new Gate.In<>("Hello");
-    Path<String> hey = hello.forkMap(
+    Path<String> hey = hello.map(
             s -> s + " World!"
 
     );
@@ -25,7 +25,7 @@ public class TestHard {
         firstMap.put(3, hey);
     }
 
-    Path<String> BLink = input.forkSwitch(
+    Path<String> BLink = input.switchMap(
             integer -> {
                 Path<String> res = firstMap.get(integer);
                 System.err.println("input fork: " + res + "\n, int: " + integer);

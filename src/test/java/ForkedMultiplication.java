@@ -11,14 +11,14 @@ public class ForkedMultiplication {
 
     private final ProactiveSuppliers.Unbound<Integer> activeSupplier = ProactiveSuppliers.unbound();
     public ForkedMultiplication() {
-        Path<Integer> firstFork = in.forkMap(
+        Path<Integer> firstFork = in.map(
                 (UnaryOperator<Integer>) integer -> {
                     int firstForkRes = integer * 2;
                     System.err.println("First fork result is: " + firstForkRes);
                     return firstForkRes;
                 }
         );
-        Path<Integer> secondFork = in.forkMap(
+        Path<Integer> secondFork = in.map(
                 (UnaryOperator<Integer>) integer -> {
                     int secondForkResult = integer * 3;
                     System.err.println("Second fork result si: " + secondForkResult);

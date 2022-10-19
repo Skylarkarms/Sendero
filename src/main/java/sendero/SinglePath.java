@@ -91,7 +91,7 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
     }
 
     @Override
-    public <S> SinglePath<S> forkMap(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, S> map) {
+    public <S> SinglePath<S> map(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, S> map) {
         return new SinglePath<>(
                 mapFunctionBuilder(map),
                 builderOperator
@@ -99,17 +99,17 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
     }
 
     @Override
-    public <S> SinglePath<S> forkMap(BinaryPredicate<S> excludeIn, Function<T, S> map) {
-        return (SinglePath<S>) super.forkMap(excludeIn, map);
+    public <S> SinglePath<S> map(BinaryPredicate<S> excludeIn, Function<T, S> map) {
+        return (SinglePath<S>) super.map(excludeIn, map);
     }
 
     @Override
-    public <S> SinglePath<S> forkMap(Function<T, S> map) {
-        return (SinglePath<S>) super.forkMap(map);
+    public <S> SinglePath<S> map(Function<T, S> map) {
+        return (SinglePath<S>) super.map(map);
     }
 
     @Override
-    public <S> SinglePath<S> forkUpdate(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, BiFunction<S, T, S> update) {
+    public <S> SinglePath<S> update(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, BiFunction<S, T, S> update) {
         return new SinglePath<>(
                 builderOperator,
                 this,
@@ -118,17 +118,17 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
     }
 
     @Override
-    public <S> SinglePath<S> forkUpdate(BinaryPredicate<S> excludeIn, BiFunction<S, T, S> update) {
-        return (SinglePath<S>) super.forkUpdate(excludeIn, update);
+    public <S> SinglePath<S> update(BinaryPredicate<S> excludeIn, BiFunction<S, T, S> update) {
+        return (SinglePath<S>) super.update(excludeIn, update);
     }
 
     @Override
-    public <S> SinglePath<S> forkUpdate(BiFunction<S, T, S> update) {
-        return (SinglePath<S>) super.forkUpdate(update);
+    public <S> SinglePath<S> update(BiFunction<S, T, S> update) {
+        return (SinglePath<S>) super.update(update);
     }
 
     @Override
-    public <S> SinglePath<S> forkSwitch(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, BasePath<S>> switchMap) {
+    public <S> SinglePath<S> switchMap(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, BasePath<S>> switchMap) {
         return new SinglePath<>(
                 switchFunctionBuilder(switchMap),
                 builderOperator
@@ -136,13 +136,13 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
     }
 
     @Override
-    public <S> SinglePath<S> forkSwitch(BinaryPredicate<S> excludeIn, Function<T, BasePath<S>> switchMap) {
-        return (SinglePath<S>) super.forkSwitch(excludeIn, switchMap);
+    public <S> SinglePath<S> switchMap(BinaryPredicate<S> excludeIn, Function<T, BasePath<S>> switchMap) {
+        return (SinglePath<S>) super.switchMap(excludeIn, switchMap);
     }
 
     @Override
-    public <S> SinglePath<S> forkSwitch(Function<T, BasePath<S>> switchMap) {
-        return (SinglePath<S>) super.forkSwitch(switchMap);
+    public <S> SinglePath<S> switchMap(Function<T, BasePath<S>> switchMap) {
+        return (SinglePath<S>) super.switchMap(switchMap);
     }
 
     @Override

@@ -67,7 +67,7 @@ public class SwitchMapTest {
     }
 
     private final Path<Obj> composed = buildCompose(id, base);
-    private final Path<Obj> forkOne = composed.forkMap(
+    private final Path<Obj> forkOne = composed.map(
             obj -> {
                 System.err.println(TAG + "Fork ONE to occur<><>!!");
                 return new Obj(obj.state, obj.content +
@@ -79,7 +79,7 @@ public class SwitchMapTest {
         System.err.println(TAG + "Fork ONE is: " + forkOne);
     }
 
-    private final Path<Obj> forkTwo = forkOne.forkMap(
+    private final Path<Obj> forkTwo = forkOne.map(
             obj -> {
                 System.err.println(TAG + "Fork TWO to occur<><>!!");
                 return new Obj(obj.state, obj.content +
@@ -108,11 +108,11 @@ public class SwitchMapTest {
     Path<Obj> buildCompose(
             Path<Integer> idSource,
             Map<Integer, Path<String>> base) {
-        Path<Obj> res = idSource.forkSwitch(
+        Path<Obj> res = idSource.switchMap(
                 Obj::areEqual,
                 id -> {
                     System.err.println("buildCompose: id is: " + id);
-                    return base.get(id).forkUpdate(
+                    return base.get(id).update(
                             Builders.withInitial(Obj.NOT_SET),
                             Obj::update
                     );

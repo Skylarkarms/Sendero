@@ -90,7 +90,7 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
     }
 
     @Override
-    public <S> Path<S> forkMap(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, S> map) {
+    public <S> Path<S> map(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, S> map) {
         return new Path<>(
                 mapFunctionBuilder(map),
                 builderOperator
@@ -98,17 +98,17 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
     }
 
     @Override
-    public <S> Path<S> forkMap(BinaryPredicate<S> excludeIn, Function<T, S> map) {
-        return (Path<S>) super.forkMap(excludeIn, map);
+    public <S> Path<S> map(BinaryPredicate<S> excludeIn, Function<T, S> map) {
+        return (Path<S>) super.map(excludeIn, map);
     }
 
     @Override
-    public <S> Path<S> forkMap(Function<T, S> map) {
-        return (Path<S>) super.forkMap(map);
+    public <S> Path<S> map(Function<T, S> map) {
+        return (Path<S>) super.map(map);
     }
 
     @Override
-    public <S> Path<S> forkUpdate(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, BiFunction<S, T, S> update) {
+    public <S> Path<S> update(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, BiFunction<S, T, S> update) {
         return new Path<>(
                 builderOperator,
                 this,
@@ -117,17 +117,17 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
     }
 
     @Override
-    public <S> Path<S> forkUpdate(BinaryPredicate<S> excludeIn, BiFunction<S, T, S> update) {
-        return (Path<S>) super.forkUpdate(excludeIn, update);
+    public <S> Path<S> update(BinaryPredicate<S> excludeIn, BiFunction<S, T, S> update) {
+        return (Path<S>) super.update(excludeIn, update);
     }
 
     @Override
-    public <S> Path<S> forkUpdate(BiFunction<S, T, S> update) {
-        return (Path<S>) super.forkUpdate(update);
+    public <S> Path<S> update(BiFunction<S, T, S> update) {
+        return (Path<S>) super.update(update);
     }
 
     @Override
-    public <S> Path<S> forkSwitch(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, BasePath<S>> switchMap) {
+    public <S> Path<S> switchMap(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, BasePath<S>> switchMap) {
         return new Path<>(
                 switchFunctionBuilder(switchMap),
                 builderOperator
@@ -135,13 +135,13 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
     }
 
     @Override
-    public <S> Path<S> forkSwitch(BinaryPredicate<S> excludeIn, Function<T, BasePath<S>> switchMap) {
-        return (Path<S>) super.forkSwitch(excludeIn, switchMap);
+    public <S> Path<S> switchMap(BinaryPredicate<S> excludeIn, Function<T, BasePath<S>> switchMap) {
+        return (Path<S>) super.switchMap(excludeIn, switchMap);
     }
 
     @Override
-    public <S> Path<S> forkSwitch(Function<T, BasePath<S>> switchMap) {
-        return (Path<S>) super.forkSwitch(switchMap);
+    public <S> Path<S> switchMap(Function<T, BasePath<S>> switchMap) {
+        return (Path<S>) super.switchMap(switchMap);
     }
 
     @Override

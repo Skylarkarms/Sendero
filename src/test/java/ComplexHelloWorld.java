@@ -32,11 +32,11 @@ class ComplexHelloWorld {
 
         private final Link.Unbound<Integer> integerSubscriber = new Link.Unbound<>();
 
-        private final BasePath<String> process = integerSubscriber.forkSwitch(
+        private final BasePath<String> process = integerSubscriber.switchMap(
                 domainCache::get
         );
 
-        private final Path<String> firstString = holder2.forkMap(
+        private final Path<String> firstString = holder2.map(
                 cache::get
         );
 
