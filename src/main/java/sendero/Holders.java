@@ -616,6 +616,10 @@ final class Holders {
             eService.decrement();
         }
 
+        void attemptDeactivate() {
+            if (tryDeactivate()) eService.decrement();
+        }
+
         public enum LazyEService implements Executor {
             INSTANCE;
             private final ThresholdListeners.ThresholdListener thresholdSwitch = ThresholdListeners.getAtomicOf(

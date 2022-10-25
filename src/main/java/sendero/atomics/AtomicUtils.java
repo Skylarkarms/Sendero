@@ -218,7 +218,7 @@ public final class AtomicUtils {
                                 sleeper.set(SLEEPING);
                                 Thread.sleep(millis);
                             } catch (InterruptedException e) {
-                                e.printStackTrace();
+//                                Interrupted!!
                             }
                         } while (!sleeper.compareAndSet(SLEEPING, AWAKEN)); //Retries if RETRY || SHOULD_SLEEP
                     }

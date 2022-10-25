@@ -11,6 +11,7 @@ import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 import static sendero.Holders.SwapBroadcast.HOT;
+import static sendero.functions.Functions.alwaysTrue;
 import static sendero.functions.Functions.myIdentity;
 
 public class Gate<T> extends Path<T> {
@@ -263,7 +264,9 @@ public class Gate<T> extends Path<T> {
 
                 @Override
                 public Consumer<? super T>[] clear() {
-                    return locale.clear();
+                    Consumer<? super T>[] ret = locale.clear();
+                    attemptDeactivate();
+                    return ret;
                 }
 
                 @Override
@@ -406,7 +409,9 @@ public class Gate<T> extends Path<T> {
 
             @Override
             public Consumer<? super T>[] clear() {
-                return locale.clear();
+                Consumer<? super T>[] ret = locale.clear();
+                tryDeactivate();
+                return ret;
             }
 
             @Override
