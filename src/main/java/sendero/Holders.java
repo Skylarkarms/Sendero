@@ -330,7 +330,6 @@ final class Holders {
     }
 
     abstract static class BaseBroadcaster<T> extends DispatcherReader<T> {
-        public final SwapBroadcast<T> core;
         final Holder<T> holder;
         final BinaryPredicate<T> expectInput;
         private final StreamManager<T> streamManager;
@@ -401,8 +400,7 @@ final class Holders {
             boolean outIsDefault = Functions.truePredicate(expectOut);
             this.consumingFunction = builder(outIsDefault, expectOut);
             this.expectInput = builder.expectInput;
-            this.core = build(outIsDefault, expectOut);
-            this.holder = builder.buildHolder(core);
+            this.holder = builder.buildHolder(build(outIsDefault, expectOut));
             streamManager = StreamManager.getManagerFor(holder, expectInput);
         }
 
