@@ -28,6 +28,7 @@ public class SimpleLists {
         /**returns true if this is the last item to be removed*/
         boolean remove(E element);
         /**First found will be removed*/
+        boolean contains(E element);
         boolean removeIf(Predicate<E> removeIf);
         boolean isEmpty();
         E[] copy();
@@ -75,6 +76,10 @@ public class SimpleLists {
                         return i;
             }
             return -1;
+        }
+
+        boolean contains(E element) {
+            return find(element, copy, size) != -1;
         }
 
         /**Wil shortC upon first one found*/
@@ -290,6 +295,11 @@ public class SimpleLists {
         @Override
         public boolean remove(E element) {
             return Snapshot.remove(core, element);
+        }
+
+        @Override
+        public boolean contains(E element) {
+            return core.get().contains(element);
         }
 
         @Override

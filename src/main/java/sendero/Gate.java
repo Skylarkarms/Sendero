@@ -173,6 +173,8 @@ public class Gate<T> extends Path<T> {
     public interface Out<T> extends Register<T> {
         interface Many<T> extends Out<T> {
             void unregister(Consumer<? super T> consumer);
+            boolean contains(Consumer<? super T> consumer);
+            Consumer<? super T>[] clear();
         }
         interface Single<T> extends Out<T> {
             void unregister();
@@ -252,6 +254,16 @@ public class Gate<T> extends Path<T> {
                 @Override
                 public void unregister(Consumer<? super T> consumer) {
                     if (locale.remove(consumer)) deactivate();
+                }
+
+                @Override
+                public boolean contains(Consumer<? super T> consumer) {
+                    return locale.contains(consumer);
+                }
+
+                @Override
+                public Consumer<? super T>[] clear() {
+                    return locale.clear();
                 }
 
                 @Override
@@ -385,6 +397,16 @@ public class Gate<T> extends Path<T> {
             @Override
             public void unregister(Consumer<? super T> consumer) {
                 if (locale.remove(consumer)) tryDeactivate();
+            }
+
+            @Override
+            public boolean contains(Consumer<? super T> consumer) {
+                return locale.contains(consumer);
+            }
+
+            @Override
+            public Consumer<? super T>[] clear() {
+                return locale.clear();
             }
 
             @Override
