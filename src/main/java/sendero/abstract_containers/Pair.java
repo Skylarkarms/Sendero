@@ -16,6 +16,14 @@ public final class Pair {
         }
 
         public static class Long<T> {
+            private static final Long<?> DEFAULT = new Long<>(0, null);
+
+            /**value = null <p>
+             * long = 0*/
+            @SuppressWarnings("unchecked")
+            public static<T> Long<T> getDefault() {
+                return (Long<T>) DEFAULT;
+            }
             private final long aLong;
             private final T value;
 
@@ -30,6 +38,10 @@ public final class Pair {
 
             public T getValue() {
                 return value;
+            }
+
+            public boolean isDefault() {
+                return this == DEFAULT;
             }
         }
 
