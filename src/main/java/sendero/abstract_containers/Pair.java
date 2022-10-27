@@ -24,20 +24,12 @@ public final class Pair {
             public static<T> Long<T> getDefault() {
                 return (Long<T>) DEFAULT;
             }
-            private final long aLong;
-            private final T value;
+            public final long aLong;
+            public final T value;
 
             public Long(long aLong, T value) {
                 this.aLong = aLong;
                 this.value = value;
-            }
-
-            public long getLong() {
-                return aLong;
-            }
-
-            public T getValue() {
-                return value;
             }
 
             public boolean isDefault() {
