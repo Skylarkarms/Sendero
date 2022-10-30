@@ -54,6 +54,14 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
             String[] tags = basePathMap.keySet().toArray(new String[size]);
             for (int i = size - 1; i >= 0; i--) remove(tags[i]);
         }
+
+        @Override
+        public String toString() {
+            return "Storage{" +
+                    "\n basePathMap=" + basePathMap +
+                    "\n }";
+        }
+
     }
 
     <S> BasePath(
