@@ -17,8 +17,8 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 public final class BinaryEventRegisters {
-    public static Switchers.Switch getAtomicRegister() {
-        return new AtomicBinaryEventRegisterImpl();
+    public static BaseStateRegister getAtomicRegister() {
+        return new BinaryStateRegister();
     }
     public static Switchers.Switch getAtomicWith(AtomicBinaryEvent fixed) {
         return new AtomicWithFixed(fixed);
@@ -63,8 +63,8 @@ public final class BinaryEventRegisters {
         @Override
         public String toString() {
             return "BaseEvent{" +
-                    "mainState=" + mainState +
-                    '}';
+                    "\n mainState=" + mainState +
+                    "\n}";
         }
     }
 
@@ -81,15 +81,22 @@ public final class BinaryEventRegisters {
      * This class can handle ONE register at a time.
      * For multiple registers see Appointer.ConcurrentToMany.
      * For multiple NON-concurrent see bellow class*/
-    private static class AtomicBinaryEventRegisterImpl
-            extends BaseEvent
-            implements BinaryEventRegister.Atomic {
-        private final ConsumerRegisters.StateAwareBinaryConsumerRegister register = ConsumerRegisters.getStateAware(this::isActive);
+    public static abstract class BaseStateRegister extends BaseEvent implements BinaryEventRegister.Atomic {
+        abstract Switchers.Switch getSwitch();
 
         @Override
         void onStateChanged(boolean isActive) {
-            if (isActive) register.on();
-            else register.off();
+            if (isActive) getSwitch().on();
+            else getSwitch().off();
+        }
+    }
+    private static class BinaryStateRegister
+            extends BaseStateRegister {
+        private final ConsumerRegisters.StateAwareBinaryConsumerRegister register = ConsumerRegisters.getStateAware(this::isActive);
+
+        @Override
+        Switchers.Switch getSwitch() {
+            return register;
         }
 
         /**There are two caches for state, BaseEvent, which handles the Path's state (owner of this register), another within the AtomicBinaryEvent created on the fly.
@@ -116,8 +123,8 @@ public final class BinaryEventRegisters {
     }
 
     private static class AtomicWithFixed
-            extends BaseEvent
-            implements BinaryEventRegister {
+            extends BaseStateRegister
+    {
 
         private final AtomicBinaryEvent fixed;
 
@@ -126,9 +133,8 @@ public final class BinaryEventRegisters {
         }
 
         @Override
-        void onStateChanged(boolean isActive) {
-            if (isActive) fixed.on();
-            else fixed.off();
+        Switchers.Switch getSwitch() {
+            return fixed;
         }
 
         @Override
@@ -136,9 +142,11 @@ public final class BinaryEventRegisters {
             throw new IllegalStateException("Fixed");
         }
 
+        /**Unregister will shutOff the fixed AtomicBinaryEvent, rendering it unusable*/
         @Override
         public AtomicBinaryEvent unregister() {
-            throw new IllegalStateException("Fixed");
+            fixed.shutoff();
+            return null;
         }
 
         @Override
@@ -152,6 +160,11 @@ public final class BinaryEventRegisters {
                     "\n mainState=" + super.toString() +
                     ",\n fixed=" + fixed +
                     "}@" + hashCode();
+        }
+
+        @Override
+        public AtomicBinaryEvent swapRegister(AtomicBinaryEvent expect, AtomicBinaryEvent set) {
+            return null;
         }
     }
 
@@ -403,6 +416,13 @@ public final class BinaryEventRegisters {
         protected boolean isActive() {
             return synchronizer.isActive();
         }
+
+        @Override
+        public String toString() {
+            return "SynchronizedModel{" +
+                    "synchronizer=" + synchronizer +
+                    '}';
+        }
     }
 
     /**AtomicBinaryEventConsumer is used instead because it's "shutOff()" method allows "Destroy" concatenation*/
@@ -506,6 +526,13 @@ public final class BinaryEventRegisters {
         protected void onStateChange(boolean isActive) {
             if (isActive) forEachSet(Switchers.Switch::on);
             else forEachSet(Switchers.Switch::off);
+        }
+
+        @Override
+        public String toString() {
+            return "SwitchSynchronizerImpl{" +
+                    "\n, synced=" + isActive() +
+                    "\n }";
         }
     }
 

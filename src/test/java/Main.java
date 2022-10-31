@@ -98,7 +98,7 @@ public class Main {
                                 aSwitch.on();
                                 postpone(
                                         1000, () -> {
-                                            System.err.println("MAIN: FINAL OFFF!!! at: " + chronometer.lapse());
+                                            System.err.println("MAIN: FINAL OFF!!! at: " + chronometer.lapse());
                                             aSwitch.off();
                                         }
                                 );
