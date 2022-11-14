@@ -4,7 +4,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class LazyHolder<S> implements Supplier<S> {
-    private final LazyInitSingleton<S> value;
+    private final LazyInitSingleton.Supplier<S> value;
     @Override
     public S get() {
         delayer.interrupt();
@@ -21,7 +21,7 @@ public class LazyHolder<S> implements Supplier<S> {
             long millisToDestroy,
             Consumer<S> onDestroyed
     ) {
-        this.value = new LazyInitSingleton<>(onCreate);
+        this.value = new LazyInitSingleton.Supplier<>(onCreate);
         this.onDestroyed = onDestroyed;
         this.delayer = new AtomicUtils.OverlapDropExecutor.Long(millisToDestroy);
     }
