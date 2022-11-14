@@ -4,7 +4,7 @@ import sendero.abstract_containers.Pair;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-class LazyInitSingleton<T> {
+public class LazyInitSingleton<T> {
     private static final int NULL_PHASE = -1, CREATING_PHASE = 0, CREATED = 1;
     private static final Pair.Immutables.Int<?> NULL = new Pair.Immutables.Int<>(NULL_PHASE, null),
             CREATING = new Pair.Immutables.Int<>(CREATING_PHASE, null);
