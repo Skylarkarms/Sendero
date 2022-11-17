@@ -306,11 +306,11 @@ public final class BinaryEventRegisters {
         }
 
         protected SynchronizedModel(SynchronizedModel model) {
-            this.synchronizer = model.synchronizer;
+            this(model.synchronizer);
         }
 
         protected SynchronizedModel(ModelImplementation model) {
-            this.synchronizer = model.get().synchronizer;
+            this(model.get().synchronizer);
         }
 
         protected <S extends Switchers.Switch> S sync(S aSwitch) {

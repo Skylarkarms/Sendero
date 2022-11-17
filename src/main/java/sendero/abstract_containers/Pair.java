@@ -37,6 +37,30 @@ public final class Pair {
             }
         }
 
+        public static class DoubleInt {
+            public final int first, second;
+
+            private static final DoubleInt DEFAULT = new DoubleInt(0, 0);
+
+            public static DoubleInt getDefault() {
+                return DEFAULT;
+            }
+            public DoubleInt(int first, int second) {
+                this.first = first;
+                this.second = second;
+            }
+
+            public boolean isDefault() {
+                return this == DEFAULT;
+            }
+
+            public boolean isEqualTo(DoubleInt that) {
+                if (that == null) return false;
+                if (this == that) return true;
+                return that.first == first && that.second == second;
+            }
+        }
+
         public static class Int<T> {
             public final int anInt;
             public final T value;
