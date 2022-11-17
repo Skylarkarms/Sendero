@@ -4,15 +4,42 @@ import sendero.interfaces.BinaryPredicate;
 
 import java.util.Objects;
 
-public final class Pair {
+public final class Pair<T, U> {
+    private T first;
+    private U second;
+
+    public<F extends T> void setFirst(F first) {
+        this.first = first;
+    }
+
+    public<S extends U> void setSecond(S second) {
+        this.second = second;
+    }
+
+    public T getFirst() {
+        return first;
+    }
+
+    public U getSecond() {
+        return second;
+    }
 
     public static class Immutables<T, U> {
+        private static final Immutables<?, ?> DEFAULT = new Immutables<>(null, null);
+        @SuppressWarnings("unchecked")
+        public static<F, S> Immutables<F, S> getDefault() {
+            return (Immutables<F, S>) DEFAULT;
+        }
         public final T firstValue;
         public final U secondValue;
 
         public Immutables(T firstValue, U secondValue) {
             this.firstValue = firstValue;
             this.secondValue = secondValue;
+        }
+
+        public boolean isDefault() {
+            return this == DEFAULT;
         }
 
         public static class Long<T> {
