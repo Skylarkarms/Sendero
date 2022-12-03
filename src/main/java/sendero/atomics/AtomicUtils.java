@@ -64,6 +64,28 @@ public final class AtomicUtils {
         return new Witness<>(prev, null);
     }
 
+    /**If test == true, attempts to set: <p>
+     *   Will never return (null, null)<p>
+     *   if set succeeds returns (prev, next)<p>
+     *if test == false, checks contention: <p>
+     *     if contention met, retries.<p>
+     *     if no contention met returns(prev, null)
+     * */
+    public static<T> Witness<T> contentiousSetIf(
+            AtomicReference<T> ref,
+            Predicate<T> test,
+            UnaryOperator<T> nextMap
+    ) {
+        T prev = getVoid(), next;
+        while (prev != (prev = ref.get())) {
+            if (test.test(prev)) {
+                next = nextMap.apply(prev);
+                if (ref.compareAndSet(prev, next)) return new Witness<>(prev, next);
+            }
+        }
+        return new Witness<>(prev, null);
+    }
+
     public static<T> Witness.IntObject setIf(
             AtomicInteger ref,
             IntPredicate test,

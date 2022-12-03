@@ -88,6 +88,31 @@ public final class Pair<T, U> {
             }
         }
 
+        public static class DoubleLong {
+            public final long first, second;
+
+            private static final DoubleLong DEFAULT = new DoubleLong(0, 0);
+
+            public static DoubleLong getDefault() {
+                return DEFAULT;
+            }
+            public DoubleLong(long first, long second) {
+                this.first = first;
+                this.second = second;
+            }
+
+            public boolean isDefault() {
+                return this == DEFAULT;
+            }
+
+            public boolean isEqualTo(DoubleLong that) {
+                if (that == null) return false;
+                if (this == that) return true;
+                return that.first == first && that.second == second;
+            }
+        }
+
+
         public static class Int<T> {
             public final int anInt;
             public final T value;
