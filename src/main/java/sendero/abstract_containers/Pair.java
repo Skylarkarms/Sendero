@@ -62,6 +62,12 @@ public final class Pair<T, U> {
             public boolean isDefault() {
                 return this == DEFAULT;
             }
+
+            public boolean isEqual(Long<T> that, BinaryPredicate<T> equal) {
+                if (this == that) return true;
+                if (that == null) return false;
+                return that.aLong == aLong && equal.test(that.value, value);
+            }
         }
 
         public static class DoubleInt {

@@ -223,7 +223,8 @@ public final class BinaryEventRegisters {
         return Builders.BinaryEventConsumers.producerListenerDefaulter(source, executor, inputMethod, consumer);
     }
 
-    public interface ModelImplementation {
+    /**Convenience interface implementation for {@link SynchronizedModel}*/
+    public interface ISynchronizedModel {
         SynchronizedModel get();
         default <S extends Switchers.Switch> S sync(S aSwitch) {
             return get().sync(aSwitch);
@@ -309,7 +310,7 @@ public final class BinaryEventRegisters {
             this(model.synchronizer);
         }
 
-        protected SynchronizedModel(ModelImplementation model) {
+        protected SynchronizedModel(ISynchronizedModel model) {
             this(model.get().synchronizer);
         }
 
