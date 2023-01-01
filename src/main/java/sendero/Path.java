@@ -108,6 +108,11 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
     }
 
     @Override
+    public Path<T> fork(BinaryPredicate<T> excludeIn) {
+        return (Path<T>) super.fork(excludeIn);
+    }
+
+    @Override
     public <S> Path<S> update(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, BiFunction<S, T, S> update) {
         return new Path<>(
                 builderOperator,

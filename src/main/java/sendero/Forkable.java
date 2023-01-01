@@ -10,8 +10,12 @@ import java.util.function.UnaryOperator;
 import static sendero.functions.Functions.myIdentity;
 
 interface Forkable<T> {
+    /**Allowed classes are Gate.Out.Single, OR <p>
+     * Gate.Out.Many*/
     <S, O extends Gate.Out<S>> O out(Class<? super O> outputType, Function<T, S> map);
 
+    /**Allowed classes are Gate.Out.Single, OR <p>
+     * Gate.Out.Many*/
     default <O extends Gate.Out<T>> O out(Class<? super O> outputType) {
         return out(outputType, myIdentity());
     }
