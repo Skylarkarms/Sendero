@@ -1,5 +1,6 @@
 package sendero;
 
+import sendero.functions.Functions;
 import sendero.interfaces.BinaryPredicate;
 
 import java.util.function.BiFunction;
@@ -21,6 +22,18 @@ interface Forkable<T> {
         return map(
                 Builders.excludeIn(excludeIn),
                 map
+        );
+    }
+
+    /**Forks the data with a logic gate ruling option for data insertion exclusion <p>
+     * @param excludeIn = logic gate for data insertion exclusion: <p>
+     *    true = will NOT set new value <p>
+     *    false = will SET new value
+     *    */
+    default Forkable<T> fork(BinaryPredicate<T> excludeIn) {
+        return map(
+                Builders.excludeIn(excludeIn),
+                Functions.myIdentity()
         );
     }
     default <S> Forkable<S> map(Function<T, S> map) {
