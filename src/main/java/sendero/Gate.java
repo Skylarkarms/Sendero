@@ -32,6 +32,13 @@ public class Gate<T> extends Path<T> {
         super(builderOperator);
     }
 
+    Gate(
+            BinaryPredicate<T> excludeIn,
+            T initialValue
+    )  {
+        super(tHolderBuilder -> tHolderBuilder.excludeIn(excludeIn).withInitial(initialValue));
+    }
+
     Gate(BinaryPredicate<T> excludeIn) {
         this(Builders.excludeIn(excludeIn));
     }
@@ -81,6 +88,10 @@ public class Gate<T> extends Path<T> {
             super(initialValue);
         }
 
+        public Acceptor(BinaryPredicate<T> excludeIn, T initialValue) {
+            super(excludeIn, initialValue);
+        }
+
         public Acceptor(BinaryPredicate<T> excludeIn) {
             super(excludeIn);
         }
@@ -109,6 +120,10 @@ public class Gate<T> extends Path<T> {
 
         public Updater(BinaryPredicate<T> excludeIn) {
             super(excludeIn);
+        }
+
+        public Updater(BinaryPredicate<T> excludeIn, T initialValue) {
+            super(excludeIn, initialValue);
         }
 
         public Updater(UnaryOperator<Builders.HolderBuilder<T>> builderOperator) {
