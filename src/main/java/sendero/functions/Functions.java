@@ -99,6 +99,9 @@ public final class Functions {
     public static Runnable emptyRunnable() {
         return emptyRunnable;
     }
+    public static boolean isEmpty(Runnable runnable) {
+        return runnable == emptyRunnable;
+    }
     public static final Predicate<?> alwaysTrue = new Predicate<Object>() {
         @Override
         public boolean test(Object next) {
