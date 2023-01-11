@@ -2,6 +2,7 @@ package sendero.atomics;
 
 import sendero.abstract_containers.Pair;
 
+import java.util.ConcurrentModificationException;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -9,6 +10,17 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.*;
 
 public final class AtomicUtils {
+
+    /**Class that checks for concurrency contention and throws if met.*/
+    public static final class ContentionCheck {
+        private final AtomicInteger ver = new AtomicInteger();
+
+        public void checkThrow(Runnable heavyTask) {
+            int curr  = ver.incrementAndGet();
+            heavyTask.run();
+            if (curr != ver.get()) throw new ConcurrentModificationException("Incoming version was: " + curr + " current version is: " + ver.get());
+        }
+    }
 
     public static class Witness<T> {
         public final T prev, next;

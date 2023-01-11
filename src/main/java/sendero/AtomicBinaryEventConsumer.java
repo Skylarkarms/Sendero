@@ -38,21 +38,21 @@ public abstract class AtomicBinaryEventConsumer implements AtomicBinaryEvent {
     protected abstract void onStateChange(boolean isActive);
 
     @Override
-    public boolean on() {
+    public final boolean on() {
         boolean isOn = setOn();
         if (isOn) onStateChange(true);
         return isOn;
     }
 
     @Override
-    public boolean off() {
+    public final boolean off() {
         boolean isOff = setOff();
         if (isOff) onStateChange(false);
         return isOff;
     }
 
     @Override
-    public boolean shutoff() {
+    public final boolean shutoff() {
         int prev = versionedState.getAndSet(SHUT_DOWN);
         boolean wasOn = isOn(prev);
         if (wasOn) onStateChange(false);
@@ -66,7 +66,7 @@ public abstract class AtomicBinaryEventConsumer implements AtomicBinaryEvent {
     }
 
     /**If a signal arrives first nothing will happen*/
-    public boolean start() {
+    public final boolean start() {
         boolean started = versionedState.compareAndSet(NOT_SET, ON);
         if (started) setStart();
         return started;
