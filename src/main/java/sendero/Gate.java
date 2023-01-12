@@ -185,6 +185,11 @@ public class Gate<T> extends Path<T> {
         public void update(long delay, UnaryOperator<T> update) {
             consumerUpdater.update(delay, update);
         }
+
+        @Override
+        public T get() {
+            return super.get();
+        }
     }
     public interface Out<T> extends Register<T> {
         interface Many<T> extends Out<T> {
