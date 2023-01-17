@@ -119,7 +119,7 @@ final class Immutable<T> implements Supplier<T> {
     }
 
     public boolean isInvalid() {
-        return isSet() && upper == Values.NOT_SET;
+        return /*isSet() &&*/ upper == Values.NOT_SET;
     }
 
     public int dataSerial() {

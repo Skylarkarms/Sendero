@@ -22,6 +22,64 @@ public final class AtomicUtils {
         }
     }
 
+    /**
+     * Drops the execution If a new version is added (x + 1).
+     * The version should be built within the scope of it's Thread queue,
+     * in order to properly signify it's version at the moment of execution.
+     *
+     * @param newVer: the version up to the point in which the Runnable is created.
+     * @param volatileCheck: matched against a volatile read of the same version.
+     * @return the Runnable to enter the executor.
+     *
+     * eg.: This method posts an execution to a background thread and then immediately posts it to the main thread.
+     *
+     * public static<T> void backAndForth(AtomicInteger versionCount, Callable<T> callable, Consumer<T> consumer) {
+     *         int newVer = versionCount.incrementAndGet();
+     *         Executor.onBack(
+     *                 AtomicUtils.backPressureDrop(
+     *                         newVer, versionCount::get,
+     *                         () -> {
+     *                             try {
+     *                                 T t = callable.call();
+     *                                 Executor.onMain(
+     *                                         AtomicUtils.backPressureDrop(
+     *                                                 newVer, versionCount::get,
+     *                                                 () -> consumer.accept(t)
+     *                                         )
+     *                                 );
+     *                             } catch (Exception e) {
+     *                                 throw new RuntimeException(e);
+     *                             }
+     *                         }
+     *                 )
+     *         );
+     *     }
+     *
+     *     Usage:
+     *
+     *     private final AtomicInteger countRef = new AtomicInteger();
+     *
+     *
+     *     public void getLedgerCount(IntConsumer count) {
+     *         LedgerDao dao = ledgerDaoP.get();
+     *         Post.backAndForth(countRef, dao::getLedgerCount2, count::accept);
+     *     }
+     *
+     *     Notice how the atomicInteger is kept outside the method, as it should serve <p>
+     *     as a semaphore that inspects concurrency.
+     *
+     * */
+    public static<T> Runnable backPressureDrop(
+            int newVer,
+            IntSupplier volatileCheck,
+            Runnable action) {
+        return () -> {
+            if (!(newVer < volatileCheck.getAsInt())) {
+                action.run();
+            }
+        };
+    }
+
     public static class Witness<T> {
         public final T prev, next;
 

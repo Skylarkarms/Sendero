@@ -187,7 +187,7 @@ final class Holders {
                                 (res = (prev = getSnapshot()).test(topValues)).isLesser()
                         ) {
                             T prevData = prev.get(), nextData = topData.apply(prevData);
-                            if (prev.isInvalid() || nextData != prevData) {
+                            if (!prev.isSet() || prev.isInvalid() || nextData != prevData) {
                                 Immutable<T> next = res.getNext(prev, topValues, nextData);
                                 if (compareAndSet(prev, next)) {
                                     break;
@@ -204,7 +204,7 @@ final class Holders {
                                 (res = (prev = getSnapshot()).test(topValues)).isLesser()
                         ) {
                             T prevData = prev.get(), nextData = topData.apply(prevData);
-                            if ((prev.isInvalid() || nextData != prevData) && test.test(nextData, prevData)) {
+                            if ((!prev.isSet() || prev.isInvalid() || nextData != prevData) && test.test(nextData, prevData)) {
                                 Immutable<T> next = res.getNext(prev, topValues, nextData);
                                 if (compareAndSet(prev, next)) {
                                     break;
