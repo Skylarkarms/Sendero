@@ -196,9 +196,36 @@ public class Gate<T> extends Path<T> {
             void unregister(Consumer<? super T> consumer);
             boolean contains(Consumer<? super T> consumer);
             Consumer<? super T>[] clear();
+
+            /**
+             * Creates a single event observation
+             * The listener will remain connected until a value is present in the Container.
+             * */
+            default void obtain(Consumer<? super T> consumer) {
+                final Consumer<? super T> toAccept = new Consumer<T>() {
+                    @Override
+                    public void accept(T t) {
+                        consumer.accept(t);
+                        unregister(this);
+                    }
+                };
+                register(toAccept);
+            }
         }
         interface Single<T> extends Out<T> {
             void unregister();
+            /**
+             * Creates a single event observation
+             * The listener will remain connected until a value is present in the Container.
+             * */
+            default void obtain(Consumer<? super T> consumer) {
+                register(
+                        t -> {
+                            consumer.accept(t);
+                            unregister();
+                        }
+                );
+            }
         }
     }
     static final class Outs {
@@ -361,7 +388,6 @@ public class Gate<T> extends Path<T> {
                     if (locale.unregister() != null) deactivate();
 
                 }
-
             }
 
         }
