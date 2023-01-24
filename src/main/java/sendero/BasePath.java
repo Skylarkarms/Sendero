@@ -25,7 +25,13 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
         @SuppressWarnings("unchecked")
         public <T, P extends BasePath<T>> P get(String TAG, Class<? super T> componentType) {
             assertNonNull(TAG);
-            return (P) basePathMap.get(TAG);
+            P path = (P) basePathMap.get(TAG);
+            assert path != null : "TAG:[" + TAG + "] not present in store: " + basePathMap;
+            return path;
+        }
+
+        public boolean contains(String TAG) {
+            return basePathMap.containsKey(TAG);
         }
 
         private void assertNonNull(String TAG) {
