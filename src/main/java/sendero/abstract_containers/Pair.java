@@ -180,6 +180,14 @@ public final class Pair<T, U> {
         public int hashCode() {
             return Objects.hash(firstValue, secondValue);
         }
+
+        @Override
+        public String toString() {
+            return "Immutables{" +
+                    "\n firstValue=" + firstValue +
+                    ",\n secondValue=" + secondValue +
+                    "\n }";
+        }
     }
 
 }
