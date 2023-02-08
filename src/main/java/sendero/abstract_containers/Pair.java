@@ -123,6 +123,17 @@ public final class Pair<T, U> {
             public final int anInt;
             public final T value;
 
+            private static final Int<?> defaultPair = new Int<>(0, null);
+
+            @SuppressWarnings("unchecked")
+            public static<T> Int<T> getDefault() {
+                return (Int<T>) defaultPair;
+            }
+
+            public boolean isDefault() {
+                return this == defaultPair;
+            }
+
             public Int(int anInt, T value) {
                 this.anInt = anInt;
                 this.value = value;
