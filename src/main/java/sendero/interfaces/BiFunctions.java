@@ -17,4 +17,13 @@ public interface BiFunctions<T, U, R> {
             return Int.this::apply;
         }
     }
+    @FunctionalInterface
+    interface Bool<U, R> extends BiFunctions<Boolean, U, R> {
+        R apply(boolean aBool, U u);
+
+        @Override
+        default BiFunction<Boolean, U, R> as() {
+            return Bool.this::apply;
+        }
+    }
 }
