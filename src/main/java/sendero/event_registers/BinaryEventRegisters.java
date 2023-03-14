@@ -295,6 +295,23 @@ public final class BinaryEventRegisters {
         }
     }
 
+    /**A self-contained model that inherits from {@link AtomicBinaryEventConsumer} */
+    public static class LiveModel extends SwitchSynchronizerImpl<Object> implements ISynchronizedModel {
+        private final SynchronizedModel model = SynchronizedModel.getInstance(
+                this
+        );
+
+        @Override
+        public SynchronizedModel get() {
+            return model;
+        }
+
+        @Override
+        public boolean isActive() {
+            return ISynchronizedModel.super.isActive();
+        }
+    }
+
     public static class SynchronizedModel {
         private final SwitchSynchronizer<Object> synchronizer;
 
