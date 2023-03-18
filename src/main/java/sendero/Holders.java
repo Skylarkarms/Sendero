@@ -1,6 +1,5 @@
 package sendero;
 
-import sendero.abstract_containers.Pair;
 import sendero.atomics.AtomicScheduler;
 import sendero.atomics.AtomicUtils;
 import sendero.atomics.LazyHolder;
@@ -10,6 +9,7 @@ import sendero.interfaces.BinaryConsumer;
 import sendero.interfaces.BinaryPredicate;
 import sendero.interfaces.SynthEqual;
 import sendero.interfaces.Updater;
+import sendero.pairs.Pair;
 import sendero.threshold_listener.ThresholdListeners;
 
 import java.util.Objects;
@@ -19,12 +19,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
+import java.util.function.*;
 
 final class Holders {
     interface HolderIO<T> extends Updater<T>, Consumer<T> {

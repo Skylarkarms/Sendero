@@ -1,5 +1,5 @@
 import sendero.*;
-import sendero.abstract_containers.Pair;
+import sendero.pairs.Pair;
 import sendero.interfaces.BinaryPredicate;
 import sendero.interfaces.Updater;
 

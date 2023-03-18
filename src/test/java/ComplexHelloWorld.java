@@ -95,7 +95,7 @@ class ComplexHelloWorld {
 //            );
 //        }
 
-        final Consumer<String[]> exitGate = Consumers.transform(
+        final Consumer<String[]> exitGate = Consumers.map(
                 strings -> strings[0] + " " + strings[1],
                 s -> {
                     System.out.println(s);

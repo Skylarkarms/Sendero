@@ -11,7 +11,6 @@ import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
 import static sendero.Holders.SwapBroadcast.HOT;
-import static sendero.functions.Functions.alwaysTrue;
 import static sendero.functions.Functions.myIdentity;
 
 public class Gate<T> extends Path<T> {

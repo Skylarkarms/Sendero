@@ -1,6 +1,6 @@
 package sendero.lists;
 
-import sendero.abstract_containers.Pair;
+import sendero.pairs.Pair;
 
 import java.lang.reflect.Array;
 import java.util.Arrays;

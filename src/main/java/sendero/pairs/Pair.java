@@ -1,4 +1,4 @@
-package sendero.abstract_containers;
+package sendero.pairs;
 
 import sendero.interfaces.BinaryPredicate;
 
@@ -118,7 +118,6 @@ public final class Pair<T, U> {
             }
         }
 
-
         public static class Int<T> {
             public final int anInt;
             public final T value;
@@ -200,5 +199,4 @@ public final class Pair<T, U> {
                     "\n }";
         }
     }
-
 }

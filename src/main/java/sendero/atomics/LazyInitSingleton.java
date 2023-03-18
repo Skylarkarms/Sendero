@@ -1,6 +1,6 @@
 package sendero.atomics;
 
-import sendero.abstract_containers.Pair;
+import sendero.pairs.Pair;
 
 import java.util.concurrent.atomic.AtomicReference;
 

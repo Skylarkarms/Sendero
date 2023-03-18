@@ -20,7 +20,6 @@ public interface SynthEqual {
         return that.test((S) paramAt(this, at));
     }
 
-
     default <S> boolean equalTo(int at, S arg) {
         return paramAt(this, at).equals(arg);
     }
@@ -41,3 +40,5 @@ public interface SynthEqual {
         }
     }
 }
+
+

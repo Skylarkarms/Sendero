@@ -1,6 +1,6 @@
 package sendero.atomics;
 
-import sendero.abstract_containers.Pair;
+import sendero.pairs.Pair;
 
 import java.util.ConcurrentModificationException;
 import java.util.Objects;
@@ -11,7 +11,6 @@ import java.util.function.*;
 
 public final class AtomicUtils {
 
-    /**Class that checks for concurrency contention and throws if met.*/
     public static final class ContentionCheck {
         private final AtomicInteger ver = new AtomicInteger();
 
@@ -156,6 +155,37 @@ public final class AtomicUtils {
         return new Witness<>(prev, null);
     }
 
+    /**If test == true, attempts to set: <p>
+     *   Will never return (null, null)<p>
+     *   if set succeeds returns (prev, next)<p>
+     *if test == false, checks contention: <p>
+     *     if contention met, retries.<p>
+     *     if no contention met returns(prev, null)
+     * */
+    public static<T> Witness.IntObject contentiousSetIf(
+            AtomicInteger ref,
+            IntPredicate test,
+//            Predicate<T> test,
+            IntUnaryOperator nextMap
+    ) {
+        Integer prev = null;
+        int next;
+        while (!Objects.equals(prev, prev = ref.get())) {
+            if (test.test(prev)) {
+                next = nextMap.applyAsInt(prev);
+                if (ref.compareAndSet(prev, next)) return new Witness.IntObject(prev, next);
+            }
+        }
+        return new Witness.IntObject(prev, null);
+    }
+
+    /**If test == true, attempts to set: <p>
+     *   If set fails returns (null, null)<p>
+     *   if set succeeds returns (prev, next)<p>
+     *if test == false, checks contention: <p>
+     *     if contention met, retries.<p>
+     *     if no contention met returns(prev, null)
+     * */
     public static<T> Witness.IntObject setIf(
             AtomicInteger ref,
             IntPredicate test,

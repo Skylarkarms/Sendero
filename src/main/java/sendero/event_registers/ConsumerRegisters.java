@@ -1,8 +1,8 @@
 package sendero.event_registers;
 
 import sendero.AtomicBinaryEvent;
-import sendero.abstract_containers.Pair;
 import sendero.functions.Functions;
+import sendero.pairs.Pair;
 import sendero.switchers.Switchers;
 
 import java.util.concurrent.atomic.AtomicReference;
