@@ -20,6 +20,7 @@ interface Forkable<T> {
         return out(outputType, myIdentity());
     }
 
+
     <S> Forkable<S> map(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, Function<T, S> map);
 
     default <S> Forkable<S> map(BinaryPredicate<S> excludeIn, Function<T, S> map) {
@@ -27,6 +28,9 @@ interface Forkable<T> {
                 Builders.excludeIn(excludeIn),
                 map
         );
+    }
+    default <S> Forkable<S> map(Function<T, S> map) {
+        return map(myIdentity(), map);
     }
 
     /**Forks the data with a logic gate ruling option for data insertion exclusion <p>
@@ -40,17 +44,14 @@ interface Forkable<T> {
                 Functions.myIdentity()
         );
     }
-    default <S> Forkable<S> map(Function<T, S> map) {
-        return map(myIdentity(), map);
-    }
 
     /**For when additional rules are required, including an INITIAL value for S*/
     <S> Forkable<S> update(UnaryOperator<Builders.HolderBuilder<S>> builderOperator, BiFunction<S, T, S> update);
 
     default  <S> Forkable<S> update(BinaryPredicate<S> excludeIn, BiFunction<S, T, S> update) {
         return update(
-               Builders.excludeIn(excludeIn),
-               update
+                Builders.excludeIn(excludeIn),
+                update
         );
     }
 
@@ -73,6 +74,7 @@ interface Forkable<T> {
                 switchMap
         );
     }
+
     default <S> Forkable<S> switchMap(Function<T, BasePath<S>> switchMap) {
         return switchMap(myIdentity(), switchMap);
     }
