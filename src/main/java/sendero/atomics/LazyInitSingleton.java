@@ -2,6 +2,10 @@ package sendero.atomics;
 
 import sendero.pairs.Pair;
 
+import java.util.AbstractMap;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class LazyInitSingleton<T> {
@@ -45,7 +49,8 @@ public class LazyInitSingleton<T> {
         }
     }
 
-    public static final class Function<S, T> extends LazyInitSingleton<T> implements java.util.function.Function<S, T> {
+    public static final class Function<S, T> extends LazyInitSingleton<T>
+            implements java.util.function.Function<S, T> {
 
         private final java.util.function.Function<S, T> builder;
 
@@ -64,6 +69,42 @@ public class LazyInitSingleton<T> {
                 }
             }
             return prev.value;
+        }
+    }
+
+    public static final class Container {
+
+        public static final class Entry<C> extends AbstractMap.SimpleImmutableEntry<Class<C>, java.util.function.Supplier<C>> {
+
+            public static<T> Entry<T> get(Class<T> type, java.util.function.Supplier<T> tSupplier) {
+                return new Entry<>(type, tSupplier);
+            }
+
+            Entry(Class<C> key, java.util.function.Supplier<C> value) {
+                super(key, value);
+            }
+        }
+
+        private final Map<Class<?>, Supplier<?>> map;
+
+        public Container(Entry<?>... entries) {
+            Map<Class<?>, Supplier<?>> map = new HashMap<>();
+            for (Entry<?> e:entries
+            ) {
+                Class<?> key = e.getKey();
+                Supplier<?> prev = map.putIfAbsent(key, new Supplier<>(e.getValue()));
+                assert prev == null : "Key [" + key + "] already present in map";
+//                ObjectUtils.assertNull(
+//                        map.putIfAbsent(key, new Supplier<>(e.getValue())), () -> "Key " + key + " already present in map = " + CollectionUtils.toString(map.entrySet()));
+            }
+            this.map = Collections.unmodifiableMap(map);
+        }
+
+        public<T> T get(Class<T> tClass) {
+            Supplier<?> supplier = map.get(tClass);
+            assert supplier != null : "Class " + tClass + " not present in map";
+//            Supplier<?> supplier = ObjectUtils.getNonNull(map.get(tClass), () -> "Type: " + tClass + " not present in map " + CollectionUtils.toString(map.entrySet()));
+            return tClass.cast(supplier.get());
         }
     }
 }
