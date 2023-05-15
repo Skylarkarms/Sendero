@@ -553,5 +553,4 @@ public final class BinaryEventRegisters {
                     "\n }";
         }
     }
-
 }
