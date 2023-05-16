@@ -92,7 +92,7 @@ public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
     public T get() {
         NOT_ACTIVE_WARNING();
         Immutable<T> imm = activationHolder.getSnapshot();
-        assert imm != NOT_SET;
+        assert imm != NOT_SET : "Value has not yet been set.";
         return imm.get();
     }
     private static final int max_tries = 3;
@@ -128,13 +128,23 @@ public class ProactiveSuppliers<T> implements ProactiveSupplier<T> {
     }
 
     private void zeroDelay(Consumer<? super T> consumer) {
+        Immutable<T> snapshot = sysSuspendGet();
+        makeAccept(snapshot, consumer);
+    }
+
+    /**Attempts to retrieve a value up to {@link #max_tries} else returns null*/
+    public T suspendGet() {
+        return sysSuspendGet().get();
+    }
+
+    private Immutable<T> sysSuspendGet() {
         Immutable<T> snapshot = NOT_SET;
         int tries = 0;
         while (!snapshot.match((snapshot = activationHolder.getSnapshot()).local)) {
             tries++;
             if (tries == max_tries) break;
         }
-        makeAccept(snapshot, consumer);
+        return snapshot;
     }
 
     private void makeAccept(Immutable<T> snapshot, Consumer<? super T> consumer) {
