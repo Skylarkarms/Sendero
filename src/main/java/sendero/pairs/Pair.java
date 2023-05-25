@@ -167,6 +167,29 @@ public final class Pair<T, U> {
                 if (compareTo(that) != 0) return false;
                 return sameValue(that.value, equal);
             }
+
+            public static final class AndFloat {
+                public final int anInt;
+                public final int aFloat;
+
+                public AndFloat(int anInt, int aFloat) {
+                    this.anInt = anInt;
+                    this.aFloat = aFloat;
+                }
+
+                @Override
+                public boolean equals(Object o) {
+                    if (this == o) return true;
+                    if (o == null || getClass() != o.getClass()) return false;
+                    AndFloat andFloat = (AndFloat) o;
+                    return anInt == andFloat.anInt && aFloat == andFloat.aFloat;
+                }
+
+                @Override
+                public int hashCode() {
+                    return Objects.hash(anInt, aFloat);
+                }
+            }
         }
 
         public static class Bool<T> {
