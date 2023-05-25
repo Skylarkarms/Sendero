@@ -170,9 +170,9 @@ public final class Pair<T, U> {
 
             public static final class AndFloat {
                 public final int anInt;
-                public final int aFloat;
+                public final float aFloat;
 
-                public AndFloat(int anInt, int aFloat) {
+                public AndFloat(int anInt, float aFloat) {
                     this.anInt = anInt;
                     this.aFloat = aFloat;
                 }
