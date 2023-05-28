@@ -36,13 +36,13 @@ public final class AtomicUtils {
      * public static<T> void backAndForth(AtomicInteger versionCount, Callable<T> callable, Consumer<T> consumer) {
      *         int newVer = versionCount.incrementAndGet();
      *         Executor.onBack(
-     *                 AtomicUtils.backPressureDrop(
+     *                 AtomicUtils.backPressureDropper(
      *                         newVer, versionCount::get,
      *                         () -> {
      *                             try {
      *                                 T t = callable.call();
      *                                 Executor.onMain(
-     *                                         AtomicUtils.backPressureDrop(
+     *                                         AtomicUtils.backPressureDropper(
      *                                                 newVer, versionCount::get,
      *                                                 () -> consumer.accept(t)
      *                                         )
@@ -69,7 +69,7 @@ public final class AtomicUtils {
      *     as a semaphore that inspects concurrency.
      *
      * */
-    public static<T> Runnable backPressureDrop(
+    public static<T> Runnable backPressureDropper(
             int newVer,
             IntSupplier volatileCheck,
             Runnable action) {
@@ -78,6 +78,12 @@ public final class AtomicUtils {
                 action.run();
             }
         };
+    }
+
+    public static void backPressureDrop(int newVer, IntSupplier volatileCheck, Runnable action) {
+        if (!(newVer < volatileCheck.getAsInt())) {
+            action.run();
+        }
     }
 
     public static class Witness<T> {
@@ -266,19 +272,35 @@ public final class AtomicUtils {
 
         private final AtomicReference<RunnableRef> semaphore = new AtomicReference<>(RunnableRef.OPENED);
         private final Executor runnableConsumer;
-        private final Runnable localRunnable = new Runnable() {
-            @Override
-            public void run() {
-                RunnableRef prev;
-                while ((prev = semaphore.get()).shouldCompute()) {
-                    RunnableRef computing = prev.computing();
-                    if (semaphore.compareAndSet(prev, computing)) {
-                        runnableConsumer.execute(computing);
-                        semaphore.compareAndSet(computing, RunnableRef.OPENED);
-                    }
+        private final Runnable executorRunnable = () -> {
+            RunnableRef prev;
+            while ((prev = semaphore.get()).shouldCompute()) {
+                RunnableRef computing = prev.computing();
+                if (semaphore.compareAndSet(prev, computing)) {
+                    computing.run();
+                    semaphore.compareAndSet(computing, RunnableRef.OPENED);
                 }
             }
         };
+//        private final Runnable localRunnable = new Runnable() {
+//            @Override
+//            public void run() {
+//                beginRun();
+//
+////                RunnableRef prev;
+////                while ((prev = semaphore.get()).shouldCompute()) {
+////                    RunnableRef computing = prev.computing();
+////                    if (semaphore.compareAndSet(prev, computing)) {
+////                        runnableConsumer.execute(computing);
+////                        semaphore.compareAndSet(computing, RunnableRef.OPENED);
+////                    }
+////                }
+//            }
+//        };
+
+        private void beginRun() {
+            runnableConsumer.execute(executorRunnable);
+        }
 
         public OverlapDropExecutor(
                 Executor runnableConsumer
@@ -298,7 +320,8 @@ public final class AtomicUtils {
 
         private void CAS(RunnableRef newRef, Runnable runnable) {
             if (semaphore.compareAndSet(RunnableRef.OPENED, newRef)) {
-                localRunnable.run();
+//                localRunnable.run();
+                beginRun();
             } else {
                 RunnableRef queued = new RunnableRef(QUEUE, runnable);
                 if (!queued(queued)) CAS(newRef, runnable);
