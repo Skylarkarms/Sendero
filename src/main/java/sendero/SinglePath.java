@@ -1,8 +1,8 @@
 package sendero;
 
 import sendero.functions.Functions;
-import sendero.interfaces.ActivationListener;
 import sendero.interfaces.BinaryPredicate;
+import sendero.interfaces.BooleanConsumer;
 import sendero.interfaces.ConsumerUpdater;
 
 import java.util.function.BiFunction;
@@ -36,27 +36,27 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
 
     public static<T> SinglePath<T> getSinglePath(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
-            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
+            Function<ConsumerUpdater<T>, BooleanConsumer> activationsFun
     ) {
        return new SinglePath<>(builderOperator, activationsFun);
     }
 
     public static<T> SinglePath<T> getSinglePath(
             BinaryPredicate<T> excludeIn,
-            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
+            Function<ConsumerUpdater<T>, BooleanConsumer> activationsFun
     ) {
        return new SinglePath<>(Builders.excludeIn(excludeIn), activationsFun);
     }
 
     public static<T> SinglePath<T> getSinglePath(
-            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
+            Function<ConsumerUpdater<T>, BooleanConsumer> activationsFun
     ) {
        return new SinglePath<>(Functions.myIdentity(), activationsFun);
     }
 
     protected SinglePath(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
-            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
+            Function<ConsumerUpdater<T>, BooleanConsumer> activationsFun
     ) {
         super(builderOperator, activationsFun);
     }
@@ -193,6 +193,5 @@ public class SinglePath<T> extends PathAbsDispatcherHolder<T> {
     public boolean isDefault() {
         return this == DEFAULT;
     }
-
 }
 

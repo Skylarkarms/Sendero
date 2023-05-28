@@ -489,7 +489,7 @@ final class Holders {
 
         /**Handy for debugging:
          * When a BasePath becomes active, we could infer whether a source is
-         * being listened or not and throw and exception*/
+         * being listened or not and throw an exception*/
         protected boolean activationListenerIsSet() {
             return activationManager.activationListenerIsSet();
         }

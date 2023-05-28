@@ -1,7 +1,7 @@
 package sendero;
 
 import sendero.event_registers.ConsumerRegisters;
-import sendero.interfaces.ActivationListener;
+import sendero.interfaces.BooleanConsumer;
 import sendero.interfaces.ConsumerUpdater;
 import sendero.lists.SimpleLists;
 import sendero.pairs.Pair;
@@ -96,7 +96,7 @@ public abstract class BasePath<T> extends Holders.ExecutorHolder<T> implements F
 
     <S> BasePath(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
-            Function<ConsumerUpdater<T>, ActivationListener> activationsFun) {
+            Function<ConsumerUpdater<T>, BooleanConsumer> activationsFun) {
         super(builderOperator,
                 Builders.ManagerBuilder.onActive(
                         activationsFun

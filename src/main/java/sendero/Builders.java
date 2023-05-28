@@ -122,7 +122,7 @@ public final class Builders {
 
         @SuppressWarnings("unchecked")
         public static<S> ManagerBuilder onActive(
-                Function<ConsumerUpdater<S>, ActivationListener> activationListenerFun
+                Function<ConsumerUpdater<S>, BooleanConsumer> activationListenerFun
 
         ) {
             return new ManagerBuilder(

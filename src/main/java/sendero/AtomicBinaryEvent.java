@@ -1,6 +1,6 @@
 package sendero;
 
-import sendero.interfaces.ActivationListener;
+import sendero.interfaces.BooleanConsumer;
 import sendero.switchers.Switchers;
 /**AtomicBinaryEvent is intended as a binary regressive event mediator between nodes within the reactive system, <p>
  * a system inherently concurrent. <p>
@@ -33,11 +33,11 @@ public interface AtomicBinaryEvent extends Switchers.Switch {
         };
     }
 
-    static AtomicBinaryEvent base(ActivationListener listener) {
+    static AtomicBinaryEvent base(BooleanConsumer listener) {
         return new AtomicBinaryEventConsumer() {
             @Override
             protected void onStateChange(boolean isActive) {
-                listener.onStateChange(isActive);
+                listener.accept(isActive);
             }
         };
     }

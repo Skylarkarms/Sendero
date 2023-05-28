@@ -1,6 +1,6 @@
 package sendero;
 
-import sendero.interfaces.ActivationListener;
+import sendero.interfaces.BooleanConsumer;
 import sendero.interfaces.ConsumerUpdater;
 
 import java.util.function.BiFunction;
@@ -20,7 +20,7 @@ public abstract class PathAbsDispatcherHolder<T> extends BasePath<T> {
 
     PathAbsDispatcherHolder(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
-            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
+            Function<ConsumerUpdater<T>, BooleanConsumer> activationsFun
     ) {
         this(
                 builderOperator,
@@ -103,6 +103,8 @@ public abstract class PathAbsDispatcherHolder<T> extends BasePath<T> {
         return pathDispatcher.isInactive();
     }
 
+    /**Allowed classes are Gate.Out.Single, OR <p>
+     * Gate.Out.Many*/
     @SuppressWarnings("unchecked")
     @Override
     public <S, O extends Gate.Out<S>> O out(Class<? super O> outputType, Function<T, S> map) {

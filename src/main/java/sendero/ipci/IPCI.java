@@ -25,7 +25,8 @@ public interface IPCI<T> {
 
         public ID(String tag) {
             this.tag = tag;
-            ObjectUtils.assertNull(idMap.putIfAbsent(tag, this), "This tag " + tag + " already in map = " + CollectionUtils.toString(idMap.keySet()));
+            IPCI.ID<?> prev = idMap.putIfAbsent(tag, this);
+            assert prev == null : "This tag " + tag + " already in map = " + idMap.keySet();
         }
 
         @SuppressWarnings("unchecked")
@@ -61,7 +62,7 @@ public interface IPCI<T> {
         }
 
         private String getInstanceMapString() {
-            return CollectionUtils.toString(idInstanceMap.keySet());
+            return idInstanceMap.keySet().toString();
         }
 
         @SuppressWarnings("unchecked")
@@ -82,9 +83,6 @@ public interface IPCI<T> {
 
         @SuppressWarnings("unchecked")
         C delete() {
-//            if (eraseClass()) {
-//                return (C) idInstanceMap.remove(this);
-//            }
             return ObjectUtils.testGet(this::eraseClass, () -> (C) idInstanceMap.remove(this));
         }
 

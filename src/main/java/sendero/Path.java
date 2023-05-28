@@ -1,8 +1,8 @@
 package sendero;
 
 import sendero.functions.Functions;
-import sendero.interfaces.ActivationListener;
 import sendero.interfaces.BinaryPredicate;
+import sendero.interfaces.BooleanConsumer;
 import sendero.interfaces.ConsumerUpdater;
 
 import java.util.function.BiFunction;
@@ -26,27 +26,27 @@ public class Path<T> extends PathAbsDispatcherHolder<T> {
 
     public static<T> Path<T> getPath(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
-            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
+            Function<ConsumerUpdater<T>, BooleanConsumer> activationsFun
     ) {
         return new Path<>(builderOperator, activationsFun);
     }
 
     public static<T> Path<T> getPath(
             BinaryPredicate<T> excludeIn,
-            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
+            Function<ConsumerUpdater<T>, BooleanConsumer> activationsFun
     ) {
         return new Path<>(Builders.excludeIn(excludeIn), activationsFun);
     }
 
     public static<T> Path<T> getPath(
-            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
+            Function<ConsumerUpdater<T>, BooleanConsumer> activationsFun
     ) {
         return new Path<>(Functions.myIdentity(), activationsFun);
     }
 
     protected Path(
             UnaryOperator<Builders.HolderBuilder<T>> builderOperator,
-            Function<ConsumerUpdater<T>, ActivationListener> activationsFun
+            Function<ConsumerUpdater<T>, BooleanConsumer> activationsFun
     ) {
         super(builderOperator, activationsFun);
     }

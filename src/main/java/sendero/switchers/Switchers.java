@@ -11,7 +11,6 @@ public class Switchers {
         boolean on();
         boolean off();
         boolean isActive();
-
     }
 
     static class Atomic implements Switch {
@@ -39,5 +38,4 @@ public class Switchers {
                     '}';
         }
     }
-
 }
