@@ -190,6 +190,14 @@ public final class Pair<T, U> {
                     return Objects.hash(anInt, aFloat);
                 }
             }
+
+            @Override
+            public String toString() {
+                return "Int{" +
+                        "\n anInt=" + anInt +
+                        ",\n value=" + value +
+                        "\n }";
+            }
         }
 
         public static class Bool<T> {
