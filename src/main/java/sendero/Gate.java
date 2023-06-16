@@ -5,7 +5,9 @@ import sendero.interfaces.BinaryPredicate;
 import sendero.interfaces.ConsumerUpdater;
 import sendero.interfaces.Register;
 import sendero.lists.SimpleLists;
+import sendero.pairs.Pair;
 
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
@@ -222,6 +224,39 @@ public class Gate<T> extends Path<T> {
                         t -> {
                             consumer.accept(t);
                             unregister();
+                        }
+                );
+            }
+            /**
+             * Delays the consuming on a separate Thread, and waits (if possible) <p>
+             * until all race conditions resume on a stable state. <p>
+             * */
+            default void delayedObtain(Consumer<? super T> consumer) {
+                register(
+                        new Consumer<T>() {
+                            final AtomicReference<Pair.Immutables.Int<T>> local = new AtomicReference<>(Pair.Immutables.Int.getDefault());
+                            @Override
+                            public void accept(T t) {
+                                if (local.getAndUpdate(
+                                        prev -> new Pair.Immutables.Int<>(prev.anInt+1, t)
+                                ).isDefault()) {
+                                    new Thread(
+                                            () -> {
+                                                Pair.Immutables.Int<T> version;
+                                                do {
+                                                    version = local.get();
+                                                    if (version.compareTo(local.get()) == 0) {
+                                                        consumer.accept(version.value);
+                                                        if (local.compareAndSet(version, Pair.Immutables.Int.getDefault())) {
+                                                            unregister();
+                                                            break;
+                                                        }
+                                                    }
+                                                } while (!local.get().isDefault());
+                                            }
+                                    ).start();
+                                }
+                            }
                         }
                 );
             }
